@@ -3,8 +3,8 @@ from viewer_3D import Viewer3D
 from viewer_2D import Viewer2D
 import argparse
 
-def main_3D(data):
-    viewer = Viewer3D(data,mode=2)
+def main_3D(data,folder_mask):
+    viewer = Viewer3D(data,mode=2,label=folder_mask)
     viewer.show()
 
 def main_2D(data,folder_mask):
@@ -19,8 +19,6 @@ if __name__ == '__main__':
 
     arg = parser.parse_args()
     data_path = arg.folder_dcm
-    #data_path = '/home/francoismasson/Projet_AIC/label_mask/'
-    #data_path = '/home/francoismasson/Projet_AIC/data_preprocess/'
 
     sub_folders = os.listdir(data_path)
     data = []
@@ -33,4 +31,4 @@ if __name__ == '__main__':
     if arg.labels_2D :
         main_2D(data,arg.folder_mask)
     else :
-        main_3D(data)
+        main_3D(data,arg.folder_mask)

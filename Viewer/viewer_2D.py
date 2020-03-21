@@ -21,7 +21,7 @@ class Viewer2D(object):
         self.frame_init = 0
         self.data_path = data_path
         self.folder_mask = folder_mask
-
+        
         # Callback
         self.draw()
 

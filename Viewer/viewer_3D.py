@@ -259,7 +259,10 @@ class Viewer3D(object):
 
         # Along the z axis : Later Along x axis and y axis ... (3D Object Detection from CT Scans using a Slice-and-fuse Approach)
         slicer = np.unique(numpy_nodes[:,2]).astype(int)
-        directory = os.getcwd() + self.label_folder
+        if os.path.exists(self.label_folder):
+            directory = self.label_folder
+        else :
+            directory = os.getcwd() + self.label_folder
         os.makedirs(os.path.join(directory,self.title),exist_ok = True) ## Make folder recursively
         for z_axis in range(self.mask.shape[0]):
             if z_axis in slicer:
