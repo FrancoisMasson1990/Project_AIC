@@ -158,6 +158,7 @@ class Image_2D(Viewer2D):
         self.slices = None
         self.slices = self.load_scan(self.data_path, self.frame)
         self.image = self.get_pixels_hu(self.slices)
+        
         self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
         self.init_label = True
 
@@ -187,6 +188,7 @@ class Image_2D(Viewer2D):
 
         self._image = None
         self._image = self.axis1.imshow(self.image[self.index], cmap='gray')
+        
         self.label_image = np.load(self.label[self.index])
         if self.label is not None:
             self._label = self.axis2.imshow(self.label_image, vmin=0, vmax=1)
@@ -215,6 +217,7 @@ class Image_2D(Viewer2D):
 
         self.slices = self.load_scan(self.data_path, self.frame)
         self.image = self.get_pixels_hu(self.slices)
+
         self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
 
         self.slicer.valmax = len(self.image)-1
