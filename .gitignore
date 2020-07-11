@@ -1,3 +1,8 @@
 *.pyc
 __pycache__
 **/node_modules/
+**/base_donnees/
+**/data_folder/
+**/data_label_npy/
+**/data_preprocess/
+**/label_mask/

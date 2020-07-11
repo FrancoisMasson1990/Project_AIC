@@ -1,0 +1,4 @@
+data_path : "/home/francoismasson/Desktop/Project_AIC/data_preprocess/"
+folder_mask : "/home/francoismasson/Desktop/Project_AIC/label_mask/"
+npy_folder : "/home/francoismasson/Desktop/Project_AIC/data_label_npy/"
+label_2D : False

@@ -1,13 +1,18 @@
 ## Main class to visualize data dicom
 import vtk
+# Disable vtk Warning
+vtk.vtkObject.GlobalWarningDisplayOff()
 from vtkplotter import *
 import numpy as np
 from vtkplotter import settings
 import vtkplotter.settings as settings
 import vtkplotter.addons as addons
-from vtk.util.numpy_support import vtk_to_numpy
+from vtk.util.numpy_support import vtk_to_numpy,numpy_to_vtk
 import numpy as np
 import pydicom
+from pydicom.dataset import Dataset, FileDataset
+from pydicom.uid import ExplicitVRLittleEndian
+import pydicom._storage_sopclass_uids
 import glob
 from widget import *
 from tqdm import tqdm 
@@ -16,7 +21,7 @@ import matplotlib.pyplot as plt
 
 class Viewer3D(object):
 
-    def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/'):
+    def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/',npy=None):
         
         self.frame = 0
         self.icol = 0
@@ -25,9 +30,11 @@ class Viewer3D(object):
         self.window_size = (1200, 800)
         if mode ==  1 :
             self.mode = ['ray_cast']
-        else :
+        elif mode == 2 :
             self.mode = ['ray_cast','iso']
-
+        elif mode == 4 :
+            self.mode = ['ray_cast','iso','slicer_2d','inference']
+        
         self.actor_list = []
         self.buttons = []
         self.render_list = []
@@ -42,6 +49,7 @@ class Viewer3D(object):
         self.spacing = None
         self.title = None
         self.label_folder = label
+        self.npy_folder = npy
 
         '''One render window, multiple viewports'''
         self.rw = vtk.vtkRenderWindow()
@@ -51,6 +59,7 @@ class Viewer3D(object):
         ## Freeze windows if not clicked on actor !!!!
         vsty = vtk.vtkInteractorStyleTrackballCamera()
         self.iren.SetInteractorStyle(vsty)
+        self.view_mode = True
 
         ## Callback to update content
         self.iren.RemoveObservers('KeyPressEvent')
@@ -61,16 +70,6 @@ class Viewer3D(object):
         self.viewport_frame()
         self.viewport()
 
-        ## Declare here for the 2d 
-        self.renderer2 = None
-        self.renderWindow2 = None
-        self.renderWindowInteractor2 = None
-
-        ## Declare here for the 3d 
-        self.renderer3 = None
-        self.renderWindow3 = None
-        self.renderWindowInteractor3 = None
-
         self.render_aux = []
         self.actor_aux = []
 
@@ -80,12 +79,19 @@ class Viewer3D(object):
         self.xmaxs=[]
         self.ymins=[]
         self.ymaxs=[]
+
         # Define viewport ranges
         for size in range(len(self.mode)):
             self.xmins.append(size/len(self.mode))
             self.xmaxs.append(size/len(self.mode) + 1/len(self.mode))
             self.ymins.append(0)
             self.ymaxs.append(1)
+        
+        if len(self.mode) == 4:
+            self.xmins=[0,.5,0,.5]
+            self.xmaxs=[0.5,1,0.5,1]
+            self.ymins=[0.5,0.5,0,0]
+            self.ymaxs=[1,1,0.5,0.5]
 
         self.xmins=np.asarray(self.xmins)
         self.xmaxs=np.asarray(self.xmaxs)
@@ -98,26 +104,20 @@ class Viewer3D(object):
         self.ren_bkg = ['Black']
     
     def viewport(self):
-
         for i in range(len(self.mode)):
             self.ren = vtk.vtkRenderer()
             self.render_list.append(self.ren)
             self.rw.AddRenderer(self.ren)
             self.ren.SetViewport(self.xmins[i], self.ymins[i], self.xmaxs[i], self.ymaxs[i])
             self.actor = self.add_actors(self.mode[i],self.frame)
-            self.ren.AddActor(self.actor)
+            if self.actor != []:
+                self.ren.AddActor(self.actor)
             if self.mode[i] == 'ray_cast':
                 ## button used for the colors changing
                 states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.035],states=["State 1", "State 2"])
                 self.but = Button(self.buttonfuncMode, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.but.actor)
                 self.buttons.append(self.but)
-
-                ## button used for the 3D Slicer
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.3, 0.035],states=["Slicer 3D"])
-                self.but3Dslice = Button(self.buttonfuncMode_3Dslice, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
-                self.ren.AddActor2D(self.but3Dslice.actor)
-                self.buttons.append(self.but3Dslice)
 
                 if len(self.axes_list)==0:
                    self.axes = Axes(self.iren)
@@ -139,19 +139,28 @@ class Viewer3D(object):
                 self.saver = Button(self.buttonfuncMode_saving, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.saver.actor)
                 self.buttons.append(self.saver)
+
+            elif self.mode[i] == 'slicer_2d' :
+                # ## button used for the 2D Slicer and change view
+                ## button used for the colors changing
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.035],states=["Start Slicer Mode", "Stop Slicer Mode"])
+                self.but_ = Button(self.buttonviewMode, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
+                self.ren.AddActor2D(self.but_.actor)
+                self.buttons.append(self.but_)
+
+            elif self.mode[i] == 'inference' :
+                ## button used for inference and GT
+                ## button used for inference
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.035],states=["Inference"])
+                self.infer = Button(self.buttonviewMode, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
+                self.ren.AddActor2D(self.infer.actor)
+                self.buttons.append(self.infer)
             
             self.ren.SetBackground(self.colors.GetColor3d(self.ren_bkg[0]))
             self.ren.ResetCamera()
             self.camera_position()
     
     def add_actors(self,mode,frame):
-        # Add actors according to the mode and create tmp file
-        if mode == 'ray_cast':
-            actor = self.ray_cast(self.data_path[frame])
-        if mode == 'iso':
-            actor = self.iso_surface(self.data_path[frame])
-        self.actor_list.append(actor)
-
         ## Update title : 
         txt = glob.glob(self.data_path[frame] + '/*.txt')
         self.title = self.data_path[frame].split('/')
@@ -167,6 +176,22 @@ class Viewer3D(object):
         else :
             self.rw.SetWindowName('Valve Unknown')
 
+        # Add actors according to the mode and create tmp file
+        if mode == 'ray_cast':
+            actor = self.ray_cast(self.data_path[frame])
+        if mode == 'iso':
+            actor = self.iso_surface(self.data_path[frame])
+            self.cutter_actor = actor
+        if mode == 'slicer_2d':
+            actor = self.slicer_2d(self.data_path[frame])
+        if mode == 'inference':
+            numpy_3d = glob.glob(os.path.join(self.npy_folder,self.title) + '/*.npy')
+            if len(numpy_3d)>0:
+               actor = self.label_3d(numpy_3d[0])
+            else :
+               actor = []
+        self.actor_list.append(actor)
+
         return actor
 
     def buttonfuncMode(self):
@@ -175,20 +200,20 @@ class Viewer3D(object):
         self.volume.mode(snew)
         self.but.switch()
     
-    def buttonfuncMode_3Dslice(self):
-        if not self.window_3Dslice:
-            self.window_3Dslice = not self.window_3Dslice
-            self.renderer3,self.renderWindow3,self.renderWindowInteractor3 = self.create_window(self.renderer3,self.renderWindow3,self.renderWindowInteractor3) 
-            Slicer3D(self.data_path[self.frame],self.renderer3,self.renderWindow3,self.renderWindowInteractor3)
-            self.renderWindow3.Render()
-            self.renderWindowInteractor3.Start()  
+    def buttonviewMode(self):
+        self.but_.switch()
+        if self.view_mode:
+            style = vtk.vtkInteractorStyleImage()
+            style.SetInteractionModeToImage3D()
+            self.view_mode = not self.view_mode
         else :
-            self.window_3Dslice = not self.window_3Dslice
-            self.close_window(self.renderWindowInteractor3)
-    
+            style = vtk.vtkInteractorStyleTrackballCamera()
+            self.view_mode = not self.view_mode
+        self.iren.SetInteractorStyle(style)
+        
     def buttonfuncMode_cutter(self):
         if not self.cutter_tool :
-            self.cutter_obj.append(Cutter(self.render_list[-1],self.iren,self.actor_list[-1]))
+            self.cutter_obj.append(Cutter(self.render_list[-1],self.iren,self.cutter_actor))
             for cut in self.cutter_obj:
                 self.widget_cut = cut.boxWidget
                 self.widget_cut.On()
@@ -241,17 +266,84 @@ class Viewer3D(object):
         return self.volume
     
     def iso_surface(self,data):
-        self.img = vtkio.load(data).isosurface()
+        self.img = vtkio.load(data)
+        self.img = self.img.isosurface()
         ## Following lines used to get the mask 
         self.mask = tuple(reversed(vtkio.load(data).imagedata().GetDimensions()))
         self.mask = np.zeros(self.mask)
         self.spacing = vtkio.load(data).imagedata().GetSpacing()
         return self.img
+
+    def slicer_2d(self,data):
+        self.image = vtkio.load(data).imagedata()
+        self.im = vtk.vtkImageResliceMapper()
+        self.im.SetInputData(self.image)
+        self.im.SliceFacesCameraOn()
+        self.im.SliceAtFocalPointOn()
+        self.im.BorderOn()
+        self.ip = vtk.vtkImageProperty()
+        self.ip.SetInterpolationTypeToLinear()
+        self.ia = vtk.vtkImageSlice()
+        self.ia.SetMapper(self.im)
+        self.ia.SetProperty(self.ip)
+
+        printc("Slicer Mode:", invert=1, c="m")
+        printc(
+            """Press  SHIFT+Left mouse    to rotate the camera for oblique slicing
+            SHIFT+Middle mouse  to slice perpendicularly through the image
+            Left mouse and Drag to modify luminosity and contrast
+            X                   to Reset to sagittal view
+            Y                   to Reset to coronal view
+            Z                   to Reset to axial view
+            R                   to Reset the Window/Levels
+            Q                   to Quit.""",
+            c="m",
+        )
+        
+        return self.ia
+
+    def label_3d(self,data):
+        with open(data, 'rb') as f:
+            self.img = np.load(f)  
+        self.points = vtk.vtkPoints()
+        # Create the topology of the point (a vertex)
+        self.vertices = vtk.vtkCellArray()
+        # Add points
+        for i in range(0, len(self.img)):
+            p = self.img[i].tolist()
+            point_id = self.points.InsertNextPoint(p)
+            self.vertices.InsertNextCell(1)
+            self.vertices.InsertCellPoint(point_id)
+        # Create a poly data object
+        polydata = vtk.vtkPolyData()
+        # Set the points and vertices we created as the geometry and topology of the polydata
+        polydata.SetPoints(self.points)
+        polydata.SetVerts(self.vertices)
+        polydata.Modified()
+        # Mapper for points
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputData(polydata)
+        # ACTOR for points
+        self.actor_point = vtk.vtkActor()
+        self.actor_point.SetMapper(mapper)
+        #actor.GetProperty().SetPointSize(apoint_size)
+        self.actor_point.GetProperty().SetColor([1,0,0])
+
+        return self.actor_point
     
     def numpy_saving(self,points):
         ## Will try to fit a rectangle and to retrieve the x,y,z coordinate for segmentation...
         array = points.GetOutput().GetPoints()
         numpy_nodes = vtk_to_numpy(array.GetData())
+
+        if os.path.exists(self.npy_folder):
+            directory = self.npy_folder
+        else :
+            directory = os.getcwd() + self.npy_folder
+        os.makedirs(os.path.join(directory,self.title),exist_ok = True) ## Make folder recursively
+
+        with open(os.path.join(directory,self.title) + '/' + 'volume_label.npy', 'wb') as f:
+            np.save(f,numpy_nodes)
 
         numpy_nodes[:,0] = np.around(numpy_nodes[:,0]/self.spacing[0])
         numpy_nodes[:,1] = np.around(numpy_nodes[:,1]/self.spacing[1])
@@ -278,8 +370,9 @@ class Viewer3D(object):
             ## Need to fill contour image - Not perfect so will use manual tool correction
             ## https://scikit-image.org/docs/dev/user_guide/tutorial_segmentation.html
             ## https://www.learnopencv.com/filling-holes-in-an-image-using-opencv-python-c/
-            from scipy import ndimage as ndi
-            self.mask[z_axis,::] = ndi.binary_fill_holes(self.mask[z_axis,::])
+            # TODO :
+            #from scipy import ndimage as ndi
+            #self.mask[z_axis,::] = ndi.binary_fill_holes(self.mask[z_axis,::])
             np.save(os.path.join(directory,self.title) + '/' + str(z_axis),self.mask[z_axis,::])
             #plt.imsave(os.path.join(directory,self.title) + '/' + str(z_axis) + ".png",self.mask[z_axis,::])
         

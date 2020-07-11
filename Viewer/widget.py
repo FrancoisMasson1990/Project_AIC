@@ -391,8 +391,8 @@ class Grid(object):
         ############################################### axes titles
         titles = []
         if xtitle:
-            xt = shapes.Text(xtitle, pos=(0,0,0), s=xTitleSize, bc=xTitleBackfaceColor,
-                             c=xTitleColor, justify=xTitleJustify, depth=titleDepth)
+            xt = shapes.Text(xtitle, pos=(0,0,0), s=xTitleSize,
+                            c=xTitleColor, justify=xTitleJustify, depth=titleDepth)
             if reorientShortTitle and len(ytitle) < 3:  # title is short
                 wpos = [xTitlePosition, -xTitleOffset +0.02, 0]
             else:
@@ -403,7 +403,7 @@ class Grid(object):
             titles.append(xt.lighting(specular=0, diffuse=0, ambient=1))
 
         if ytitle:
-            yt = shapes.Text(ytitle, pos=(0, 0, 0), s=yTitleSize, bc=yTitleBackfaceColor,
+            yt = shapes.Text(ytitle, pos=(0, 0, 0), s=yTitleSize,
                              c=yTitleColor, justify=yTitleJustify, depth=titleDepth)
             if reorientShortTitle and len(ytitle) < 3:  # title is short
                 wpos = [-yTitleOffset +0.03-0.01*len(ytitle), yTitlePosition, 0]
@@ -416,7 +416,7 @@ class Grid(object):
             titles.append(yt.lighting(specular=0, diffuse=0, ambient=1))
 
         if ztitle:
-            zt = shapes.Text(ztitle, pos=(0, 0, 0), s=zTitleSize, bc=zTitleBackfaceColor,
+            zt = shapes.Text(ztitle, pos=(0, 0, 0), s=zTitleSize,
                              c=zTitleColor, justify=zTitleJustify, depth=titleDepth)
             if reorientShortTitle and len(ztitle) < 3:  # title is short
                 wpos = [(-zTitleOffset+0.02-0.003*len(ztitle))/1.42,
@@ -609,53 +609,3 @@ class Cutter(object):
             self.origins.append(self.planes.GetPlane(faces).GetOrigin())
             self.normals.append(self.planes.GetPlane(faces).GetNormal())
             
-
-class Slicer3D(object):
-
-    def __init__(self,folder,renderer,renwin,interactor):
-
-        self.folder = folder
-        self.ren = renderer
-        self.renWin = renwin
-        self.iren = interactor
-        self.image = vtkio.load(self.folder).imagedata()
-        
-        self.im = vtk.vtkImageResliceMapper()
-        self.im.SetInputData(self.image)
-        self.im.SliceFacesCameraOn()
-        self.im.SliceAtFocalPointOn()
-        self.im.BorderOn()
-
-        ip = vtk.vtkImageProperty()
-        ip.SetInterpolationTypeToLinear()
-
-        self.ia = vtk.vtkImageSlice()
-        self.ia.SetMapper(self.im)
-        self.ia.SetProperty(ip)
-        
-        self.ren.AddViewProp(self.ia)
-
-        style = vtk.vtkInteractorStyleImage()
-        style.SetInteractionModeToImage3D()
-        self.iren.SetInteractorStyle(style)
-
-        self.renWin.SetInteractor(self.iren)
-
-        self.renWin.Render()
-        cam1 = self.ren.GetActiveCamera()
-        cam1.ParallelProjectionOn()
-        self.ren.ResetCameraClippingRange()
-        cam1.Zoom(1.3)
-
-        printc("Slicer Mode:", invert=1, c="m")
-        printc(
-            """Press  SHIFT+Left mouse    to rotate the camera for oblique slicing
-            SHIFT+Middle mouse  to slice perpendicularly through the image
-            Left mouse and Drag to modify luminosity and contrast
-            X                   to Reset to sagittal view
-            Y                   to Reset to coronal view
-            Z                   to Reset to axial view
-            R                   to Reset the Window/Levels
-            Q                   to Quit.""",
-            c="m",
-        )

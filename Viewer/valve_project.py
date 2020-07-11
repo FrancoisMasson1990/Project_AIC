@@ -2,9 +2,10 @@ import os
 from viewer_3D import Viewer3D
 from viewer_2D import Viewer2D
 import argparse
+import yaml 
 
-def main_3D(data,folder_mask):
-    viewer = Viewer3D(data,mode=2,label=folder_mask)
+def main_3D(data,folder_mask,folder_npy):
+    viewer = Viewer3D(data,mode=4,label=folder_mask,npy=folder_npy)
     viewer.show()
 
 def main_2D(data,folder_mask):
@@ -13,22 +14,31 @@ def main_2D(data,folder_mask):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Project AIC')
-    parser.add_argument('--folder_dcm', help='Dicom dataset with the .dcm extension files')
-    parser.add_argument('--labels_2D',action='store_true',help='Activate label 2D tools')
-    parser.add_argument('--folder_mask',help='folder with the label_mask')
+    #parser.add_argument('--folder_dcm', help='Dicom dataset with the .dcm extension files')
+    #parser.add_argument('--labels_2D',action='store_true',help='Activate label 2D tools')
+    #parser.add_argument('--folder_mask',help='folder with the label_mask')
 
     arg = parser.parse_args()
-    data_path = arg.folder_dcm
 
-    sub_folders = os.listdir(data_path)
+    with open('./data_info.yml') as f:
+       # The FullLoader parameter handles the conversion from YAML
+       # scalar values to Python the dictionary format
+       config = yaml.load(f, Loader=yaml.FullLoader)
+
+    arg.data_path = config.get("data_path",None)
+    arg.labels_2D = config.get("labels_2D",None)
+    arg.folder_mask = config.get("folder_mask",None)
+    arg.npy_folder = config.get("npy_folder",None)
+
+    sub_folders = os.listdir(arg.data_path)
     data = []
     for sub_folder in sub_folders:
-        root = os.path.join(data_path,sub_folder)
+        root = os.path.join(arg.data_path,sub_folder)
         sub_ = os.listdir(root)
         for sub in sub_ :
             data.append(os.path.join(root,sub))
-
+    
     if arg.labels_2D :
         main_2D(data,arg.folder_mask)
     else :
-        main_3D(data,arg.folder_mask)
+        main_3D(data,arg.folder_mask,arg.npy_folder)
