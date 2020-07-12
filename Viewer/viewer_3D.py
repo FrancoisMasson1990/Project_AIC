@@ -40,12 +40,15 @@ class Viewer3D(object):
         self.render_list = []
         self.axes_list = []
         self.grid_list = []
+        self.score_list = []
+        self.actor_infer_list = []
         self.cutter_tool = False
         self.window_2D = False
         self.window_3Dslice = False
         self.cutter_obj = []
         self.widget_cut = None
         self.mask = None
+        self.render_score = None
         self.spacing = None
         self.title = None
         self.label_folder = label
@@ -60,6 +63,8 @@ class Viewer3D(object):
         vsty = vtk.vtkInteractorStyleTrackballCamera()
         self.iren.SetInteractorStyle(vsty)
         self.view_mode = True
+        self.gt_view_mode = False
+        self.infer_view_mode = False
 
         ## Callback to update content
         self.iren.RemoveObservers('KeyPressEvent')
@@ -69,9 +74,6 @@ class Viewer3D(object):
         self.iren.SetRenderWindow(self.rw)
         self.viewport_frame()
         self.viewport()
-
-        self.render_aux = []
-        self.actor_aux = []
 
     def viewport_frame(self):
 
@@ -110,7 +112,7 @@ class Viewer3D(object):
             self.rw.AddRenderer(self.ren)
             self.ren.SetViewport(self.xmins[i], self.ymins[i], self.xmaxs[i], self.ymaxs[i])
             self.actor = self.add_actors(self.mode[i],self.frame)
-            if self.actor != []:
+            if self.actor != None:
                 self.ren.AddActor(self.actor)
             if self.mode[i] == 'ray_cast':
                 ## button used for the colors changing
@@ -149,12 +151,27 @@ class Viewer3D(object):
                 self.buttons.append(self.but_)
 
             elif self.mode[i] == 'inference' :
+                ## button used for score and name 
+                self.score_value = Text2D("0.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+                self.ren.AddActor2D(self.score_value)
+                self.render_score = self.ren
+                self.score_list.append(self.score_value)
+
+                self.score_name = Text2D("Score :",pos=3,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+                self.ren.AddActor2D(self.score_name)
+
                 ## button used for inference and GT
                 ## button used for inference
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.035],states=["Inference"])
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.035],states=["Inference (On)","Inference (Off)"])
                 self.infer = Button(self.buttonviewMode, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.infer.actor)
                 self.buttons.append(self.infer)
+
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.3, 0.035],states=["Ground Truth (On)","Ground Truth (Off)"])
+                self.ground_truth = Button(self.buttonfuncGroundTruth, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
+                self.ren.AddActor2D(self.ground_truth.actor)
+                self.buttons.append(self.ground_truth)
+
             
             self.ren.SetBackground(self.colors.GetColor3d(self.ren_bkg[0]))
             self.ren.ResetCamera()
@@ -179,27 +196,26 @@ class Viewer3D(object):
         # Add actors according to the mode and create tmp file
         if mode == 'ray_cast':
             actor = self.ray_cast(self.data_path[frame])
+            self.actor_list.append(actor)
         if mode == 'iso':
             actor = self.iso_surface(self.data_path[frame])
             self.cutter_actor = actor
+            self.actor_list.append(actor)
         if mode == 'slicer_2d':
             actor = self.slicer_2d(self.data_path[frame])
+            self.actor_list.append(actor)
+        
         if mode == 'inference':
-            numpy_3d = glob.glob(os.path.join(self.npy_folder,self.title) + '/*.npy')
-            if len(numpy_3d)>0:
-               actor = self.label_3d(numpy_3d[0])
-            else :
-               actor = []
-        self.actor_list.append(actor)
-
-        return actor
+           return None
+        else :
+           return actor
 
     def buttonfuncMode(self):
         s = self.volume.mode()
         snew = (s + 1) % 2
         self.volume.mode(snew)
         self.but.switch()
-    
+
     def buttonviewMode(self):
         self.but_.switch()
         if self.view_mode:
@@ -243,6 +259,51 @@ class Viewer3D(object):
                 clipper.SetClippingPlanes(planes)
                 clipper.Update()
                 self.numpy_saving(clipper)
+
+    def buttonfuncGroundTruth(self):
+        self.ground_truth.switch()
+        if not self.gt_view_mode:
+            numpy_3d = glob.glob(os.path.join(self.npy_folder,self.title) + '/*.npy')
+            if len(numpy_3d)>0:
+                actor_ = self.label_3d(numpy_3d[0],c=[1,0,0])
+                self.actor_infer_list.append(actor_)
+            for render in self.render_list:
+                if render == self.render_score:
+                    render.AddActor(actor_)
+            self.rw.Render()
+            self.ren.ResetCamera()
+            self.camera_position()
+            self.gt_view_mode = not self.gt_view_mode
+        else : 
+            for render in self.render_list:
+                if render == self.render_score:
+                    for actor_ in self.actor_infer_list:
+                        render.RemoveActor(actor_)
+            self.actor_infer_list = []
+            self.rw.Render()
+            self.gt_view_mode = not self.gt_view_mode
+
+    def buttoninference(self):
+        pass
+
+    def inference(self):
+        # Erase the score 
+        # for score in self.score_list:
+        #     for render in self.render_list:
+        #         try : 
+        #             render.RemoveActor(score)
+        #         except:
+        #             pass
+        # self.rw.Render()
+        # self.score_list = []
+        # # Update the score
+        # self.score_value = Text2D("10.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+        # for render in self.render_list:
+        #     if render == self.render_score:
+        #         render.AddActor2D(self.score_value)
+        #         self.score_list.append(self.score_value)
+        # self.rw.Render()
+        pass
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
@@ -302,7 +363,7 @@ class Viewer3D(object):
         
         return self.ia
 
-    def label_3d(self,data):
+    def label_3d(self,data,c=[1,0,0]):
         with open(data, 'rb') as f:
             self.img = np.load(f)  
         self.points = vtk.vtkPoints()
@@ -323,11 +384,10 @@ class Viewer3D(object):
         # Mapper for points
         mapper = vtk.vtkPolyDataMapper()
         mapper.SetInputData(polydata)
-        # ACTOR for points
         self.actor_point = vtk.vtkActor()
         self.actor_point.SetMapper(mapper)
         #actor.GetProperty().SetPointSize(apoint_size)
-        self.actor_point.GetProperty().SetColor([1,0,0])
+        self.actor_point.GetProperty().SetColor(c)
 
         return self.actor_point
     

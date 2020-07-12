@@ -608,4 +608,154 @@ class Cutter(object):
         for faces in range(self.planes.GetNumberOfPlanes()):
             self.origins.append(self.planes.GetPlane(faces).GetOrigin())
             self.normals.append(self.planes.GetPlane(faces).GetNormal())
-            
+
+def Text2D(txt,pos=3,s=1,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False):
+    """
+        Returns a ``vtkActor2D`` representing 2D text.
+            :param pos: text is placed in one of the 8 positions:
+
+                    1, bottom-left
+                    2, bottom-right
+                    3, top-left
+                    4, top-right
+                    5, bottom-middle
+                    6, middle-right
+                    7, middle-left
+                    8, top-middle
+
+                If a pair (x,y) is passed as input the 2D text is place at that
+                position in the coordinate system of the 2D screen (with the
+                origin sitting at the bottom left).
+
+            :type pos: list, int
+
+            :param float s: size of text.
+            :param bg: background color
+            :param float alpha: background opacity
+            :param str justify: text justification
+            :param str font: available fonts are
+
+                    - Courier
+                    - Times
+                    - Arial
+                    - CallingCode
+                    - ChineseRuler
+                    - Godsway
+                    - ImpactLabel
+                    - Komiko
+                    - Monospace
+                    - Montserrat
+                    - Overspray
+    """
+    if c is None: # automatic black or white
+        if settings.plotter_instance and settings.plotter_instance.renderer:
+            c = (0.9, 0.9, 0.9)
+            if settings.plotter_instance.renderer.GetGradientBackground():
+                bgcol = settings.plotter_instance.renderer.GetBackground2()
+            else:
+                bgcol = settings.plotter_instance.renderer.GetBackground()
+            if np.sum(bgcol) > 1.5:
+                c = (0.1, 0.1, 0.1)
+        else:
+            c = (0.5, 0.5, 0.5)
+
+    if isinstance(pos, str): # corners
+        if "top" in pos:
+            if "left" in pos: pos = 3
+            elif "mid" in pos: pos = 8
+            elif "right" in pos: pos = 4
+        elif "bottom" in pos:
+            if "left" in pos: pos = 1
+            elif "mid" in pos: pos = 5
+            elif "right" in pos: pos = 2
+        else:
+            if "left" in pos: pos = 7
+            elif "right" in pos: pos = 6
+            else: pos = 3
+
+    if isinstance(pos, int): # corners
+        if pos > 8:
+            pos = 8
+        if pos < 1:
+            pos = 1
+        ca = vtk.vtkCornerAnnotation()
+        ca.SetNonlinearFontScaleFactor(s/2.7)
+        ca.SetText(pos - 1, str(txt))
+        ca.PickableOff()
+        cap = ca.GetTextProperty()
+        cap.SetColor(getColor(c))
+        if font.lower() == "courier": cap.SetFontFamilyToCourier()
+        elif font.lower() == "times": cap.SetFontFamilyToTimes()
+        elif font.lower() == "arial": cap.SetFontFamilyToArial()
+        else:
+            cap.SetFontFamily(vtk.VTK_FONT_FILE)
+            cap.SetFontFile(settings.fonts_path + font +'.ttf')
+        if bg:
+            bgcol = getColor(bg)
+            cap.SetBackgroundColor(bgcol)
+            cap.SetBackgroundOpacity(alpha * 0.1)
+            #cap.SetFrameColor(bgcol)
+            #cap.FrameOn()
+        cap.SetBold(bold)
+        cap.SetItalic(italic)
+        setattr(ca, 'renderedAt', set())
+        settings.collectable_actors.append(ca)
+
+        ###############
+        return ca
+        ###############
+
+    if len(pos)!=2:
+        print("Error in Text2D(): len(pos) must be 2 or integer value or string.")
+        raise RuntimeError()
+
+    else:
+
+        ###############
+        actor2d = vtk.vtkActor2D()
+        actor2d.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+        actor2d.SetPosition(pos)
+        tmapper = vtk.vtkTextMapper()
+        tmapper.SetInput(str(txt))
+        actor2d.SetMapper(tmapper)
+        tp = tmapper.GetTextProperty()
+        tp.BoldOff()
+        tp.SetFontSize(int(s*20))
+        tp.SetColor(getColor(c))
+        tp.SetJustificationToLeft()
+        if "top" in justify:
+            tp.SetVerticalJustificationToTop()
+        if "bottom" in justify:
+            tp.SetVerticalJustificationToBottom()
+        if "cent" in justify:
+            tp.SetVerticalJustificationToCentered()
+            tp.SetJustificationToCentered()
+        if "left" in justify:
+            tp.SetJustificationToLeft()
+        if "right" in justify:
+            tp.SetJustificationToRight()
+
+        if font.lower() == "courier": tp.SetFontFamilyToCourier()
+        elif font.lower() == "times": tp.SetFontFamilyToTimes()
+        elif font.lower() == "arial": tp.SetFontFamilyToArial()
+        else:
+            tp.SetFontFamily(vtk.VTK_FONT_FILE)
+            if font in settings.fonts:
+                tp.SetFontFile(settings.fonts_path + font + '.ttf')
+            elif os.path.exists(font):
+                tp.SetFontFile(font)
+            else:
+                #printc("Font", font, "not found in", settings.fonts_path, c="r")
+                #printc("Available fonts are:", settings.fonts, c="y")
+                tp.SetFontFamilyToCourier() # silently fail
+        if bg:
+            bgcol = getColor(bg)
+            tp.SetBackgroundColor(bgcol)
+            tp.SetBackgroundOpacity(alpha * 0.1)
+            tp.SetFrameColor(bgcol)
+            tp.FrameOn()
+        actor2d.PickableOff()
+        setattr(actor2d, 'renderedAt', set())
+        settings.collectable_actors.append(actor2d)
+        return actor2d
+        
