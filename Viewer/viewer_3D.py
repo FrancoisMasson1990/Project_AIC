@@ -267,9 +267,9 @@ class Viewer3D(object):
             if len(numpy_3d)>0:
                 actor_ = self.label_3d(numpy_3d[0],c=[1,0,0])
                 self.actor_infer_list.append(actor_)
-            for render in self.render_list:
-                if render == self.render_score:
-                    render.AddActor(actor_)
+                for render in self.render_list:
+                    if render == self.render_score:
+                        render.AddActor(actor_)
             self.rw.Render()
             self.ren.ResetCamera()
             self.camera_position()
@@ -461,7 +461,12 @@ class Viewer3D(object):
             if self.frame > 0:
                 for render,actor in zip(self.render_list,self.actor_list):
                     render.RemoveActor(actor)
+                for render in self.render_list:
+                    if render == self.render_score:
+                        for actor_ in self.actor_infer_list:
+                            render.RemoveActor(actor_)
                 self.actor_list = []
+                self.actor_infer_list = []
                 self.frame += -1
                 for mode in self.mode:
                     _ = self.add_actors(mode,self.frame)
@@ -473,7 +478,12 @@ class Viewer3D(object):
             if self.frame < (len(self.data_path)-1):
                 for render,actor in zip(self.render_list,self.actor_list):
                     render.RemoveActor(actor)
+                for render in self.render_list:
+                    if render == self.render_score:
+                        for actor_ in self.actor_infer_list:
+                            render.RemoveActor(actor_)
                 self.actor_list = []
+                self.actor_infer_list = []
                 self.frame += 1
                 for mode in self.mode:
                     _ = self.add_actors(mode,self.frame)
