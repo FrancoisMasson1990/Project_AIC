@@ -25,7 +25,7 @@ single HDF5 file for easier use in TensorFlow/Keras.
 Dataset is split in two parts : data_preprocess & label_mask
 So far not using .zip files but may be an option later
 
-For BraTS (Task 1):
+For Medical AIC (Task 1):
 
 LABEL_CHANNELS: "labels": {
 	 "0": "background",
@@ -35,7 +35,6 @@ LABEL_CHANNELS: "labels": {
 """
 
 import os
-import nibabel as nib  # pip install nibabel
 import numpy as np
 from tqdm import tqdm  # pip install tqdm
 import h5py   # pip install h5py
@@ -47,6 +46,7 @@ import pydicom
 from skimage.transform import resize
 from natsort import natsorted
 import copy
+import yaml
 
 def normalize_img(img):
 	"""
@@ -172,7 +172,27 @@ def get_pixels_hu(scans):
     
     return np.array(image, dtype=np.int16)
 
-def convert_raw_data_to_hdf5(filename, dataDir, json_data):
+def test_train_val_split(image_files,split):
+	"""
+	Once the dataset fully enough on data, could perform train/val/split.
+	Right now only conversion of all data in a single list.
+	"""
+	# Set the random seed so that always get same random mix
+	np.random.seed(42)
+	idxList = np.arange(len(image_files))  # List of file indices
+	randomList = np.random.random(len(image_files))  # List of random numbers
+	#Random number go from 0 to 1. So anything above
+	#split is in the validation list.
+	trainList = idxList[randomList < split]
+	otherList = idxList[randomList >= split]
+	randomList = np.random.random(len(otherList))  # List of random numbers
+
+	validateList = otherList[randomList >= 0.5]
+	testList = otherList[randomList < 0.5]
+	
+	return trainList,validateList,testList 
+
+def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	"""
 	Go through the dataset.json file.
 	We've already split into training and validation subsets.
@@ -190,14 +210,42 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data):
 	attach_attributes(hdf_file, json_data["release"], "release")
 	attach_attributes(hdf_file, json_data["tensorImageSize"], "tensorImageSize")
 
-	# Training filenames / Duplicate for validation/test set
-
 	image_files = expand_list(json_data["dataset_folder"],format='/*.dcm')
 	label_files = expand_list(json_data["label_folder"],format='/*.npy')
 
-	attach_attributes(hdf_file, image_files, "input_files")
-	attach_attributes(hdf_file, label_files, "label_files")
+	assert len(image_files) == len(label_files), "Files and labels don't have the same length"
 	
+	image_files = np.asarray(image_files)
+	label_files = np.asarray(label_files)
+
+	# Test/train/val split
+	train_list_index,val_list_index,test_list_index = test_train_val_split(image_files,split)
+	train_list_index = np.asarray(train_list_index)
+	val_list_index = np.asarray(val_list_index)
+	test_list_index = np.asarray(test_list_index)
+
+	# Training filenames
+	train_image_files = image_files[train_list_index].tolist()
+	train_label_files = label_files[train_list_index].tolist()
+
+	# Validation filenames
+	validate_image_files = image_files[val_list_index].tolist()
+	validate_label_files = label_files[val_list_index].tolist()
+
+	# Testing filenames
+	test_image_files = image_files[test_list_index].tolist()
+	test_label_files = label_files[test_list_index].tolist()
+
+	attach_attributes(hdf_file, train_image_files, "training_input_files")
+	attach_attributes(hdf_file, train_label_files, "training_label_files")
+	attach_attributes(hdf_file, validate_image_files, "validation_input_files")
+	attach_attributes(hdf_file, validate_label_files, "validation_label_files")
+	attach_attributes(hdf_file, test_image_files, "testing_input_files")
+	attach_attributes(hdf_file, test_label_files, "testing_label_files")
+
+	image_files = image_files.tolist()
+	label_files = label_files.tolist()
+
 	"""
 	Print shapes of raw data
 	"""
@@ -222,7 +270,7 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data):
 	# Save training set images
 	print("Step 1 of 6. Save training set images.")
 	first = True
-	for idx in tqdm(image_files):
+	for idx in tqdm(train_image_files):
 
 		images = load_scan(idx)
 		imgs = get_pixels_hu(images)
@@ -233,6 +281,60 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data):
 		if first:
 			first = False
 			img_train_dset = hdf_file.create_dataset("imgs_train",
+													 imgs.shape,
+													 maxshape=(None,
+															   imgs.shape[1],
+															   imgs.shape[2],
+															   imgs.shape[3]),
+													 dtype=float)
+			img_train_dset[:] = imgs
+		else:
+			row = img_train_dset.shape[0]  # Count current dataset rows
+			img_train_dset.resize(row + num_rows, axis=0)  # Add new row
+			# Insert data into new row
+			img_train_dset[row:(row + num_rows), :] = imgs
+
+	# Save training set images
+	print("Step 2 of 6. Save validation set images.")
+	first = True
+	for idx in tqdm(validate_image_files):
+
+		images = load_scan(idx)
+		imgs = get_pixels_hu(images)
+		imgs = preprocess_inputs(imgs)
+		
+		num_rows = imgs.shape[0]
+
+		if first:
+			first = False
+			img_train_dset = hdf_file.create_dataset("imgs_validation",
+													 imgs.shape,
+													 maxshape=(None,
+															   imgs.shape[1],
+															   imgs.shape[2],
+															   imgs.shape[3]),
+													 dtype=float)
+			img_train_dset[:] = imgs
+		else:
+			row = img_train_dset.shape[0]  # Count current dataset rows
+			img_train_dset.resize(row + num_rows, axis=0)  # Add new row
+			# Insert data into new row
+			img_train_dset[row:(row + num_rows), :] = imgs
+
+	# Save training set images
+	print("Step 3 of 6. Save testing set images.")
+	first = True
+	for idx in tqdm(train_image_files):
+
+		images = load_scan(idx)
+		imgs = get_pixels_hu(images)
+		imgs = preprocess_inputs(imgs)
+		
+		num_rows = imgs.shape[0]
+
+		if first:
+			first = False
+			img_train_dset = hdf_file.create_dataset("imgs_testing",
 													 imgs.shape,
 													 maxshape=(None,
 															   imgs.shape[1],
@@ -271,6 +373,56 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data):
 			# Insert data into new row
 			msk_train_dset[row:(row + num_rows), :] = msk
 
+	# Save training set masks
+	print("Step 5 of 6. Save validation set masks.")
+	first = True
+	for idx in tqdm(label_files):
+
+		msk = load_mask(idx)
+		msk = preprocess_labels(msk)
+		num_rows = msk.shape[0]
+
+		if first:
+			first = False
+			msk_train_dset = hdf_file.create_dataset("msks_validation",
+													 msk.shape,
+													 maxshape=(None,
+															   msk.shape[1],
+															   msk.shape[2],
+															   msk.shape[3]),
+													 dtype=float)
+			msk_train_dset[:] = msk
+		else:
+			row = msk_train_dset.shape[0]  # Count current dataset rows
+			msk_train_dset.resize(row + num_rows, axis=0)  # Add new row
+			# Insert data into new row
+			msk_train_dset[row:(row + num_rows), :] = msk
+
+	# Save training set masks
+	print("Step 6 of 6. Save testing set masks.")
+	first = True
+	for idx in tqdm(label_files):
+
+		msk = load_mask(idx)
+		msk = preprocess_labels(msk)
+		num_rows = msk.shape[0]
+
+		if first:
+			first = False
+			msk_train_dset = hdf_file.create_dataset("msks_testing",
+													 msk.shape,
+													 maxshape=(None,
+															   msk.shape[1],
+															   msk.shape[2],
+															   msk.shape[3]),
+													 dtype=float)
+			msk_train_dset[:] = msk
+		else:
+			row = msk_train_dset.shape[0]  # Count current dataset rows
+			msk_train_dset.resize(row + num_rows, axis=0)  # Add new row
+			# Insert data into new row
+			msk_train_dset[row:(row + num_rows), :] = msk
+
 	hdf_file.close()
 	print("Finished processing.")
 	print("HDF5 saved to {}".format(filename))
@@ -282,15 +434,19 @@ if __name__ == "__main__":
 			"single HDF5 file for easier use in TensorFlow/Keras.")
 
 	parser = argparse.ArgumentParser(description="Medical AIC project data ",add_help=True, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	parser.add_argument("--data_path",default=None,help="Path to the datafiles")
-	parser.add_argument("--save_path",default=None,help="Folder to save Numpy data files")
-	parser.add_argument("--output_filename",default="project_aic.h5",help="Name of the output HDF5 file")
 	parser.add_argument("--resize", type=int, default=240,help="Resize height and width to this size. Original size = 240")
-	parser.add_argument("--split", type=float, default=0.85,help="Train/test split ratio")
+	parser.add_argument("--split", type=float, default=0.5,help="Train/test split ratio")
 
 	args = parser.parse_args()
 
-	save_dir = args.save_path
+	with open('./preprocess_data.yml') as f:
+		# The FullLoader parameter handles the conversion from YAML
+		# scalar values to Python the dictionary format
+		config = yaml.load(f, Loader=yaml.FullLoader)
+
+	data_path = config.get("data_path",None)
+	output_filename = config.get("output_filename",None)
+	save_dir = config.get("save_path",None)
 
 	if save_dir is None:
 		save_dir = expanduser("~")
@@ -302,22 +458,18 @@ if __name__ == "__main__":
 		if not os.path.isdir(save_dir):
 			raise
 
-	filename = os.path.join(save_dir, args.output_filename)
-
+	filename = os.path.join(save_dir, output_filename)
+		
 	# Check for existing output file and delete if exists
 	if os.path.exists(filename):
 		print("Removing existing data file: {}".format(filename))
 		os.remove(filename)
 
-
 	"""
-	Get the training file names from the data directory.
-	Decathlon should always have a dataset.json file in the
-	subdirectory which lists the experiment information including
-	the input and label filenames.
+	All the useful infos are stored in a json file (dataset.json)
 	"""
 
-	json_filename = os.path.join(args.data_path, "dataset.json")
+	json_filename = os.path.join(data_path, "dataset.json")
 
 	try:
 		with open(json_filename, "r") as fp:
@@ -343,25 +495,4 @@ if __name__ == "__main__":
 	and randomize the file list.
 	"""
 
-	# Set the random seed so that always get same random mix
-	np.random.seed(816)
-
-	"""
-	Once the dataset fully enough on data, could perform train/val/split.
-	Right now only conversion of all data in a single list.
-	"""
-	
-	# numFiles = experiment_data["numTraining"]
-	# idxList = np.arange(numFiles)  # List of file indices
-	# randomList = np.random.random(numFiles)  # List of random numbers
-	
-	# Random number go from 0 to 1. So anything above
-	# args.train_split is in the validation list.
-	# trainList = idxList[randomList < args.split]
-
-	# otherList = idxList[randomList >= args.split]
-	# randomList = np.random.random(len(otherList))  # List of random numbers
-	# validateList = otherList[randomList >= 0.5]
-	# testList = otherList[randomList < 0.5]
-
-	convert_raw_data_to_hdf5(filename, args.data_path,experiment_data)
+	convert_raw_data_to_hdf5(filename,data_path,experiment_data,args.split)

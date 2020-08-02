@@ -1,4 +1,4 @@
-data_path : "/home/francoismasson/Desktop/Project_AIC/data_preprocess/"
-folder_mask : "/home/francoismasson/Desktop/Project_AIC/label_mask/"
+data_path : "/home/francoismasson/Desktop/Project_AIC/data_folder/data_preprocess_magna/"
+folder_mask : "/home/francoismasson/Desktop/Project_AIC/data_folder/label_mask_magna/"
 npy_folder : "/home/francoismasson/Desktop/Project_AIC/data_label_npy/"
-label_2D : False
+labels_2D : False

@@ -14,10 +14,6 @@ def main_2D(data,folder_mask):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Project AIC')
-    #parser.add_argument('--folder_dcm', help='Dicom dataset with the .dcm extension files')
-    #parser.add_argument('--labels_2D',action='store_true',help='Activate label 2D tools')
-    #parser.add_argument('--folder_mask',help='folder with the label_mask')
-
     arg = parser.parse_args()
 
     with open('./data_info.yml') as f:
@@ -37,7 +33,7 @@ if __name__ == '__main__':
         sub_ = os.listdir(root)
         for sub in sub_ :
             data.append(os.path.join(root,sub))
-    
+
     if arg.labels_2D :
         main_2D(data,arg.folder_mask)
     else :
