@@ -23,38 +23,35 @@ This module contains all of the model definition code.
 You can try custom models by modifying the code here.
 """
 
-from argparser import args
 import os
 import time
 import shutil
 
-import tensorflow as tf  # conda install -c anaconda tensorflow
-
-if args.keras_api:
-    import keras as K
-else:
-    from tensorflow import keras as K
+import tensorflow as tf  
+from tensorflow import keras as K
 
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
+
 
 class unet(object):
     """
     2D U-Net model class
     """
 
-    def __init__(self, channels_first=args.channels_first,
-                 fms=args.featuremaps,
-                 output_path = args.output_path,
-                 inference_filename = args.inference_filename,
-                 batch_size = args.batch_size,
-                 blocktime = args.blocktime,
-                 num_threads = args.num_threads,
-                 learning_rate = args.learningrate,
-                 num_inter_threads = args.num_inter_threads,
-                 use_upsampling = args.use_upsampling,
-                 use_dropout = args.use_dropout,
-                 print_model = args.print_model):
+    def __init__(self, channels_first=None,
+                 fms=None,
+                 output_path = None,
+                 inference_filename = None,
+                 batch_size = None,
+                 blocktime = None,
+                 num_threads = None,
+                 learning_rate = None,
+                 weight_dice_loss = None,
+                 num_inter_threads = None,
+                 use_upsampling = None,
+                 use_dropout = None,
+                 print_model = None):
 
 
         self.channels_first = channels_first
@@ -73,7 +70,6 @@ class unet(object):
             self.data_format = "channels_last"
 
         self.fms = fms  # 32 or 16 depending on your memory size
-
         self.learningrate = learning_rate
 
         print("Data format = " + self.data_format)
@@ -90,7 +86,7 @@ class unet(object):
         #self.loss = self.combined_dice_ce_loss
 
         self.optimizer = K.optimizers.Adam(lr=self.learningrate)
-
+        self.weight_dice_loss = weight_dice_loss
         self.custom_objects = {
             "combined_dice_ce_loss": self.combined_dice_ce_loss,
             "dice_coef_loss": self.dice_coef_loss,
@@ -154,12 +150,11 @@ class unet(object):
         return dice_loss
 
 
-    def combined_dice_ce_loss(self, target, prediction, axis=(1, 2), smooth=1.0,
-                              weight=args.weight_dice_loss):
+    def combined_dice_ce_loss(self, target, prediction, axis=(1, 2), smooth=1.0):
         """
         Combined Dice and Binary Cross Entropy Loss
         """
-        return weight*self.dice_coef_loss(target, prediction, axis, smooth) + \
+        return self.weight_dice_loss*self.dice_coef_loss(target, prediction, axis, smooth) + \
             (1-weight)*K.losses.binary_crossentropy(target, prediction)
 
 
@@ -191,7 +186,7 @@ class unet(object):
         else:
              self.input_shape = [None, None, num_chan_in]
 
-#        self.input_shape = imgs_shape[1:]
+        #self.input_shape = imgs_shape[1:]
 
         self.num_input_channels = num_chan_in
 
@@ -222,7 +217,7 @@ class unet(object):
             name="encodeCb", filters=self.fms*4, **params)(encodeC)
 
         poolC = K.layers.MaxPooling2D(name="poolC", pool_size=(2, 2))(encodeC)
-#         model.add(MaxPooling2D(pool_size=(2, 2), dim_ordering="th"))
+        #model.add(MaxPooling2D(pool_size=(2, 2), dim_ordering="th"))
 
         encodeD = K.layers.Conv2D(name="encodeDa", filters=self.fms*8, **params)(poolC)
         if self.use_dropout:
@@ -332,7 +327,7 @@ class unet(object):
                                                               self.num_inter_threads)
 
         # Tensorboard callbacks
-        if (args.use_upsampling):
+        if (self.use_upsampling):
             tensorboard_filename = os.path.join(self.output_path,
                                                 "keras_tensorboard_upsampling"
                                                 "_batch{}/{}".format(

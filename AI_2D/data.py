@@ -19,41 +19,27 @@
 #
 
 import h5py
-
-from argparser import args
-"""
-For BraTS (Task 1):
-
-INPUT CHANNELS:  "modality": {
-     "0": "FLAIR",
-     "1": "T1w",
-     "2": "t1gd",
-     "3": "T2w"
- },
-LABEL_CHANNELS: "labels": {
-     "0": "background",
-     "1": "edema",
-     "2": "non-enhancing tumor",
-     "3": "enhancing tumour"
- }
-
-"""
-
 import numpy as np
+from tensorflow import keras as K
+
+"""
+For Medical AIC (Task 1):
+
+LABEL_CHANNELS: "labels": {
+	 "0": "background",
+	 "1": "Magna_valve",
+}
+
+"""
+
 """
 This module loads the training and validation datasets.
 If you have custom datasets, you can load and preprocess them here.
 """
 
-if args.keras_api:
-    import keras as K
-else:
-    from tensorflow import keras as K
-
 """
 Load data from HDF5 file
 """
-
 
 class PreprocessHDF5Matrix(K.utils.HDF5Matrix):
     """
@@ -63,8 +49,8 @@ class PreprocessHDF5Matrix(K.utils.HDF5Matrix):
 
     def __init__(self, datapath, dataset, datagen, start=0, end=None,
                  normalizer=None, crop_dim=128,
-                 use_augmentation=False, seed=args.seed,
-                 channels_first=args.channels_first):
+                 use_augmentation=False, seed=42,
+                 channels_first=False):
         """
         This will need to keep up with the HDF5Matrix code
         base.  It allows us to do random image cropping and
@@ -192,7 +178,7 @@ class PreprocessHDF5Matrix(K.utils.HDF5Matrix):
 
 
 def load_data(hdf5_data_filename, batch_size=128, crop_dim=[-1, -1],
-              channels_first=args.channels_first, seed=args.seed):
+              use_augmentation=False,channels_first=False, seed=42):
     """
     Load the data from the HDF5 file using the Keras HDF5 wrapper.
     """
@@ -213,14 +199,14 @@ def load_data(hdf5_data_filename, batch_size=128, crop_dim=[-1, -1],
                                       "imgs_train",
                                       image_datagen,
                                       crop_dim=crop_dim,
-                                      use_augmentation=args.use_augmentation,
+                                      use_augmentation=use_augmentation,
                                       seed=seed,
                                       channels_first=channels_first)
     msks_train = PreprocessHDF5Matrix(hdf5_data_filename,
                                       "msks_train",
                                       msk_datagen,
                                       crop_dim=crop_dim,
-                                      use_augmentation=args.use_augmentation,
+                                      use_augmentation=use_augmentation,
                                       seed=seed,
                                       channels_first=channels_first)
 

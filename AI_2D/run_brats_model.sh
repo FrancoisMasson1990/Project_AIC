@@ -122,18 +122,3 @@ fi
 #         --output_path $MODEL_OUTPUT_DIR \
 #         --inference_filename $INFERENCE_FILENAME \
 #         --crop_dim $IMG_SIZE
-
-# echo " "
-# echo "********************************************************"
-# echo "Step 4 of 4: Converting the TensorFlow model to OpenVINO"
-# echo "********************************************************"
-# echo "If you have OpenVINO installed, then you can run the following command"
-# echo "to create the OpenVINO model."
-# echo ""
-# echo "source /opt/intel/openvino/bin/setupvars.sh"
-# echo "python ${INTEL_OPENVINO_DIR}/deployment_tools/model_optimizer/mo_tf.py \\"
-# echo "   --input_model ./frozen_model/unet_model_for_decathlon.pb \\"
-# echo "   --input_shape [1,${IMG_SIZE},${IMG_SIZE},4] \\"
-# echo "   --output_dir openvino_models/FP32/ \\"
-# echo "   --data_type FP32  --model_name saved_model"
-# echo " "
