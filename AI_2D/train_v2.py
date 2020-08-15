@@ -40,13 +40,6 @@ to take advantage of multi-core systems.
 See https://github.com/intel/mkl-dnn
 """
 
-#CONFIG = tf.ConfigProto(intra_op_parallelism_threads=args.num_threads,
-#                        inter_op_parallelism_threads=args.num_inter_threads)
-
-#SESS = tf.Session(config=CONFIG)
-#SESS = tf.Session()
-#K.backend.set_session(SESS)
-
 print("TensorFlow version: {}".format(tf.__version__))
 print("Keras API version: {}".format(K.__version__))
 
@@ -160,7 +153,7 @@ if __name__ == "__main__":
     output_path = config.get("output_path",None)
     inference_filename = config.get("inference_filename",None)
     batch_size = config.get("batch_size",None)
-    n_epoch = config.get("n_epoch",None)
+    n_epoch = config.get("epochs",None)
     crop_dim = config.get("crop_dim",None)
     use_augmentation = config.get("use_augmentation",None)
     channels_first = config.get("channels_first",None)
@@ -186,6 +179,8 @@ if __name__ == "__main__":
     os.environ["INTRA_THREADS"] = str(num_threads)
     os.environ["KMP_SETTINGS"] = "0"  # Show the settings at runtime
 
+    tf.config.threading.set_inter_op_parallelism_threads(num_inter_threads)
+    tf.config.threading.set_intra_op_parallelism_threads(num_threads)
 
     train_and_predict(hdf5_filename = data_filename,
                       output_path = output_path,

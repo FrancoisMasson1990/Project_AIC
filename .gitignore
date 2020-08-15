@@ -7,4 +7,5 @@ __pycache__
 **/data_label_npy/
 **/data_preprocess/
 **/label_mask/
+**/output/
 **/.vscode/

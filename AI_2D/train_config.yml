@@ -4,12 +4,12 @@ output_path: "/home/francoismasson/Desktop/Project_AIC/output" #the folder to sa
 inference_filename: "unet_model_for_aic.hdf5"
 use_upsampling: False #use upsampling instead of transposed convolution
 num_inter_threads: 1 #the number of intraop threads
-batch_size: 128 #the batch size for training
+batch_size: 4 #the batch size for training
 seed: 42 #random number generation
 crop_dim: -1 #Size to crop images (square, in pixels). If -1, then no cropping
 blocktime: 1000 #blocktime
 epochs: 40 #number of epochs to train
-learningrate: 0.0001 #learning rate
+learning_rate: 0.0001 #learning rate
 weight_dice_loss: 0.9 #Weight for the Dice loss compared to crossentropy
 featuremaps: 32 #How many feature maps in the model
 keras_api: False #use keras instead of tf.keras

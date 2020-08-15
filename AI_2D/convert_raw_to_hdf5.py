@@ -324,7 +324,7 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	# Save training set images
 	print("Step 3 of 6. Save testing set images.")
 	first = True
-	for idx in tqdm(train_image_files):
+	for idx in tqdm(test_image_files):
 
 		images = load_scan(idx)
 		imgs = get_pixels_hu(images)
@@ -351,7 +351,7 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	# Save training set masks
 	print("Step 4 of 6. Save training set masks.")
 	first = True
-	for idx in tqdm(label_files):
+	for idx in tqdm(train_label_files):
 
 		msk = load_mask(idx)
 		msk = preprocess_labels(msk)
@@ -376,7 +376,7 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	# Save training set masks
 	print("Step 5 of 6. Save validation set masks.")
 	first = True
-	for idx in tqdm(label_files):
+	for idx in tqdm(validate_label_files):
 
 		msk = load_mask(idx)
 		msk = preprocess_labels(msk)
@@ -401,7 +401,7 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	# Save training set masks
 	print("Step 6 of 6. Save testing set masks.")
 	first = True
-	for idx in tqdm(label_files):
+	for idx in tqdm(test_label_files):
 
 		msk = load_mask(idx)
 		msk = preprocess_labels(msk)
