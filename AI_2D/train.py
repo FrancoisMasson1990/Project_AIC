@@ -23,56 +23,44 @@ This module loads the data from data.py, creates a TensorFlow/Keras model
 from model.py, trains the model on the data, and then saves the
 best model.
 """
-
+import multiprocessing
+import psutil
 import datetime
 import os
-
-import tensorflow as tf  # conda install -c anaconda tensorflow
-
-import settings   # Use the custom settings.py file for default parameters
-
+import tensorflow as tf
+from tensorflow import keras as K 
+import yaml
 from data import load_data
-
 import numpy as np
-
-from argparser import args
+from model import unet
 
 """
 For best CPU speed set the number of intra and inter threads
 to take advantage of multi-core systems.
 See https://github.com/intel/mkl-dnn
 """
-#CONFIG = tf.ConfigProto(intra_op_parallelism_threads=args.num_threads,
-#                        inter_op_parallelism_threads=args.num_inter_threads)
-
-#SESS = tf.Session(config=CONFIG)
-SESS = tf.Session()
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
-os.environ["OMP_NUM_THREADS"] = str(args.num_threads)
-os.environ["KMP_BLOCKTIME"] = "1"
-
-# If hyperthreading is enabled, then use
-os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
-
-# If hyperthreading is NOT enabled, then use
-#os.environ["KMP_AFFINITY"] = "granularity=thread,compact"
-
-if args.keras_api:
-    import keras as K
-else:
-    from tensorflow import keras as K
 
 print("TensorFlow version: {}".format(tf.__version__))
-#print("Intel MKL-DNN is enabled = {}".format(tf.pywrap_tensorflow.IsMklEnabled()))
-
 print("Keras API version: {}".format(K.__version__))
 
-if args.channels_first:
-    K.backend.set_image_data_format("channels_first")
-
-K.backend.set_session(SESS)
-
-def train_and_predict(data_path, data_filename, batch_size, n_epoch):
+def train_and_predict(hdf5_filename = None,
+                      output_path = None,
+                      inference_filename = None,
+                      batch_size = None,
+                      n_epoch = None,
+                      crop_dim = None,
+                      use_augmentation = None,
+                      channels_first = None,
+                      seed = None,
+                      featuremaps = None,
+                      blocktime = None,
+                      num_threads = None,
+                      learning_rate = None,
+                      weight_dice_loss = None,
+                      num_inter_threads = None,
+                      use_upsampling = None,
+                      use_dropout = None,
+                      print_model = None):
     """
     Create a model, load the data, and train it.
     """
@@ -80,17 +68,13 @@ def train_and_predict(data_path, data_filename, batch_size, n_epoch):
     """
     Step 1: Load the data
     """
-    hdf5_filename = os.path.join(data_path, data_filename)
+
     print("-" * 30)
     print("Loading the data from HDF5 file ...")
     print("-" * 30)
 
-    imgs_train, msks_train, imgs_validation, msks_validation, \
-        imgs_testing, msks_testing = \
-        load_data(hdf5_filename, args.batch_size,
-                  [args.crop_dim, args.crop_dim],
-                  args.channels_first, args.seed)
-
+    imgs_train, msks_train, imgs_validation, msks_validation, imgs_testing, msks_testing = \
+        load_data(hdf5_filename,batch_size,[crop_dim,crop_dim],use_augmentation,channels_first,seed)
 
     print("-" * 30)
     print("Creating and compiling model ...")
@@ -99,19 +83,27 @@ def train_and_predict(data_path, data_filename, batch_size, n_epoch):
     """
     Step 2: Define the model
     """
-    if args.use_pconv:
-        from model_pconv import unet
-    else:
-        from model import unet
-
-    unet_model = unet()
+    
+    unet_model = unet(channels_first = channels_first,
+                      fms = featuremaps,
+                      output_path = output_path,
+                      inference_filename = inference_filename,
+                      batch_size = batch_size,
+                      blocktime = blocktime,
+                      num_threads = num_threads,
+                      learning_rate = learning_rate,
+                      weight_dice_loss = weight_dice_loss,
+                      num_inter_threads = num_inter_threads,
+                      use_upsampling = use_upsampling,
+                      use_dropout = use_dropout,
+                      print_model = print_model)
+    
     model = unet_model.create_model(imgs_train.shape, msks_train.shape)
-
     model_filename, model_callbacks = unet_model.get_callbacks()
 
     # If there is a current saved file, then load weights and start from
     # there.
-    saved_model = os.path.join(args.output_path, args.inference_filename)
+    saved_model = os.path.join(output_path,inference_filename)
     if os.path.isfile(saved_model):
         model.load_weights(saved_model)
 
@@ -149,20 +141,65 @@ def train_and_predict(data_path, data_filename, batch_size, n_epoch):
 
 if __name__ == "__main__":
 
-    # os.system("lscpu")
+    with open('./train_config.yml') as f:
+        # The FullLoader parameter handles the conversion from YAML
+        # scalar values to Python the dictionary format
+        config = yaml.load(f, Loader=yaml.FullLoader)
 
-    START_TIME = datetime.datetime.now()
-    print("Started script on {}".format(START_TIME))
+    start_time = datetime.datetime.now()
+    print("Started script on {}".format(start_time))
 
-    print("args = {}".format(args))
-    #os.system("uname -a")
-    print("TensorFlow version: {}".format(tf.__version__))
+    data_filename = config.get("data_filename",None)
+    output_path = config.get("output_path",None)
+    inference_filename = config.get("inference_filename",None)
+    batch_size = config.get("batch_size",None)
+    n_epoch = config.get("epochs",None)
+    crop_dim = config.get("crop_dim",None)
+    use_augmentation = config.get("use_augmentation",None)
+    channels_first = config.get("channels_first",None)
+    seed = config.get("seed",None)
+    featuremaps = config.get("featuremaps",None)
+    blocktime = config.get("blocktime",None)
+    num_threads = min(len(psutil.Process().cpu_affinity()), psutil.cpu_count(logical=False))
+    learning_rate = config.get("learning_rate",None)
+    weight_dice_loss = config.get("weight_dice_loss",None)
+    num_inter_threads = config.get("num_inter_threads",None)
+    use_upsampling = config.get("use_upsampling",None)
+    use_dropout = config.get("use_dropout",None)
+    print_model = config.get("print_model",None)
+    
 
-    train_and_predict(args.data_path, args.data_filename,
-                      args.batch_size, args.epochs)
+    # Set environment 
 
-    print(
-        "Total time elapsed for program = {} seconds".format(
-            datetime.datetime.now() -
-            START_TIME))
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
+    os.environ["OMP_NUM_THREADS"] = str(num_threads)
+    os.environ["KMP_BLOCKTIME"] = str(blocktime)
+    os.environ["KMP_AFFINITY"] = "granularity=fine,compact,1,0"
+    os.environ["INTER_THREADS"] = str(num_inter_threads)
+    os.environ["INTRA_THREADS"] = str(num_threads)
+    os.environ["KMP_SETTINGS"] = "0"  # Show the settings at runtime
+
+    tf.config.threading.set_inter_op_parallelism_threads(num_inter_threads)
+    tf.config.threading.set_intra_op_parallelism_threads(num_threads)
+
+    train_and_predict(hdf5_filename = data_filename,
+                      output_path = output_path,
+                      inference_filename = inference_filename,
+                      batch_size = batch_size,
+                      n_epoch = n_epoch,
+                      crop_dim = crop_dim,
+                      use_augmentation = use_augmentation,
+                      channels_first = channels_first,
+                      seed = seed,
+                      featuremaps = featuremaps,
+                      blocktime = blocktime,
+                      num_threads = num_threads,
+                      learning_rate = learning_rate,
+                      weight_dice_loss = weight_dice_loss,
+                      num_inter_threads = num_inter_threads,
+                      use_upsampling = use_upsampling,
+                      use_dropout = use_dropout,
+                      print_model = print_model)
+
+    print("Total time elapsed for program = {} seconds".format(datetime.datetime.now() - start_time))
     print("Stopped script on {}".format(datetime.datetime.now()))
