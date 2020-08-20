@@ -436,6 +436,13 @@ class Viewer3D(object):
             np.save(os.path.join(directory,self.title) + '/' + str(z_axis),self.mask[z_axis,::])
             #plt.imsave(os.path.join(directory,self.title) + '/' + str(z_axis) + ".png",self.mask[z_axis,::])
         
+        #WIP
+        #if self.mask.shape[0] != required shape:
+        #    for z_axis in (shape-maxshape,shape):
+        #        self.mask[z_axis,::] = np.zeros(shape)
+        #        np.save(os.path.join(directory,self.title) + '/' + str(z_axis),self.mask[z_axis,::])
+
+        
         print('Labeling done !')
 
     def create_window(self,render,renderwindow,interactor):

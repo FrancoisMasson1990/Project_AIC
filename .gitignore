@@ -1,5 +1,8 @@
 *.pyc
 *.h5
+*.png
+*.gif
+*.avi
 __pycache__
 **/node_modules/
 **/base_donnees/

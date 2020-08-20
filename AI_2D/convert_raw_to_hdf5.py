@@ -294,7 +294,7 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 			# Insert data into new row
 			img_train_dset[row:(row + num_rows), :] = imgs
 
-	# Save training set images
+	# Save validation set images
 	print("Step 2 of 6. Save validation set images.")
 	first = True
 	for idx in tqdm(validate_image_files):
@@ -307,21 +307,21 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 
 		if first:
 			first = False
-			img_train_dset = hdf_file.create_dataset("imgs_validation",
+			img_validation_dset = hdf_file.create_dataset("imgs_validation",
 													 imgs.shape,
 													 maxshape=(None,
 															   imgs.shape[1],
 															   imgs.shape[2],
 															   imgs.shape[3]),
 													 dtype=float)
-			img_train_dset[:] = imgs
+			img_validation_dset[:] = imgs
 		else:
-			row = img_train_dset.shape[0]  # Count current dataset rows
-			img_train_dset.resize(row + num_rows, axis=0)  # Add new row
+			row = img_validation_dset.shape[0]  # Count current dataset rows
+			img_validation_dset.resize(row + num_rows, axis=0)  # Add new row
 			# Insert data into new row
-			img_train_dset[row:(row + num_rows), :] = imgs
+			img_validation_dset[row:(row + num_rows), :] = imgs
 
-	# Save training set images
+	# Save testing set images
 	print("Step 3 of 6. Save testing set images.")
 	first = True
 	for idx in tqdm(test_image_files):
@@ -334,17 +334,17 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 
 		if first:
 			first = False
-			img_train_dset = hdf_file.create_dataset("imgs_testing",
+			img_testing_dset = hdf_file.create_dataset("imgs_testing",
 													 imgs.shape,
 													 maxshape=(None,
 															   imgs.shape[1],
 															   imgs.shape[2],
 															   imgs.shape[3]),
 													 dtype=float)
-			img_train_dset[:] = imgs
+			img_testing_dset[:] = imgs
 		else:
-			row = img_train_dset.shape[0]  # Count current dataset rows
-			img_train_dset.resize(row + num_rows, axis=0)  # Add new row
+			row = img_testing_dset.shape[0]  # Count current dataset rows
+			img_testing_dset.resize(row + num_rows, axis=0)  # Add new row
 			# Insert data into new row
 			img_train_dset[row:(row + num_rows), :] = imgs
 
@@ -373,7 +373,7 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 			# Insert data into new row
 			msk_train_dset[row:(row + num_rows), :] = msk
 
-	# Save training set masks
+	# Save validation set masks
 	print("Step 5 of 6. Save validation set masks.")
 	first = True
 	for idx in tqdm(validate_label_files):
@@ -384,21 +384,21 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 
 		if first:
 			first = False
-			msk_train_dset = hdf_file.create_dataset("msks_validation",
+			msk_validation_dset = hdf_file.create_dataset("msks_validation",
 													 msk.shape,
 													 maxshape=(None,
 															   msk.shape[1],
 															   msk.shape[2],
 															   msk.shape[3]),
 													 dtype=float)
-			msk_train_dset[:] = msk
+			msk_validation_dset[:] = msk
 		else:
-			row = msk_train_dset.shape[0]  # Count current dataset rows
-			msk_train_dset.resize(row + num_rows, axis=0)  # Add new row
+			row = msk_validation_dset.shape[0]  # Count current dataset rows
+			msk_validation_dset.resize(row + num_rows, axis=0)  # Add new row
 			# Insert data into new row
-			msk_train_dset[row:(row + num_rows), :] = msk
+			msk_validation_dset[row:(row + num_rows), :] = msk
 
-	# Save training set masks
+	# Save testing set masks
 	print("Step 6 of 6. Save testing set masks.")
 	first = True
 	for idx in tqdm(test_label_files):
@@ -409,19 +409,19 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 
 		if first:
 			first = False
-			msk_train_dset = hdf_file.create_dataset("msks_testing",
+			msk_testing_dset = hdf_file.create_dataset("msks_testing",
 													 msk.shape,
 													 maxshape=(None,
 															   msk.shape[1],
 															   msk.shape[2],
 															   msk.shape[3]),
 													 dtype=float)
-			msk_train_dset[:] = msk
+			msk_testing_dset[:] = msk
 		else:
-			row = msk_train_dset.shape[0]  # Count current dataset rows
-			msk_train_dset.resize(row + num_rows, axis=0)  # Add new row
+			row = msk_testing_dset.shape[0]  # Count current dataset rows
+			msk_testing_dset.resize(row + num_rows, axis=0)  # Add new row
 			# Insert data into new row
-			msk_train_dset[row:(row + num_rows), :] = msk
+			msk_testing_dset[row:(row + num_rows), :] = msk
 
 	hdf_file.close()
 	print("Finished processing.")

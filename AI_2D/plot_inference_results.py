@@ -25,50 +25,12 @@ import os
 
 import numpy as np
 import tensorflow as tf
-import keras as K
-import settings
-import argparse
+from tensorflow import keras as K 
 import h5py
 
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use("Agg")
-
-
-parser = argparse.ArgumentParser(
-    description="Inference example for trained 2D U-Net model on BraTS.",
-    add_help=True, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-parser.add_argument("--data_path", default=settings.DATA_PATH,
-                    help="the path to the data")
-parser.add_argument("--data_filename", default=settings.DATA_FILENAME,
-                    help="the HDF5 data filename")
-parser.add_argument("--output_path", default=settings.OUT_PATH,
-                    help="the folder to save the model and checkpoints")
-parser.add_argument("--inference_filename", default=settings.INFERENCE_FILENAME,
-                    help="the Keras inference model filename")
-parser.add_argument("--use_pconv",help="use partial convolution based padding",
-                    action="store_true",
-                    default=settings.USE_PCONV)
-parser.add_argument("--output_pngs", default="inference_examples",
-                    help="the directory for the output prediction pngs")
-
-parser.add_argument("--intraop_threads", default=settings.NUM_INTRA_THREADS,
-                    type=int, help="Number of intra-op-parallelism threads")
-parser.add_argument("--interop_threads", default=settings.NUM_INTER_THREADS,
-                    type=int, help="Number of inter-op-parallelism threads")
-parser.add_argument("--crop_dim", default=128,
-                    type=int, help="Crop dimension for images")
-
-args = parser.parse_args()
-
-# Optimize CPU threads for TensorFlow
-CONFIG = tf.ConfigProto(
-    inter_op_parallelism_threads=args.interop_threads,
-    intra_op_parallelism_threads=args.intraop_threads)
-
-SESS = tf.Session(config=CONFIG)
-K.backend.set_session(SESS)
 
 
 def calc_dice(target, prediction, smooth=0.01):
@@ -98,7 +60,7 @@ def calc_soft_dice(target, prediction, smooth=0.01):
 
 
 def plot_results(model, imgs_validation, msks_validation,
-                 img_no, png_directory):
+                 img_no):
     """
     Calculate the Dice and plot the predicted masks for image # img_no
     """
@@ -109,11 +71,11 @@ def plot_results(model, imgs_validation, msks_validation,
     # Crop the image
     height = img.shape[1]
     width = img.shape[2]
-    if (args.crop_dim != -1) and (args.crop_dim < height) and (args.crop_dim < width):
-        startx = (height - args.crop_dim) // 2
-        starty = (width - args.crop_dim) // 2
-        img = img[:,startx:(startx+args.crop_dim),starty:(starty+args.crop_dim),:]
-        msk = msk[:,startx:(startx+args.crop_dim),starty:(starty+args.crop_dim),:]
+    #if (args.crop_dim != -1) and (args.crop_dim < height) and (args.crop_dim < width):
+    #    startx = (height - args.crop_dim) // 2
+    #    starty = (width - args.crop_dim) // 2
+    #    img = img[:,startx:(startx+args.crop_dim),starty:(starty+args.crop_dim),:]
+    #    msk = msk[:,startx:(startx+args.crop_dim),starty:(starty+args.crop_dim),:]
 
 
     pred_mask = model.predict(img)
@@ -131,45 +93,43 @@ def plot_results(model, imgs_validation, msks_validation,
     plt.imshow(pred_mask[0, :, :, 0], origin="lower")
     plt.title("Prediction\n(Dice = {:.4f})".format(calc_dice(msk, pred_mask)))
     plt.axis("off")
-
+    #plt.show()
+    png_directory = "/home/francoismasson/Desktop/Project_AIC/results/"
     png_filename = os.path.join(png_directory, "pred_{}.png".format(img_no))
     plt.savefig(png_filename, bbox_inches="tight", pad_inches=0)
-    print("Dice {:.4f}, Soft Dice {:.4f}, Saved png file to: {}".format(
-        calc_dice(msk, pred_mask), calc_soft_dice(msk, pred_mask), png_filename))
+    #print("Dice {:.4f}, Soft Dice {:.4f}, Saved png file to: {}".format(
+    #    calc_dice(msk, pred_mask), calc_soft_dice(msk, pred_mask)))
 
 
 if __name__ == "__main__":
 
-    data_filename = os.path.join(args.data_path, args.data_filename)
-    model_filename = os.path.join(args.output_path, args.inference_filename)
+    data_filename = "/home/francoismasson/Desktop/Project_AIC/hdf5_files/project_aic.h5"
+    model_filename = "/home/francoismasson/Desktop/Project_AIC/output/unet_model_for_aic.hdf5"
 
     # Load data
     df = h5py.File(data_filename, "r")
-    imgs_testing = df["imgs_testing"]
-    msks_testing = df["msks_testing"]
-    files_testing = df["testing_input_files"]
+    imgs_testing = df["imgs_validation"]
+    msks_testing = df["msks_validation"]
+    files_testing = df["validation_input_files"]
 
     # Load model
-    if args.use_pconv:
-        from model_pconv import unet
-    else:
-        from model import unet    
+    from model import unet    
     unet_model = unet()
     model = unet_model.load_model(model_filename)
 
     # Create output directory for images
     png_directory = "inference_examples"
-    if not os.path.exists(png_directory):
-        os.makedirs(png_directory)
-
+    
     # Plot some results
     # The plots will be saved to the png_directory
     # Just picking some random samples.
-    indicies_testing = [50, 61, 102, 210, 371,
-                        400, 1093, 2222, 3540, 4485,
-                        5566, 5675, 6433]
+    indicies_testing = np.arange(0,400).tolist()
+    #indicies_testing = [50, 61, 102, 210, 371,
+    #                    400]
+                        #, 2222, 3540, 4485,
+                        #5566, 5675, 6433]
 
 
     for idx in indicies_testing:
         plot_results(model, imgs_testing, msks_testing,
-                     idx, args.output_pngs)
+                     idx)
