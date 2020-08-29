@@ -33,7 +33,7 @@ if __name__ == '__main__':
         sub_ = os.listdir(root)
         for sub in sub_ :
             data.append(os.path.join(root,sub))
-
+    
     if arg.labels_2D :
         main_2D(data,arg.folder_mask)
     else :

@@ -323,7 +323,7 @@ class Viewer3D(object):
     def ray_cast(self,data):
         self.img = vtkio.load(data).imagedata()
         self.volume = Volume(self.img,c='jet',mode=int(0))
-        self.volume.jittering(True)        
+        self.volume.jittering(True)
         return self.volume
     
     def iso_surface(self,data):
@@ -333,6 +333,7 @@ class Viewer3D(object):
         self.mask = tuple(reversed(vtkio.load(data).imagedata().GetDimensions()))
         self.mask = np.zeros(self.mask)
         self.spacing = vtkio.load(data).imagedata().GetSpacing()
+        
         return self.img
 
     def slicer_2d(self,data):
