@@ -3,6 +3,8 @@
 *.png
 *.gif
 *.avi
+*.tar
+*.dcm
 __pycache__
 **/node_modules/
 **/base_donnees/
