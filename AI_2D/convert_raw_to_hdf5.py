@@ -157,20 +157,20 @@ def load_mask(path):
 	return mask
 
 def get_pixels_hu(scans):
-    image = np.stack([s.pixel_array for s in scans])
-    image = image.astype(np.int16)
-    image[image == -2000] = 0
+	image = np.stack([s.pixel_array for s in scans])
+	image = image.astype(np.int16)
+	image[image == -2000] = 0
     # Convert to Hounsfield units (HU)
-    intercept = scans[0].RescaleIntercept
-    slope = scans[0].RescaleSlope
-    
-    if slope != 1:
-        image = slope * image.astype(np.float64)
-        image = image.astype(np.int16)
-        
-    image += np.int16(intercept)
-    
-    return np.array(image, dtype=np.int16)
+	intercept = scans[0].RescaleIntercept
+	slope = scans[0].RescaleSlope
+
+	if slope != 1:
+		image = slope * image.astype(np.float64)
+		image = image.astype(np.int16)
+		
+	image += np.int16(intercept)
+
+	return np.array(image, dtype=np.int16)
 
 def test_train_val_split(image_files,split):
 	"""
@@ -346,7 +346,7 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 			row = img_testing_dset.shape[0]  # Count current dataset rows
 			img_testing_dset.resize(row + num_rows, axis=0)  # Add new row
 			# Insert data into new row
-			img_train_dset[row:(row + num_rows), :] = imgs
+			img_testing_dset[row:(row + num_rows), :] = imgs
 
 	# Save training set masks
 	print("Step 4 of 6. Save training set masks.")
