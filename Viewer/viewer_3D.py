@@ -18,12 +18,14 @@ from widget import *
 from tqdm import tqdm 
 from PIL import Image
 import matplotlib.pyplot as plt
+from scipy import ndimage as ndi
 
 class Viewer3D(object):
 
     def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/',npy=None):
         
         self.frame = 0
+        self.init = True
         self.icol = 0
         self.data_path = data_path
         self.colors = vtk.vtkNamedColors()
@@ -195,16 +197,18 @@ class Viewer3D(object):
 
         # Add actors according to the mode and create tmp file
         if mode == 'ray_cast':
-            actor = self.ray_cast(self.data_path[frame])
-            self.actor_list.append(actor)
+           actor = self.ray_cast(self.data_path[frame])
+           self.actor_list.append(actor)
         if mode == 'iso':
-            actor = self.iso_surface(self.data_path[frame])
-            self.cutter_actor = actor
-            self.actor_list.append(actor)
+           actor = self.iso_surface(self.data_path[frame])
+           self.cutter_actor = actor
+           self.actor_list.append(actor)
         if mode == 'slicer_2d':
-            actor = self.slicer_2d(self.data_path[frame])
-            self.actor_list.append(actor)
+           actor = self.slicer_2d(self.data_path[frame])
+           self.actor_list.append(actor)
         
+        self.init = False
+
         if mode == 'inference':
            return None
         else :
@@ -322,8 +326,11 @@ class Viewer3D(object):
 
     def ray_cast(self,data):
         self.img = vtkio.load(data).imagedata()
-        self.volume = Volume(self.img,c='jet',mode=int(0))
-        self.volume.jittering(True)
+        if self.init:
+            self.volume = Volume(self.img,c='jet',mode=int(0))
+            self.volume.jittering(True)
+        else : 
+            self.volume._update(self.img)
         return self.volume
     
     def iso_surface(self,data):
@@ -348,6 +355,7 @@ class Viewer3D(object):
         self.ia = vtk.vtkImageSlice()
         self.ia.SetMapper(self.im)
         self.ia.SetProperty(self.ip)
+        self.init = False
 
         printc("Slicer Mode:", invert=1, c="m")
         printc(
@@ -431,18 +439,9 @@ class Viewer3D(object):
             ## Need to fill contour image - Not perfect so will use manual tool correction
             ## https://scikit-image.org/docs/dev/user_guide/tutorial_segmentation.html
             ## https://www.learnopencv.com/filling-holes-in-an-image-using-opencv-python-c/
-            # TODO :
-            #from scipy import ndimage as ndi
-            #self.mask[z_axis,::] = ndi.binary_fill_holes(self.mask[z_axis,::])
+            self.mask[z_axis,::] = ndi.binary_fill_holes(self.mask[z_axis,::])
             np.save(os.path.join(directory,self.title) + '/' + str(z_axis),self.mask[z_axis,::])
             #plt.imsave(os.path.join(directory,self.title) + '/' + str(z_axis) + ".png",self.mask[z_axis,::])
-        
-        #WIP
-        #if self.mask.shape[0] != required shape:
-        #    for z_axis in (shape-maxshape,shape):
-        #        self.mask[z_axis,::] = np.zeros(shape)
-        #        np.save(os.path.join(directory,self.title) + '/' + str(z_axis),self.mask[z_axis,::])
-
         
         print('Labeling done !')
 
@@ -494,7 +493,7 @@ class Viewer3D(object):
                 self.actor_infer_list = []
                 self.frame += 1
                 for mode in self.mode:
-                    _ = self.add_actors(mode,self.frame)
+                   _ = self.add_actors(mode,self.frame)
                 for render,actor in zip(self.render_list,self.actor_list):
                     render.AddActor(actor)
                 self.rw.Render()

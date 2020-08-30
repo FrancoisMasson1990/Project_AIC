@@ -219,7 +219,10 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	label_files = np.asarray(label_files)
 
 	# Test/train/val split
-	train_list_index,val_list_index,test_list_index = test_train_val_split(image_files,split)
+	#train_list_index,val_list_index,test_list_index = test_train_val_split(image_files,split)
+	train_list_index = [0,1,2,3,4,5]
+	val_list_index = [6,7]
+	test_list_index = [8]
 	train_list_index = np.asarray(train_list_index)
 	val_list_index = np.asarray(val_list_index)
 	test_list_index = np.asarray(test_list_index)

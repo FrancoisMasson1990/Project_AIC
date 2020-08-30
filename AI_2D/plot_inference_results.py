@@ -31,7 +31,9 @@ import h5py
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use("Agg")
-
+# Load model
+from model import unet  
+from pathlib import Path 
 
 def calc_dice(target, prediction, smooth=0.01):
     """
@@ -60,23 +62,13 @@ def calc_soft_dice(target, prediction, smooth=0.01):
 
 
 def plot_results(model, imgs_validation, msks_validation,
-                 img_no):
+                 img_no,png_directory):
     """
     Calculate the Dice and plot the predicted masks for image # img_no
     """
 
     img = imgs_validation[[img_no], ]
     msk = msks_validation[[img_no], ]
-
-    # Crop the image
-    height = img.shape[1]
-    width = img.shape[2]
-    #if (args.crop_dim != -1) and (args.crop_dim < height) and (args.crop_dim < width):
-    #    startx = (height - args.crop_dim) // 2
-    #    starty = (width - args.crop_dim) // 2
-    #    img = img[:,startx:(startx+args.crop_dim),starty:(starty+args.crop_dim),:]
-    #    msk = msk[:,startx:(startx+args.crop_dim),starty:(starty+args.crop_dim),:]
-
 
     pred_mask = model.predict(img)
 
@@ -93,13 +85,11 @@ def plot_results(model, imgs_validation, msks_validation,
     plt.imshow(pred_mask[0, :, :, 0], origin="lower")
     plt.title("Prediction\n(Dice = {:.4f})".format(calc_dice(msk, pred_mask)))
     plt.axis("off")
-    #plt.show()
-    png_directory = "/home/francoismasson/Desktop/Project_AIC/results/"
+
     png_filename = os.path.join(png_directory, "pred_{}.png".format(img_no))
     plt.savefig(png_filename, bbox_inches="tight", pad_inches=0)
-    #print("Dice {:.4f}, Soft Dice {:.4f}, Saved png file to: {}".format(
-    #    calc_dice(msk, pred_mask), calc_soft_dice(msk, pred_mask)))
-
+    print("Dice {:.4f}, Soft Dice {:.4f}, Saved png file to: {}".format(
+        calc_dice(msk, pred_mask), calc_soft_dice(msk, pred_mask), png_filename))
 
 if __name__ == "__main__":
 
@@ -108,28 +98,24 @@ if __name__ == "__main__":
 
     # Load data
     df = h5py.File(data_filename, "r")
-    imgs_testing = df["imgs_validation"]
-    msks_testing = df["msks_validation"]
-    files_testing = df["validation_input_files"]
-
-    # Load model
-    from model import unet    
+    imgs = df["imgs_validation"]
+    msks = df["msks_validation"]
+    files = df["validation_input_files"]
+ 
     unet_model = unet()
     model = unet_model.load_model(model_filename)
 
     # Create output directory for images
     png_directory = "inference_examples"
-    
+
+    if not os.path.exists(png_directory):
+        os.makedirs(png_directory)
+
+    png_folder = os.path.join(Path.cwd(),png_directory)
+
     # Plot some results
     # The plots will be saved to the png_directory
-    # Just picking some random samples.
-    indicies_testing = np.arange(0,400).tolist()
-    #indicies_testing = [50, 61, 102, 210, 371,
-    #                    400]
-                        #, 2222, 3540, 4485,
-                        #5566, 5675, 6433]
-
+    indicies_testing = np.arange(0,imgs.shape[0]).tolist()
 
     for idx in indicies_testing:
-        plot_results(model, imgs_testing, msks_testing,
-                     idx)
+        plot_results(model, imgs, msks, idx, png_folder)
