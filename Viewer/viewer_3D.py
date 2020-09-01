@@ -22,7 +22,7 @@ from scipy import ndimage as ndi
 
 class Viewer3D(object):
 
-    def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/',npy=None):
+    def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/',npy=None,multi_label=False):
         
         self.frame = 0
         self.init = True
@@ -55,6 +55,7 @@ class Viewer3D(object):
         self.title = None
         self.label_folder = label
         self.npy_folder = npy
+        self.multi_label = multi_label
 
         '''One render window, multiple viewports'''
         self.rw = vtk.vtkRenderWindow()
@@ -340,7 +341,13 @@ class Viewer3D(object):
         self.mask = tuple(reversed(vtkio.load(data).imagedata().GetDimensions()))
         self.mask = np.zeros(self.mask)
         self.spacing = vtkio.load(data).imagedata().GetSpacing()
-        
+
+        if self.multi_label:
+            # Get the all points in isosurface
+            self.points = self.img.GetMapper().GetInput()
+            self.all_array = self.points.GetPoints()
+            self.all_numpy_nodes = vtk_to_numpy(self.all_array.GetData())
+            
         return self.img
 
     def slicer_2d(self,data):
@@ -395,7 +402,6 @@ class Viewer3D(object):
         mapper.SetInputData(polydata)
         self.actor_point = vtk.vtkActor()
         self.actor_point.SetMapper(mapper)
-        #actor.GetProperty().SetPointSize(apoint_size)
         self.actor_point.GetProperty().SetColor(c)
 
         return self.actor_point
@@ -417,29 +423,53 @@ class Viewer3D(object):
         numpy_nodes[:,0] = np.around(numpy_nodes[:,0]/self.spacing[0])
         numpy_nodes[:,1] = np.around(numpy_nodes[:,1]/self.spacing[1])
         numpy_nodes[:,2] = np.around(numpy_nodes[:,2]/self.spacing[2])
-
         # Along the z axis : Later Along x axis and y axis ... (3D Object Detection from CT Scans using a Slice-and-fuse Approach)
         slicer = np.unique(numpy_nodes[:,2]).astype(int)
+
+        if self.multi_label:
+            self.all_numpy_nodes[:,0] = np.around(self.all_numpy_nodes[:,0]/self.spacing[0])
+            self.all_numpy_nodes[:,1] = np.around(self.all_numpy_nodes[:,1]/self.spacing[1])
+            self.all_numpy_nodes[:,2] = np.around(self.all_numpy_nodes[:,2]/self.spacing[2])
+            slicer_tot = np.unique(self.all_numpy_nodes[:,2]).astype(int)    
+
         if os.path.exists(self.label_folder):
             directory = self.label_folder
         else :
             directory = os.getcwd() + self.label_folder
         os.makedirs(os.path.join(directory,self.title),exist_ok = True) ## Make folder recursively
+
         for z_axis in range(self.mask.shape[0]):
+            if self.multi_label:
+                if z_axis in slicer_tot:
+                    #save and diplay the mask (Not magna valve label)
+                    nodes_copy = self.all_numpy_nodes
+                    z = nodes_copy[self.all_numpy_nodes[:,2]==z_axis]
+                    x_y = np.ndarray(shape=(z.shape[0],2), dtype=int)
+                    x_y[:] = z[:,0:2]
+                    x_y = np.unique(x_y, axis=0)
+                    for value in x_y :
+                        self.mask[z_axis,value[0],value[1]] = 1
+
             if z_axis in slicer:
-                #save and diplay le mask
+                #save and diplay the mask (Magna valve label)
                 nodes_copy = numpy_nodes
                 z = nodes_copy[numpy_nodes[:,2]==z_axis]
                 x_y = np.ndarray(shape=(z.shape[0],2), dtype=int)
                 x_y[:] = z[:,0:2]
                 x_y = np.unique(x_y, axis=0)
                 for value in x_y :
-                    self.mask[z_axis,value[0],value[1]] = 1
+                    if self.multi_label:
+                        self.mask[z_axis,value[0],value[1]] = 2
+                    else :
+                        self.mask[z_axis,value[0],value[1]] = 1
+
             self.mask[z_axis,::] = np.rot90(self.mask[z_axis,::]) # To be aligned with 2D show. Can be modified in the future !        
             ## Need to fill contour image - Not perfect so will use manual tool correction
             ## https://scikit-image.org/docs/dev/user_guide/tutorial_segmentation.html
             ## https://www.learnopencv.com/filling-holes-in-an-image-using-opencv-python-c/
-            self.mask[z_axis,::] = ndi.binary_fill_holes(self.mask[z_axis,::])
+            #Can not be binary_fill_holes in multi label detection otherwise will fill everything with 1 value
+            if not self.multi_label:
+                self.mask[z_axis,::] = ndi.binary_fill_holes(self.mask[z_axis,::])
             np.save(os.path.join(directory,self.title) + '/' + str(z_axis),self.mask[z_axis,::])
             #plt.imsave(os.path.join(directory,self.title) + '/' + str(z_axis) + ".png",self.mask[z_axis,::])
         

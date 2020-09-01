@@ -2,3 +2,4 @@ data_path : "/home/francoismasson/Desktop/Project_AIC/data_folder/data_preproces
 folder_mask : "/home/francoismasson/Desktop/Project_AIC/data_folder/label_mask_magna/"
 npy_folder : "/home/francoismasson/Desktop/Project_AIC/data_label_npy/"
 labels_2D : False
+multi_label : False

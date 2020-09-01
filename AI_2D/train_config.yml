@@ -10,14 +10,14 @@ crop_dim: -1 #Size to crop images (square, in pixels). If -1, then no cropping
 blocktime: 1000 #blocktime
 epochs: 40 #number of epochs to train
 learning_rate: 0.0001 #learning rate
-weight_dice_loss: 0.9 #Weight for the Dice loss compared to crossentropy
+#weight_dice_loss: 0.9 #Set to None if dice_loss used : Weight for the Dice loss compared to crossentropy
 featuremaps: 32 #How many feature maps in the model
 keras_api: False #use keras instead of tf.keras
 use_pconv: False #use partial convolution based padding
 channels_first: False #use channels first data format
 print_model: True #print the model
 use_dropout: False #add spatial dropout layers 3/4
-use_augmentation: True #use data augmentation on training images
+use_augmentation: False #use data augmentation on training images 
 #output_pngs: #the directory for the output prediction pngs
 #input_filename: #Name of saved Keras model (e.g. model.h5)
 #output_directory: #Directory where to save the TensorFlow Serving Protobuf Model

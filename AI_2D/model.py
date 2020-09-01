@@ -33,6 +33,14 @@ from tensorflow import keras as K
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 
+import tensorflow_addons as tfa
+
+#TODO : 
+# Test with one label but all point of bones/tissues to see the results
+# Data Augmentation in convert_raw_hd5 to generate extra labels : imbalanced data
+# Use multi-class detection : Changing to softmax #304 in model.py
+# Color of multi class in plot
+# Change the loss function to one with multi-class and imbalanced problem
 
 class unet(object):
     """
@@ -81,17 +89,22 @@ class unet(object):
         self.batch_size = batch_size
 
         self.metrics = ["accuracy", self.dice_coef, self.soft_dice_coef]
-
-        self.loss = self.dice_coef_loss
-        #self.loss = self.combined_dice_ce_loss
-
-        self.optimizer = K.optimizers.Adam(lr=self.learningrate)
         self.weight_dice_loss = weight_dice_loss
+
+        if self.weight_dice_loss is not None :
+            self.loss = self.combined_dice_ce_loss
+        else :
+            self.loss = self.dice_coef_loss
+            #self.loss = tfa.losses.SigmoidFocalCrossEntropy()
+        
+        self.optimizer = K.optimizers.Adam(lr=self.learningrate)
+        
         self.custom_objects = {
             "combined_dice_ce_loss": self.combined_dice_ce_loss,
             "dice_coef_loss": self.dice_coef_loss,
             "dice_coef": self.dice_coef,
             "soft_dice_coef": self.soft_dice_coef}
+            #"focal_loss": tfa.losses.SigmoidFocalCrossEntropy()}
 
         self.blocktime = blocktime
         self.num_threads = num_threads
@@ -139,24 +152,25 @@ class unet(object):
         Also, the log allows avoidance of the division which
         can help prevent underflow when the numbers are very small.
         """
+        
         intersection = tf.reduce_sum(prediction * target, axis=axis)
         p = tf.reduce_sum(prediction, axis=axis)
         t = tf.reduce_sum(target, axis=axis)
         numerator = tf.reduce_mean(intersection + smooth)
         denominator = tf.reduce_mean(t + p + smooth)
         #dice_loss = -tf.log(2.*numerator) + tf.log(denominator)
+        # Log implementation
         dice_loss = -tf.math.log(2.*numerator) + tf.math.log(denominator)
-
+        #dice_loss = 1 - (2.*numerator)/denominator
+        
         return dice_loss
-
 
     def combined_dice_ce_loss(self, target, prediction, axis=(1, 2), smooth=1.0):
         """
         Combined Dice and Binary Cross Entropy Loss
         """
         return self.weight_dice_loss*self.dice_coef_loss(target, prediction, axis, smooth) + \
-            (1-weight)*K.losses.binary_crossentropy(target, prediction)
-
+            (1-self.weight_dice_loss)*K.losses.binary_crossentropy(target, prediction)
 
     def unet_model(self, imgs_shape, msks_shape,
                    dropout=0.2,
@@ -296,10 +310,10 @@ class unet(object):
         if final:
             model.trainable = False
         else:
-
+            
             model.compile(optimizer=optimizer,
-                          loss=self.loss,
-                          metrics=self.metrics)
+                         loss=self.loss,
+                         metrics=self.metrics)
 
             if self.print_model:
                 model.summary()

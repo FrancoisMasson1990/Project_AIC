@@ -72,6 +72,7 @@ class PreprocessHDF5Matrix(K.utils.HDF5Matrix):
             self.refs[datapath] = f
         else:
             f = self.refs[datapath]
+        
         self.data = f[dataset]
         self.start = start
         if end is None:
@@ -109,6 +110,7 @@ class PreprocessHDF5Matrix(K.utils.HDF5Matrix):
                                       base_shape[1]])
         else:
             self._base_shape = base_shape
+
 
     def random_crop_img(self, img):
         """
@@ -176,7 +178,6 @@ class PreprocessHDF5Matrix(K.utils.HDF5Matrix):
 
         return outData
 
-
 def load_data(hdf5_data_filename, batch_size=128, crop_dim=[-1, -1],
               use_augmentation=False,channels_first=False, seed=42):
     """
@@ -210,8 +211,6 @@ def load_data(hdf5_data_filename, batch_size=128, crop_dim=[-1, -1],
                                       seed=seed,
                                       channels_first=channels_first)
 
-    # Validation dataset
-    # No data augmentation
     imgs_validation = PreprocessHDF5Matrix(hdf5_data_filename,
                                            "imgs_validation",
                                            image_datagen,

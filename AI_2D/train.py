@@ -83,7 +83,7 @@ def train_and_predict(hdf5_filename = None,
     """
     Step 2: Define the model
     """
-    
+
     unet_model = unet(channels_first = channels_first,
                       fms = featuremaps,
                       output_path = output_path,
@@ -181,7 +181,7 @@ if __name__ == "__main__":
 
     tf.config.threading.set_inter_op_parallelism_threads(num_inter_threads)
     tf.config.threading.set_intra_op_parallelism_threads(num_threads)
-
+    
     train_and_predict(hdf5_filename = data_filename,
                       output_path = output_path,
                       inference_filename = inference_filename,
