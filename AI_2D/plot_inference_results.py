@@ -78,11 +78,11 @@ def plot_results(model, imgs_validation, msks_validation,
     plt.title("MRI")
     plt.axis("off")
     plt.subplot(1, 3, 2)
-    plt.imshow(msk[0, :, :, 0], origin="lower")
+    plt.imshow(msk[0, :, :, 0],interpolation='nearest',origin="lower",cmap=plt.cm.gray)
     plt.title("Ground Truth")
     plt.axis("off")
     plt.subplot(1, 3, 3)
-    plt.imshow(pred_mask[0, :, :, 0], origin="lower")
+    plt.imshow(pred_mask[0, :, :, 0],interpolation='nearest',origin="lower",cmap=plt.cm.gray)
     plt.title("Prediction\n(Dice = {:.4f})".format(calc_dice(msk, pred_mask)))
     plt.axis("off")
 

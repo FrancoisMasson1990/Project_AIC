@@ -47,6 +47,13 @@ from skimage.transform import resize
 from natsort import natsorted
 import copy
 import yaml
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+
+LABEL_CHANNELS = {"labels":{
+	 			  "background":0,
+	 			  "Magna_valve":1,
+				 }}
 
 def normalize_img(img):
 	"""
@@ -112,8 +119,14 @@ def preprocess_labels(msk):
 	if len(msk.shape) != 4:  # Make sure 4D
 		msk = np.expand_dims(msk, -1)
 
+	# Workaround to convert float number to int label with only 0 and 1's 
+	msk[(msk > 0.0) & (msk < 1.0)] = int(10)
+	msk[msk == 1] = int(5)
+	
 	msk = resampling(msk,args.resize)
-
+	msk = msk.astype(np.int64)
+	msk[msk > 1] = 1
+	
 	return msk
 
 def expand_list(data_path, format):
@@ -192,6 +205,85 @@ def test_train_val_split(image_files,split):
 	
 	return trainList,validateList,testList 
 
+def imbalanced_data_counter(image,msks):
+	"""
+	Get a repartition of the ratio of the different classes.Go through the dataset.json file.
+	This done image wise and pixel wise
+	"""
+	# Pixel Wise 
+	total_pixel = image.shape[0] * image.shape[1] * image.shape[2] * image.shape[3] 
+
+	print("\n")
+	for key,value in LABEL_CHANNELS["labels"].items():
+		count = (msks[:,:,:,0] == value).sum()
+		ratio = 100*count/total_pixel
+		print("pixel wise ratio (%) of {} is {}".format(key,str(ratio)))
+
+	#Image Wise
+	for key,value in LABEL_CHANNELS["labels"].items():
+		count = 0
+		for l in range(msks.shape[0]):
+			if value == 0 :
+				is_value = np.all((msks[l,:,:,0] == value))
+			else :
+				is_value = np.any((msks[l,:,:,0] == value))
+			if is_value :
+				count += 1 
+		print("image wise ratio (%) of {} is {}".format(key,str(count/msks.shape[0])))
+		
+	print("\n")
+
+def imbalanced_data_augmentation(imgs,msks,total=10,seed=42):
+	# construct the image generator for data augmentation then
+	# initialize the total number of images generated thus far
+	aug = ImageDataGenerator(
+		rotation_range=30,
+		zoom_range=0.15,
+		width_shift_range=0.2,
+		height_shift_range=0.2,
+		shear_range=0.15,
+		horizontal_flip=True,
+		fill_mode="nearest")
+	
+	# First find masks with label 1. Ignore the full 0
+	msks_stack = []
+	index = []
+	for i in range(msks.shape[0]):
+		msks_ = msks[i,:,:,:]
+		is_value = np.any((msks_ != 0))
+		if is_value:
+			index.append(i)
+			msks_ = np.expand_dims(msks_, 0)
+			# prepare iterator
+			it = aug.flow(msks_, batch_size=1,seed=seed)
+			# generate samples
+			for i in range(total):
+				batch = it.next()
+				msks_stack.append(batch)
+
+	index = np.array(index)
+	imgs_augmented = imgs[index,:,:,:]
+
+	imgs_stack = []
+	for i in range(imgs_augmented.shape[0]):
+		imgs_ = imgs_augmented[i,:,:,:]
+		imgs_ = np.expand_dims(imgs_, 0)
+		# prepare iterator
+		it = aug.flow(imgs_, batch_size=1,seed=seed)
+		# generate samples
+		for i in range(total):
+			batch = it.next()
+			imgs_stack.append(batch)
+	
+	imgs_augmented = np.vstack(imgs_stack)
+	msks_augmented = np.vstack(msks_stack)
+
+	#Add the non augmented imgs/mask
+	imgs_augmented = np.vstack((imgs[~index,:,:,:],imgs_augmented))
+	msks_augmented = np.vstack((msks[~index,:,:,:],msks_augmented))
+	
+	return imgs_augmented,msks_augmented
+
 def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	"""
 	Go through the dataset.json file.
@@ -219,10 +311,10 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	label_files = np.asarray(label_files)
 
 	# Test/train/val split
-	#train_list_index,val_list_index,test_list_index = test_train_val_split(image_files,split)
-	train_list_index = [0]
-	val_list_index = [1]
-	test_list_index = [2]
+	train_list_index,val_list_index,test_list_index = test_train_val_split(image_files,split)
+	#train_list_index = [0]
+	#val_list_index = [1]
+	#test_list_index = [2]
 	train_list_index = np.asarray(train_list_index)
 	val_list_index = np.asarray(val_list_index)
 	test_list_index = np.asarray(test_list_index)
@@ -271,14 +363,24 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 														 msk[2]))
 
 	# Save training set images
-	print("Step 1 of 6. Save training set images.")
+	print("Step 1 of 3. Save training set images and masking set images.")
 	first = True
-	for idx in tqdm(train_image_files):
+	for idx,idx_ in tqdm(zip(train_image_files,train_label_files)):
 
 		images = load_scan(idx)
 		imgs = get_pixels_hu(images)
 		imgs = preprocess_inputs(imgs)
+
+		msk = load_mask(idx_)
+		msk = preprocess_labels(msk)
 		
+		assert msk.shape[0] == imgs.shape[0]
+
+		# Print out the ratio of one exemple
+		imbalanced_data_counter(imgs,msk)
+
+		# Data augmentation for the training part
+		imgs,msk = imbalanced_data_augmentation(imgs,msk)
 		num_rows = imgs.shape[0]
 
 		if first:
@@ -291,22 +393,40 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 															   imgs.shape[3]),
 													 dtype=float)
 			img_train_dset[:] = imgs
+
+			msk_train_dset = hdf_file.create_dataset("msks_train",
+													 msk.shape,
+													 maxshape=(None,
+															   msk.shape[1],
+															   msk.shape[2],
+															   msk.shape[3]),
+													 dtype=float)
+			msk_train_dset[:] = msk
+
 		else:
 			row = img_train_dset.shape[0]  # Count current dataset rows
 			img_train_dset.resize(row + num_rows, axis=0)  # Add new row
 			# Insert data into new row
 			img_train_dset[row:(row + num_rows), :] = imgs
 
+			row = msk_train_dset.shape[0]  # Count current dataset rows
+			msk_train_dset.resize(row + num_rows, axis=0)  # Add new row
+			# Insert data into new row
+			msk_train_dset[row:(row + num_rows), :] = msk
+
 	# Save validation set images
-	print("Step 2 of 6. Save validation set images.")
+	print("Step 2 of 3. Save validation set images and masking set images.")
 	first = True
-	for idx in tqdm(validate_image_files):
+	for idx,idx_ in tqdm(zip(validate_image_files,validate_label_files)):
 
 		images = load_scan(idx)
 		imgs = get_pixels_hu(images)
 		imgs = preprocess_inputs(imgs)
 		
-		num_rows = imgs.shape[0]
+		msk = load_mask(idx_)
+		msk = preprocess_labels(msk)
+		
+		assert msk.shape[0] == imgs.shape[0]
 
 		if first:
 			first = False
@@ -318,21 +438,40 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 															   imgs.shape[3]),
 													 dtype=float)
 			img_validation_dset[:] = imgs
+
+			msk_validation_dset = hdf_file.create_dataset("msks_validation",
+													 msk.shape,
+													 maxshape=(None,
+															   msk.shape[1],
+															   msk.shape[2],
+															   msk.shape[3]),
+													 dtype=float)
+			msk_validation_dset[:] = msk
+
 		else:
 			row = img_validation_dset.shape[0]  # Count current dataset rows
 			img_validation_dset.resize(row + num_rows, axis=0)  # Add new row
 			# Insert data into new row
 			img_validation_dset[row:(row + num_rows), :] = imgs
 
+			row = msk_validation_dset.shape[0]  # Count current dataset rows
+			msk_validation_dset.resize(row + num_rows, axis=0)  # Add new row
+			# Insert data into new row
+			msk_validation_dset[row:(row + num_rows), :] = msk
+
 	# Save testing set images
-	print("Step 3 of 6. Save testing set images.")
+	print("Step 3 of 3. Save testing set images and masking set images.")
 	first = True
-	for idx in tqdm(test_image_files):
+	for idx,idx_ in tqdm(zip(test_image_files,test_label_files)):
 
 		images = load_scan(idx)
 		imgs = get_pixels_hu(images)
 		imgs = preprocess_inputs(imgs)
 		
+		msk = load_mask(idx_)
+		msk = preprocess_labels(msk)
+		
+		assert msk.shape[0] == imgs.shape[0]
 		num_rows = imgs.shape[0]
 
 		if first:
@@ -345,73 +484,7 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 															   imgs.shape[3]),
 													 dtype=float)
 			img_testing_dset[:] = imgs
-		else:
-			row = img_testing_dset.shape[0]  # Count current dataset rows
-			img_testing_dset.resize(row + num_rows, axis=0)  # Add new row
-			# Insert data into new row
-			img_testing_dset[row:(row + num_rows), :] = imgs
 
-	# Save training set masks
-	print("Step 4 of 6. Save training set masks.")
-	first = True
-	for idx in tqdm(train_label_files):
-
-		msk = load_mask(idx)
-		msk = preprocess_labels(msk)
-		num_rows = msk.shape[0]
-
-		if first:
-			first = False
-			msk_train_dset = hdf_file.create_dataset("msks_train",
-													 msk.shape,
-													 maxshape=(None,
-															   msk.shape[1],
-															   msk.shape[2],
-															   msk.shape[3]),
-													 dtype=float)
-			msk_train_dset[:] = msk
-		else:
-			row = msk_train_dset.shape[0]  # Count current dataset rows
-			msk_train_dset.resize(row + num_rows, axis=0)  # Add new row
-			# Insert data into new row
-			msk_train_dset[row:(row + num_rows), :] = msk
-
-	# Save validation set masks
-	print("Step 5 of 6. Save validation set masks.")
-	first = True
-	for idx in tqdm(validate_label_files):
-
-		msk = load_mask(idx)
-		msk = preprocess_labels(msk)
-		num_rows = msk.shape[0]
-
-		if first:
-			first = False
-			msk_validation_dset = hdf_file.create_dataset("msks_validation",
-													 msk.shape,
-													 maxshape=(None,
-															   msk.shape[1],
-															   msk.shape[2],
-															   msk.shape[3]),
-													 dtype=float)
-			msk_validation_dset[:] = msk
-		else:
-			row = msk_validation_dset.shape[0]  # Count current dataset rows
-			msk_validation_dset.resize(row + num_rows, axis=0)  # Add new row
-			# Insert data into new row
-			msk_validation_dset[row:(row + num_rows), :] = msk
-
-	# Save testing set masks
-	print("Step 6 of 6. Save testing set masks.")
-	first = True
-	for idx in tqdm(test_label_files):
-
-		msk = load_mask(idx)
-		msk = preprocess_labels(msk)
-		num_rows = msk.shape[0]
-
-		if first:
-			first = False
 			msk_testing_dset = hdf_file.create_dataset("msks_testing",
 													 msk.shape,
 													 maxshape=(None,
@@ -420,7 +493,13 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 															   msk.shape[3]),
 													 dtype=float)
 			msk_testing_dset[:] = msk
+
 		else:
+			row = img_testing_dset.shape[0]  # Count current dataset rows
+			img_testing_dset.resize(row + num_rows, axis=0)  # Add new row
+			# Insert data into new row
+			img_testing_dset[row:(row + num_rows), :] = imgs
+
 			row = msk_testing_dset.shape[0]  # Count current dataset rows
 			msk_testing_dset.resize(row + num_rows, axis=0)  # Add new row
 			# Insert data into new row
