@@ -14,3 +14,6 @@ __pycache__
 **/label_mask/
 **/output/
 **/.vscode/
+**/backup/
+**/data_preprocess_magna_/
+**/label_mask_magna_/

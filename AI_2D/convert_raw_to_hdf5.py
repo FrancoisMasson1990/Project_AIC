@@ -52,7 +52,8 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 LABEL_CHANNELS = {"labels":{
 	 			  "background":0,
-	 			  "Magna_valve":1,
+				  "other":1,
+	 			  "Magna_valve":2,
 				 }}
 
 def normalize_img(img):
@@ -70,6 +71,24 @@ def normalize_img(img):
 			/ np.std(img[:, :, :, channel])
 
 	return img
+
+def crop_center(img, cropx, cropy, cropz):
+	"""
+	Take a center crop of the images.
+	If we are using a 2D model, then we'll just stack the
+	z dimension.
+	"""
+	z, x, y, c = img.shape
+
+	# Make sure starting index is >= 0
+	startx = max(x // 2 - (cropx // 2), 0)
+	starty = max(y // 2 - (cropy // 2), 0)
+
+	# Make sure ending index is <= size
+	endx = min(startx + cropx, x)
+	endy = min(starty + cropy, y)
+
+	return img[:, startx:endx, starty:endy, :]
 
 def resampling(img,size):
 
@@ -102,7 +121,8 @@ def preprocess_inputs(img):
 	if len(img.shape) != 4:  # Make sure 4D
 		img = np.expand_dims(img, -1)
 
-	img = resampling(img,args.resize)
+	if (args.resize != -1):
+		img = crop_center(img, args.resize, args.resize, -1)
 	img = normalize_img(img)
 
 	return img
@@ -119,13 +139,12 @@ def preprocess_labels(msk):
 	if len(msk.shape) != 4:  # Make sure 4D
 		msk = np.expand_dims(msk, -1)
 
-	# Workaround to convert float number to int label with only 0 and 1's 
-	msk[(msk > 0.0) & (msk < 1.0)] = int(10)
-	msk[msk == 1] = int(5)
-	
-	msk = resampling(msk,args.resize)
-	msk = msk.astype(np.int64)
-	msk[msk > 1] = 1
+	# Cropping
+	if (args.resize != -1):
+		msk = crop_center(msk, args.resize, args.resize, -1)
+
+	# Twist : Valve will be considered as background
+	#msk[msk > 1] = 0
 	
 	return msk
 
@@ -230,10 +249,9 @@ def imbalanced_data_counter(image,msks):
 			if is_value :
 				count += 1 
 		print("image wise ratio (%) of {} is {}".format(key,str(count/msks.shape[0])))
-		
 	print("\n")
 
-def imbalanced_data_augmentation(imgs,msks,total=10,seed=42):
+def imbalanced_data_augmentation(imgs,msks,total=20,seed=42):
 	# construct the image generator for data augmentation then
 	# initialize the total number of images generated thus far
 	aug = ImageDataGenerator(
@@ -243,6 +261,7 @@ def imbalanced_data_augmentation(imgs,msks,total=10,seed=42):
 		height_shift_range=0.2,
 		shear_range=0.15,
 		horizontal_flip=True,
+		vertical_flip=True,
 		fill_mode="nearest")
 	
 	# First find masks with label 1. Ignore the full 0
@@ -312,9 +331,9 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 
 	# Test/train/val split
 	train_list_index,val_list_index,test_list_index = test_train_val_split(image_files,split)
-	#train_list_index = [0]
-	#val_list_index = [1]
-	#test_list_index = [2]
+	train_list_index = [0]
+	val_list_index = [1]
+	test_list_index = [2]
 	train_list_index = np.asarray(train_list_index)
 	val_list_index = np.asarray(val_list_index)
 	test_list_index = np.asarray(test_list_index)
@@ -351,16 +370,20 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	
 	images = load_scan(image_files[0])
 	imgs = get_pixels_hu(images)
-	imgs = preprocess_inputs(imgs).shape[1:]
-	print("Process Image shape = (?, {}, {}, {})".format(imgs[0],
-														 imgs[1],
-														 imgs[2]))
+	imgs_ = preprocess_inputs(imgs).shape[1:]
+	print("Process Image shape = (?, {}, {}, {})".format(imgs_[0],
+														 imgs_[1],
+														 imgs_[2]))
 	
 	msk = load_mask(label_files[0])
-	msk = preprocess_labels(msk).shape[1:]
-	print("Process Masks shape = (?, {}, {}, {})".format(msk[0],
-														 msk[1],
-														 msk[2]))
+	msk_ = preprocess_labels(msk).shape[1:]
+	print("Process Masks shape = (?, {}, {}, {})".format(msk_[0],
+														 msk_[1],
+														 msk_[2]))
+
+	# Print out the ratio of one exemple
+
+	imbalanced_data_counter(preprocess_inputs(imgs),preprocess_labels(msk))
 
 	# Save training set images
 	print("Step 1 of 3. Save training set images and masking set images.")
@@ -376,11 +399,8 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 		
 		assert msk.shape[0] == imgs.shape[0]
 
-		# Print out the ratio of one exemple
-		imbalanced_data_counter(imgs,msk)
-
 		# Data augmentation for the training part
-		imgs,msk = imbalanced_data_augmentation(imgs,msk)
+		#imgs,msk = imbalanced_data_augmentation(imgs,msk)
 		num_rows = imgs.shape[0]
 
 		if first:
@@ -427,6 +447,10 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 		msk = preprocess_labels(msk)
 		
 		assert msk.shape[0] == imgs.shape[0]
+		# Data augmentation for the validation part
+		# Required also because need to force model to improve for low imbalanced data in the val set
+		#imgs,msk = imbalanced_data_augmentation(imgs,msk)
+		num_rows = imgs.shape[0]
 
 		if first:
 			first = False
@@ -516,7 +540,7 @@ if __name__ == "__main__":
 			"single HDF5 file for easier use in TensorFlow/Keras.")
 
 	parser = argparse.ArgumentParser(description="Medical AIC project data ",add_help=True, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	parser.add_argument("--resize", type=int, default=240,help="Resize height and width to this size. Original size = 240")
+	parser.add_argument("--resize", type=int, default=-1,help="Resize height and width to this size. Original size = 512")
 	parser.add_argument("--split", type=float, default=0.5,help="Train/test split ratio")
 
 	args = parser.parse_args()

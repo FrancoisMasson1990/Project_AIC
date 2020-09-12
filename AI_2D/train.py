@@ -60,7 +60,8 @@ def train_and_predict(hdf5_filename = None,
                       num_inter_threads = None,
                       use_upsampling = None,
                       use_dropout = None,
-                      print_model = None):
+                      print_model = None,
+                      intel_model = None):
     """
     Create a model, load the data, and train it.
     """
@@ -81,26 +82,27 @@ def train_and_predict(hdf5_filename = None,
     print("-" * 30)
 
     """
-    Step 2: Define the model
+    Step 2a: Define the model (Intel version)
     """
 
     unet_model = unet(channels_first = channels_first,
-                      fms = featuremaps,
-                      output_path = output_path,
-                      inference_filename = inference_filename,
-                      batch_size = batch_size,
-                      blocktime = blocktime,
-                      num_threads = num_threads,
-                      learning_rate = learning_rate,
-                      weight_dice_loss = weight_dice_loss,
-                      num_inter_threads = num_inter_threads,
-                      use_upsampling = use_upsampling,
-                      use_dropout = use_dropout,
-                      print_model = print_model)
-    
-    model = unet_model.create_model(imgs_train.shape, msks_train.shape)
-    model_filename, model_callbacks = unet_model.get_callbacks()
+                    fms = featuremaps,
+                    output_path = output_path,
+                    inference_filename = inference_filename,
+                    batch_size = batch_size,
+                    blocktime = blocktime,
+                    num_threads = num_threads,
+                    learning_rate = learning_rate,
+                    weight_dice_loss = weight_dice_loss,
+                    num_inter_threads = num_inter_threads,
+                    use_upsampling = use_upsampling,
+                    use_dropout = use_dropout,
+                    print_model = print_model)
+        
 
+    model = unet_model.create_model(imgs_train.shape, msks_train.shape,intel_model)
+    model_filename, model_callbacks = unet_model.get_callbacks()
+    
     # If there is a current saved file, then load weights and start from
     # there.
     saved_model = os.path.join(output_path,inference_filename)
@@ -167,6 +169,7 @@ if __name__ == "__main__":
     use_upsampling = config.get("use_upsampling",None)
     use_dropout = config.get("use_dropout",None)
     print_model = config.get("print_model",None)
+    intel_model = config.get("intel_model",None)
     
 
     # Set environment 
@@ -199,7 +202,8 @@ if __name__ == "__main__":
                       num_inter_threads = num_inter_threads,
                       use_upsampling = use_upsampling,
                       use_dropout = use_dropout,
-                      print_model = print_model)
+                      print_model = print_model,
+                      intel_model = intel_model)
 
     print("Total time elapsed for program = {} seconds".format(datetime.datetime.now() - start_time))
     print("Stopped script on {}".format(datetime.datetime.now()))

@@ -70,7 +70,8 @@ def plot_results(model, imgs_validation, msks_validation,
     img = imgs_validation[[img_no], ]
     msk = msks_validation[[img_no], ]
 
-    pred_mask = model.predict(img)
+    if model is not None:
+        pred_mask = model.predict(img)
 
     plt.figure(figsize=(10, 10))
     plt.subplot(1, 3, 1)
@@ -78,18 +79,20 @@ def plot_results(model, imgs_validation, msks_validation,
     plt.title("MRI")
     plt.axis("off")
     plt.subplot(1, 3, 2)
-    plt.imshow(msk[0, :, :, 0],interpolation='nearest',origin="lower",cmap=plt.cm.gray)
+    plt.imshow(msk[0, :, :, 0],origin="lower",vmin=0, vmax=2)
     plt.title("Ground Truth")
     plt.axis("off")
     plt.subplot(1, 3, 3)
-    plt.imshow(pred_mask[0, :, :, 0],interpolation='nearest',origin="lower",cmap=plt.cm.gray)
-    plt.title("Prediction\n(Dice = {:.4f})".format(calc_dice(msk, pred_mask)))
+    if model is not None:
+        plt.imshow(pred_mask[0, :, :, 0],origin="lower",vmin=0, vmax=2)
+        plt.title("Prediction\n(Dice = {:.4f})".format(calc_dice(msk, pred_mask)))
     plt.axis("off")
 
     png_filename = os.path.join(png_directory, "pred_{}.png".format(img_no))
     plt.savefig(png_filename, bbox_inches="tight", pad_inches=0)
-    print("Dice {:.4f}, Soft Dice {:.4f}, Saved png file to: {}".format(
-        calc_dice(msk, pred_mask), calc_soft_dice(msk, pred_mask), png_filename))
+    if model is not None :
+        print("Dice {:.4f}, Soft Dice {:.4f}, Saved png file to: {}".format(
+            calc_dice(msk, pred_mask), calc_soft_dice(msk, pred_mask), png_filename))
 
 if __name__ == "__main__":
 
@@ -98,12 +101,14 @@ if __name__ == "__main__":
 
     # Load data
     df = h5py.File(data_filename, "r")
-    imgs = df["imgs_validation"]
-    msks = df["msks_validation"]
-    files = df["validation_input_files"]
+    imgs = df["imgs_testing"]
+    msks = df["msks_testing"]
  
     unet_model = unet()
-    model = unet_model.load_model(model_filename)
+    try :
+        model = unet_model.load_model(model_filename)
+    except :
+        model = None
 
     # Create output directory for images
     png_directory = "inference_examples"

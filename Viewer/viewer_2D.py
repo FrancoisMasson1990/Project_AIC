@@ -191,7 +191,7 @@ class Image_2D(Viewer2D):
         
         self.label_image = np.load(self.label[self.index])
         if self.label is not None:
-            self._label = self.axis2.imshow(self.label_image, vmin=0, vmax=1)
+            self._label = self.axis2.imshow(self.label_image, vmin=np.min(self.label_image), vmax=np.max(self.label_image))
             self.init_label = False
 
         self.slicer.on_changed(self.update)
@@ -236,7 +236,7 @@ class Image_2D(Viewer2D):
         elif self.label is not None and self.init_label:
             self.label_image = np.load(self.label[self.index])
             self.axis2.axis('off')
-            self._label = self.axis2.imshow(self.label_image, vmin=0, vmax=1)
+            self._label = self.axis2.imshow(self.label_image, vmin=np.min(self.label_image), vmax=np.max(self.label_image))
         else:
             self.axis2.cla()
             self.init_label = True

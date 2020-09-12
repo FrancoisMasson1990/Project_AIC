@@ -34,13 +34,9 @@ from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 
 import tensorflow_addons as tfa
+import segmentation_models as sm
 
-#TODO : 
-# Test with one label but all point of bones/tissues to see the results
-# Data Augmentation in convert_raw_hd5 to generate extra labels : imbalanced data
-# Use multi-class detection : Changing to softmax #304 in model.py
-# Color of multi class in plot
-# Change the loss function to one with multi-class and imbalanced problem
+import numpy as np
 
 class unet(object):
     """
@@ -95,7 +91,6 @@ class unet(object):
             self.loss = self.combined_dice_ce_loss
         else :
             self.loss = self.dice_coef_loss
-            #self.loss = tfa.losses.SigmoidFocalCrossEntropy()
         
         self.optimizer = K.optimizers.Adam(lr=self.learningrate)
         
@@ -104,7 +99,6 @@ class unet(object):
             "dice_coef_loss": self.dice_coef_loss,
             "dice_coef": self.dice_coef,
             "soft_dice_coef": self.soft_dice_coef}
-            #"focal_loss": tfa.losses.SigmoidFocalCrossEntropy()}
 
         self.blocktime = blocktime
         self.num_threads = num_threads
@@ -161,7 +155,6 @@ class unet(object):
         #dice_loss = -tf.log(2.*numerator) + tf.log(denominator)
         # Log implementation
         dice_loss = -tf.math.log(2.*numerator) + tf.math.log(denominator)
-        #dice_loss = 1 - (2.*numerator)/denominator
         
         return dice_loss
 
@@ -171,6 +164,14 @@ class unet(object):
         """
         return self.weight_dice_loss*self.dice_coef_loss(target, prediction, axis, smooth) + \
             (1-self.weight_dice_loss)*K.losses.binary_crossentropy(target, prediction)
+
+    def total_loss(self,n_classes):
+        # Segmentation models losses can be combined together by '+' and scaled by integer or float factor
+        # set class weights for dice_loss (background: 0.5; bones: 1.; valve: 2.0;)
+        dice_loss = sm.losses.DiceLoss(class_weights=np.array([0.5, 1.0, 2.0])) 
+        focal_loss = sm.losses.BinaryFocalLoss() if n_classes == 1 else sm.losses.CategoricalFocalLoss()
+        total_loss = dice_loss + (1 * focal_loss)
+        return total_loss
 
     def unet_model(self, imgs_shape, msks_shape,
                    dropout=0.2,
@@ -300,8 +301,14 @@ class unet(object):
         convOut = K.layers.Conv2D(name="convOutb", filters=self.fms, **params)(convOut)
 
         prediction = K.layers.Conv2D(name="PredictionMask",
-                                     filters=num_chan_out, kernel_size=(1, 1),
-                                     activation="sigmoid")(convOut)
+                                      filters=num_chan_out, kernel_size=(1, 1),
+                                      activation="sigmoid")(convOut)
+
+        # Can not use softmax in multilabel classification 
+        #https://towardsdatascience.com/multi-label-image-classification-with-neural-network-keras-ddc1ab1afede
+        #prediction = K.layers.Conv2D(name="PredictionMask",
+        #                             filters=num_chan_out, kernel_size=(1, 1),
+        #                             activation="softmax")(convOut)
 
         model = K.models.Model(inputs=[inputs], outputs=[prediction])
 
@@ -320,6 +327,32 @@ class unet(object):
 
         return model
 
+    def unet_model_new(self):
+
+        sm.set_framework('tf.keras')
+        BACKBONE = 'efficientnetb3'
+        CLASSES = ['bones', 'valve']
+
+        preprocess_input = sm.get_preprocessing(BACKBONE)
+        # define network parameters
+        n_classes = 1 if len(CLASSES) == 1 else (len(CLASSES) + 1)  # case for binary and multiclass segmentation
+        activation = 'sigmoid' if n_classes == 1 else 'softmax'
+
+        #create model
+        model = sm.Unet(BACKBONE, classes=n_classes, activation=activation, encoder_weights=None, input_shape=(None, None, 1))
+
+        # define optomizer
+        optim = K.optimizers.Adam(self.learningrate)
+
+        # actulally total_loss can be imported directly from library, above example just show you how to manipulate with losses
+        # total_loss = sm.losses.binary_focal_dice_loss # or sm.losses.categorical_focal_dice_loss 
+        metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
+        total_loss = self.total_loss(CLASSES)
+        # compile keras model with defined optimozer, loss and metrics
+        model.compile(optim, total_loss, metrics)
+        model.summary()
+
+        return model
 
     def get_callbacks(self):
         """
@@ -333,8 +366,10 @@ class unet(object):
         # Save model whenever we get better validation loss
         model_checkpoint = K.callbacks.ModelCheckpoint(model_filename,
                                                        verbose=1,
-                                                       monitor="val_loss",
+                                                       monitor="val_loss", #mode='min'
                                                        save_best_only=True)
+
+        lr_checkpoint = K.callbacks.ReduceLROnPlateau()
 
         directoryName = "unet_block{}_inter{}_intra{}".format(self.blocktime,
                                                               self.num_threads,
@@ -356,7 +391,7 @@ class unet(object):
             log_dir=tensorboard_filename,
             write_graph=True, write_images=True)
 
-        return model_filename, [model_checkpoint, tensorboard_checkpoint]
+        return model_filename, [model_checkpoint, tensorboard_checkpoint, lr_checkpoint]
 
 
     def evaluate_model(self, model_filename, imgs_validation, msks_validation):
@@ -384,15 +419,18 @@ class unet(object):
             print("Test dataset {} = {:.4f}".format(model.metrics_names[idx], metric))
 
 
-    def create_model(self, imgs_shape, msks_shape,
+    def create_model(self, imgs_shape, msks_shape,intel_model,
                    dropout=0.2,
                    final=False):
         """
         If you have other models, you can try them here
         """
-        return self.unet_model(imgs_shape, msks_shape,
-                          dropout=dropout,
-                          final=final)
+        if intel_model:
+            return self.unet_model(imgs_shape, msks_shape,
+                              dropout=dropout,
+                              final=final)
+        else :
+            return self.unet_model_new()
 
     def load_model(self, model_filename):
         """
