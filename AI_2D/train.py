@@ -132,14 +132,15 @@ def train_and_predict(hdf5_filename = None,
 
     unet_model.evaluate_model(model_filename, imgs_testing, msks_testing)
 
+    ## Optional 
     """
     Step 5: Save frozen TensorFlow version of model
     This can be convert into OpenVINO format with model optimizer.
     """
-    print("-" * 30)
-    print("Freezing model and saved to a TensorFlow protobuf ...")
-    print("-" * 30)
-    unet_model.save_frozen_model(model_filename, imgs_testing.shape)
+    #print("-" * 30)
+    #print("Freezing model and saved to a TensorFlow protobuf ...")
+    #print("-" * 30)
+    #unet_model.save_frozen_model(model_filename, imgs_testing.shape, intel_model)
 
 if __name__ == "__main__":
 

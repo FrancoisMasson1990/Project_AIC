@@ -26,7 +26,7 @@ You can try custom models by modifying the code here.
 import os
 import time
 import shutil
-
+import numpy as np
 import tensorflow as tf  
 from tensorflow import keras as K
 
@@ -36,7 +36,11 @@ from tensorflow.python.framework import graph_io
 import tensorflow_addons as tfa
 import segmentation_models as sm
 
-import numpy as np
+LABEL_CHANNELS = {"labels":{
+	 			  "background":0,
+				  "other":1,
+	 			  "Magna_valve":2,
+				 }}
 
 class unet(object):
     """
@@ -165,11 +169,14 @@ class unet(object):
         return self.weight_dice_loss*self.dice_coef_loss(target, prediction, axis, smooth) + \
             (1-self.weight_dice_loss)*K.losses.binary_crossentropy(target, prediction)
 
-    def total_loss(self,n_classes):
+    def total_coef_loss(self,n_classes,weights=None):
         # Segmentation models losses can be combined together by '+' and scaled by integer or float factor
         # set class weights for dice_loss (background: 0.5; bones: 1.; valve: 2.0;)
-        dice_loss = sm.losses.DiceLoss(class_weights=np.array([0.5, 1.0, 2.0])) 
-        focal_loss = sm.losses.BinaryFocalLoss() if n_classes == 1 else sm.losses.CategoricalFocalLoss()
+        if weights is None :
+            weights = np.ones(len(n_classes))
+        
+        dice_loss = sm.losses.DiceLoss(class_weights=weights) 
+        focal_loss = sm.losses.CategoricalFocalLoss()
         total_loss = dice_loss + (1 * focal_loss)
         return total_loss
 
@@ -327,15 +334,15 @@ class unet(object):
 
         return model
 
-    def unet_model_new(self):
+    def unet_model_multi_label(self,print_model=True):
 
         sm.set_framework('tf.keras')
         BACKBONE = 'efficientnetb3'
-        CLASSES = ['bones', 'valve']
+        classes = LABEL_CHANNELS["labels"].values()
 
         preprocess_input = sm.get_preprocessing(BACKBONE)
         # define network parameters
-        n_classes = 1 if len(CLASSES) == 1 else (len(CLASSES) + 1)  # case for binary and multiclass segmentation
+        n_classes = len(classes)
         activation = 'sigmoid' if n_classes == 1 else 'softmax'
 
         #create model
@@ -347,10 +354,11 @@ class unet(object):
         # actulally total_loss can be imported directly from library, above example just show you how to manipulate with losses
         # total_loss = sm.losses.binary_focal_dice_loss # or sm.losses.categorical_focal_dice_loss 
         metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
-        total_loss = self.total_loss(CLASSES)
+        total_loss = self.total_coef_loss(classes)
         # compile keras model with defined optimozer, loss and metrics
         model.compile(optim, total_loss, metrics)
-        model.summary()
+        if print_model:
+            model.summary()
 
         return model
 
@@ -399,7 +407,11 @@ class unet(object):
         Evaluate the best model on the validation dataset
         """
 
-        model = K.models.load_model(model_filename, custom_objects=self.custom_objects)
+        try :
+            model = K.models.load_model(model_filename)#, custom_objects=self.custom_objects)
+        except:
+            model = self.unet_model_multi_label(print_model=False)
+            model.load_weights(model_filename)
 
         K.backend.set_learning_phase(0)
         start_inference = time.time()
@@ -430,21 +442,25 @@ class unet(object):
                               dropout=dropout,
                               final=final)
         else :
-            return self.unet_model_new()
+            return self.unet_model_multi_label()
 
-    def load_model(self, model_filename):
+    def load_model(self, model_filename,intel_model=True):
         """
         Load a model from Keras file
         """
+        if intel_model:
+            return K.models.load_model(model_filename, custom_objects=self.custom_objects)
+        else :
+            model = self.unet_model_multi_label(print_model=False)
+            model.load_weights(model_filename)
+            return model
 
-        return K.models.load_model(model_filename, custom_objects=self.custom_objects)
 
-
-    def save_frozen_model(self, model_filename, input_shape):
+    def save_frozen_model(self, model_filename, input_shape, intel_model):
         """
         Save frozen TensorFlow formatted model protobuf
         """
-        model = self.load_model(model_filename)
+        model = self.load_model(model_filename,intel_model)
 
         # Change filename to protobuf extension
         base = os.path.basename(model_filename)

@@ -34,6 +34,14 @@ matplotlib.use("Agg")
 # Load model
 from model import unet  
 from pathlib import Path 
+import yaml
+
+LABEL_CHANNELS = {"labels":{
+	 			  "background":0,
+				  "other":1,
+	 			  "Magna_valve":2,
+				 }}
+
 
 def calc_dice(target, prediction, smooth=0.01):
     """
@@ -73,19 +81,32 @@ def plot_results(model, imgs_validation, msks_validation,
     if model is not None:
         pred_mask = model.predict(img)
 
+        if not intel_model:
+            msk_plot = msk.squeeze()
+            msk_plot = np.argmax(msk_plot,axis=-1)
+            pred_plot = pred_mask.squeeze()
+            pred_plot = np.argmax(pred_plot,axis=-1)
+        
     plt.figure(figsize=(10, 10))
     plt.subplot(1, 3, 1)
     plt.imshow(img[0, :, :, 0], cmap="bone", origin="lower")
     plt.title("MRI")
     plt.axis("off")
     plt.subplot(1, 3, 2)
-    plt.imshow(msk[0, :, :, 0],origin="lower",vmin=0, vmax=2)
+    if intel_model :
+        plt.imshow(msk[0, :, :, 0],origin="lower",vmin=0, vmax=1)
+        plt.title("Ground Truth")
+    else :
+        plt.imshow(msk_plot,origin="lower")
     plt.title("Ground Truth")
-    plt.axis("off")
+    plt.axis("off")   
     plt.subplot(1, 3, 3)
     if model is not None:
-        plt.imshow(pred_mask[0, :, :, 0],origin="lower",vmin=0, vmax=2)
-        plt.title("Prediction\n(Dice = {:.4f})".format(calc_dice(msk, pred_mask)))
+       if intel_model :
+           plt.imshow(pred_mask[0, :, :, 0],origin="lower",vmin=0, vmax=1)
+       else :
+           plt.imshow(pred_plot,origin="lower",vmin=0, vmax=1)
+       plt.title("Prediction\n(Dice = {:.4f})".format(calc_dice(msk, pred_mask)))
     plt.axis("off")
 
     png_filename = os.path.join(png_directory, "pred_{}.png".format(img_no))
@@ -99,6 +120,13 @@ if __name__ == "__main__":
     data_filename = "/home/francoismasson/Desktop/Project_AIC/hdf5_files/project_aic.h5"
     model_filename = "/home/francoismasson/Desktop/Project_AIC/output/unet_model_for_aic.hdf5"
 
+    with open('./train_config.yml') as f:
+        # The FullLoader parameter handles the conversion from YAML
+        # scalar values to Python the dictionary format
+        config = yaml.load(f, Loader=yaml.FullLoader)
+
+    intel_model = config.get("intel_model",None)
+    
     # Load data
     df = h5py.File(data_filename, "r")
     imgs = df["imgs_testing"]
@@ -106,7 +134,7 @@ if __name__ == "__main__":
  
     unet_model = unet()
     try :
-        model = unet_model.load_model(model_filename)
+        model = unet_model.load_model(model_filename,intel_model)
     except :
         model = None
 

@@ -136,15 +136,17 @@ def preprocess_labels(msk):
 	msk = [np.load(msk[i]) for i in range(len(msk))]
 	msk = np.stack(msk, axis=0)
 
-	if len(msk.shape) != 4:  # Make sure 4D
-		msk = np.expand_dims(msk, -1)
-
+	if intel_model :
+		if len(msk.shape) != 4:  # Make sure 4D
+			msk = np.expand_dims(msk, -1)
+	else :
+		# extract certain classes from mask
+		msks = [(msk == v) for v in LABEL_CHANNELS["labels"].values()]
+		msk = np.stack(msks, axis=-1).astype('float')
+    	
 	# Cropping
 	if (args.resize != -1):
 		msk = crop_center(msk, args.resize, args.resize, -1)
-
-	# Twist : Valve will be considered as background
-	#msk[msk > 1] = 0
 	
 	return msk
 
@@ -553,6 +555,7 @@ if __name__ == "__main__":
 	data_path = config.get("data_path",None)
 	output_filename = config.get("output_filename",None)
 	save_dir = config.get("save_path",None)
+	intel_model = config.get("intel_model",None)
 
 	if save_dir is None:
 		save_dir = expanduser("~")
