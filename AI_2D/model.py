@@ -36,6 +36,8 @@ from tensorflow.python.framework import graph_io
 import tensorflow_addons as tfa
 import segmentation_models as sm
 
+import tensorflow.keras.backend as backend
+
 LABEL_CHANNELS = {"labels":{
 	 			  "background":0,
 				  "other":1,
@@ -128,6 +130,16 @@ class unet(object):
 
         return tf.reduce_mean(coef)
 
+    def dice_coef_multilabel(self, target, prediction, numLabels=3):
+        #This simply calculates the dice score for each individual label, 
+        # and then sums them together, and includes the background. 
+        # The best dice score you will ever get is equal to numLables*-1.0. 
+        # When monitoring I always keep in mind that the dice for the background is almost always near 1.0.
+        dice=0
+        for index in range(numLabels):
+            dice -= self.dice_coef(target[:,:,:,index], prediction[:,:,:,index])
+        return dice
+
     def soft_dice_coef(self, target, prediction, axis=(1, 2), smooth=0.01):
         """
         Sorenson (Soft) Dice  - Don't round the predictions
@@ -168,6 +180,25 @@ class unet(object):
         """
         return self.weight_dice_loss*self.dice_coef_loss(target, prediction, axis, smooth) + \
             (1-self.weight_dice_loss)*K.losses.binary_crossentropy(target, prediction)
+
+    def tversky(self, target, prediction, smooth=1, alpha=0.7):
+        # Flatten the input data
+        y_true = backend.permute_dimensions(target, (3,1,2,0))
+        y_pred = backend.permute_dimensions(prediction, (3,1,2,0))
+
+        y_true_pos = backend.batch_flatten(y_true)
+        y_pred_pos = backend.batch_flatten(y_pred)
+        true_pos = backend.sum(y_true_pos * y_pred_pos, 1)
+        false_neg = backend.sum(y_true_pos * (1-y_pred_pos), 1)
+        false_pos = backend.sum((1-y_true_pos)*y_pred_pos, 1)
+        return (true_pos + smooth)/(true_pos + alpha*false_neg + (1-alpha)*false_pos + smooth)
+
+    def tversky_loss(self,target, prediction):
+        return 1 - tversky(target, prediction)
+
+    def focal_tversky_loss(self, target, prediction, gamma=1.25):
+        tv = self.tversky(target, prediction)
+        return backend.pow((1 - tv), gamma)
 
     def total_coef_loss(self,n_classes,weights=None):
         # Segmentation models losses can be combined together by '+' and scaled by integer or float factor
@@ -347,16 +378,21 @@ class unet(object):
 
         #create model
         model = sm.Unet(BACKBONE, classes=n_classes, activation=activation, encoder_weights=None, input_shape=(None, None, 1))
-
         # define optomizer
         optim = K.optimizers.Adam(self.learningrate)
 
         # actulally total_loss can be imported directly from library, above example just show you how to manipulate with losses
         # total_loss = sm.losses.binary_focal_dice_loss # or sm.losses.categorical_focal_dice_loss 
-        metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
-        total_loss = self.total_coef_loss(classes)
+        
         # compile keras model with defined optimozer, loss and metrics
-        model.compile(optim, total_loss, metrics)
+        #metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
+        #total_loss = self.total_coef_loss(classes)
+        #model.compile(optim, total_loss, metrics)
+        
+        loss = self.focal_tversky_loss
+        metrics = [self.dice_coef_multilabel]        
+        model.compile(optim, loss, metrics)
+
         if print_model:
             model.summary()
 
@@ -408,7 +444,7 @@ class unet(object):
         """
 
         try :
-            model = K.models.load_model(model_filename)#, custom_objects=self.custom_objects)
+            model = K.models.load_model(model_filename, custom_objects=self.custom_objects)
         except:
             model = self.unet_model_multi_label(print_model=False)
             model.load_weights(model_filename)
