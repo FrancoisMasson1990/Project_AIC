@@ -196,7 +196,7 @@ class unet(object):
     def tversky_loss(self,target, prediction):
         return 1 - tversky(target, prediction)
 
-    def focal_tversky_loss(self, target, prediction, gamma=1.25):
+    def focal_tversky_loss(self, target, prediction, gamma=3):
         tv = self.tversky(target, prediction)
         return backend.pow((1 - tv), gamma)
 
