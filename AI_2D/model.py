@@ -38,10 +38,15 @@ import segmentation_models as sm
 
 import tensorflow.keras.backend as backend
 
+# LABEL_CHANNELS = {"labels":{
+# 	 			  "background":0,
+# 				  "other":1,
+# 	 			  "Magna_valve":2,
+# 				 }}
+
 LABEL_CHANNELS = {"labels":{
 	 			  "background":0,
-				  "other":1,
-	 			  "Magna_valve":2,
+	 			  "Magna_valve":1,
 				 }}
 
 class unet(object):
@@ -130,7 +135,7 @@ class unet(object):
 
         return tf.reduce_mean(coef)
 
-    def dice_coef_multilabel(self, target, prediction, numLabels=3):
+    def dice_coef_multilabel(self, target, prediction, numLabels=2):
         #This simply calculates the dice score for each individual label, 
         # and then sums them together, and includes the background. 
         # The best dice score you will ever get is equal to numLables*-1.0. 

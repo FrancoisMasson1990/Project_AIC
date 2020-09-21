@@ -123,6 +123,7 @@ def preprocess_inputs(img):
 
 	if (args.resize != -1):
 		img = crop_center(img, args.resize, args.resize, -1)
+
 	img = normalize_img(img)
 
 	return img
@@ -147,8 +148,20 @@ def preprocess_labels(msk):
 	# Cropping
 	if (args.resize != -1):
 		msk = crop_center(msk, args.resize, args.resize, -1)
-	
-	return msk
+
+	# WIP : Trying to find labels with no data imbalanced 
+	# Remove one label
+	msk = np.delete(msk,1,3)
+
+	index = []
+	for l in range(msk.shape[0]):
+		is_value = np.all((msk[l,:,:,1] == 0))
+		if not is_value :
+			index.append(l)
+
+	msk = msk[index]
+
+	return msk,index
 
 def expand_list(data_path, format):
 
@@ -332,7 +345,10 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	label_files = np.asarray(label_files)
 
 	# Test/train/val split
-	train_list_index,val_list_index,test_list_index = test_train_val_split(image_files,split)
+	#train_list_index,val_list_index,test_list_index = test_train_val_split(image_files,split)
+	train_list_index = [0]
+	val_list_index = [1]
+	test_list_index = [2]
 	train_list_index = np.asarray(train_list_index)
 	val_list_index = np.asarray(val_list_index)
 	test_list_index = np.asarray(test_list_index)
@@ -367,22 +383,25 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 	print("n.b. All tensors converted to stacks of 2D slices.")
 	print("If you want true 3D tensors, then modify this code appropriately.")
 	
-	images = load_scan(image_files[0])
-	imgs = get_pixels_hu(images)
-	imgs_ = preprocess_inputs(imgs).shape[1:]
-	print("Process Image shape = (?, {}, {}, {})".format(imgs_[0],
-														 imgs_[1],
-														 imgs_[2]))
-	
-	msk = load_mask(label_files[0])
-	msk_ = preprocess_labels(msk).shape[1:]
-	print("Process Masks shape = (?, {}, {}, {})".format(msk_[0],
-														 msk_[1],
-														 msk_[2]))
+	try :
+		images = load_scan(image_files[0])
+		imgs = get_pixels_hu(images)
+		imgs_ = preprocess_inputs(imgs).shape[1:]
+		print("Process Image shape = (?, {}, {}, {})".format(imgs_[0],
+															imgs_[1],
+															imgs_[2]))
+		
+		msk = load_mask(label_files[0])
+		msk_ = preprocess_labels(msk).shape[1:]
+		print("Process Masks shape = (?, {}, {}, {})".format(msk_[0],
+															msk_[1],
+															msk_[2]))
+	except :
+		pass
 
 	# Print out the ratio of one exemple
 
-	imbalanced_data_counter(preprocess_inputs(imgs),preprocess_labels(msk))
+	#imbalanced_data_counter(preprocess_inputs(imgs),preprocess_labels(msk))
 
 	# Save training set images
 	print("Step 1 of 3. Save training set images and masking set images.")
@@ -394,8 +413,9 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 		imgs = preprocess_inputs(imgs)
 
 		msk = load_mask(idx_)
-		msk = preprocess_labels(msk)
-		
+		msk,index = preprocess_labels(msk)
+		imgs = imgs[index]
+
 		assert msk.shape[0] == imgs.shape[0]
 
 		# Data augmentation for the training part
@@ -443,7 +463,8 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 		imgs = preprocess_inputs(imgs)
 		
 		msk = load_mask(idx_)
-		msk = preprocess_labels(msk)
+		msk,index = preprocess_labels(msk)
+		imgs = imgs[index]
 		
 		assert msk.shape[0] == imgs.shape[0]
 		# Data augmentation for the validation part
@@ -492,7 +513,8 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 		imgs = preprocess_inputs(imgs)
 		
 		msk = load_mask(idx_)
-		msk = preprocess_labels(msk)
+		msk,index = preprocess_labels(msk)
+		imgs = imgs[index]
 		
 		assert msk.shape[0] == imgs.shape[0]
 		num_rows = imgs.shape[0]

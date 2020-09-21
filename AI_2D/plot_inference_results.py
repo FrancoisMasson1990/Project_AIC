@@ -85,12 +85,13 @@ def plot_results(model, imgs_validation, msks_validation,
 
     if model is not None:
         pred_mask = model.predict(img)
-
         if not intel_model:
-            msk_plot = msk.squeeze()
-            msk_plot = np.argmax(msk_plot,axis=-1)
             pred_plot = pred_mask.squeeze()
             pred_plot = np.argmax(pred_plot,axis=-1)
+
+    if not intel_model:
+        msk_plot = msk.squeeze()
+        msk_plot = np.argmax(msk_plot,axis=-1)
         
     plt.figure(figsize=(10, 10))
     plt.subplot(1, 3, 1)
