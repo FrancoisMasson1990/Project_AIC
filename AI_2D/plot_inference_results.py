@@ -22,9 +22,27 @@
 Takes a trained model and performs inference on a few validation examples.
 """
 import os
-
+import sys
 import numpy as np
 import tensorflow as tf
+
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus and len(sys.argv)> 1 and sys.argv[1].startswith("-a"):
+    print("allowing growth")
+    growth = True
+else:
+    print("nogrowth")
+    growth = False
+
+try:
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, growth)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+except RuntimeError as e:
+    print(e)
+
 from tensorflow import keras as K 
 import h5py
 
@@ -68,7 +86,7 @@ def calc_soft_dice(target, prediction, smooth=0.01):
 
     return coef
 
-def calc_dice_multi(target,prediction,numLabels=3):
+def calc_dice_multi(target,prediction,numLabels=2):
     dice=0
     for index in range(numLabels):
         dice -= calc_dice(target[:,:,:,index], prediction[:,:,:,index])
@@ -130,8 +148,8 @@ def plot_results(model, imgs_validation, msks_validation,
 
 if __name__ == "__main__":
 
-    data_filename = "/home/francoismasson/Desktop/Project_AIC/hdf5_files/project_aic.h5"
-    model_filename = "/home/francoismasson/Desktop/Project_AIC/output/unet_model_for_aic.hdf5"
+    data_filename = "/home/francoismasson/Project_AIC/hdf5_files/project_aic.h5"
+    model_filename = "/home/francoismasson/Project_AIC/output/unet_model_for_aic.hdf5"
 
     with open('./train_config.yml') as f:
         # The FullLoader parameter handles the conversion from YAML

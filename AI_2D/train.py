@@ -28,6 +28,25 @@ import psutil
 import datetime
 import os
 import tensorflow as tf
+import sys 
+
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus and len(sys.argv)> 1 and sys.argv[1].startswith("-a"):
+    print("allowing growth")
+    growth = True
+else:
+    print("nogrowth")
+    growth = False
+
+try:
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, growth)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+except RuntimeError as e:
+    print(e)
+
 from tensorflow import keras as K 
 import yaml
 from data import load_data
@@ -132,16 +151,6 @@ def train_and_predict(hdf5_filename = None,
 
     unet_model.evaluate_model(model_filename, imgs_testing, msks_testing)
 
-    ## Optional 
-    """
-    Step 5: Save frozen TensorFlow version of model
-    This can be convert into OpenVINO format with model optimizer.
-    """
-    #print("-" * 30)
-    #print("Freezing model and saved to a TensorFlow protobuf ...")
-    #print("-" * 30)
-    #unet_model.save_frozen_model(model_filename, imgs_testing.shape, intel_model)
-
 if __name__ == "__main__":
 
     with open('./train_config.yml') as f:
@@ -183,8 +192,8 @@ if __name__ == "__main__":
     os.environ["INTRA_THREADS"] = str(num_threads)
     os.environ["KMP_SETTINGS"] = "0"  # Show the settings at runtime
 
-    tf.config.threading.set_inter_op_parallelism_threads(num_inter_threads)
-    tf.config.threading.set_intra_op_parallelism_threads(num_threads)
+    #tf.config.threading.set_inter_op_parallelism_threads(num_inter_threads)
+    #tf.config.threading.set_intra_op_parallelism_threads(num_threads)
     
     train_and_predict(hdf5_filename = data_filename,
                       output_path = output_path,

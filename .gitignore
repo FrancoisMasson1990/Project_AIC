@@ -5,6 +5,7 @@
 *.avi
 *.tar
 *.dcm
+*.yml
 __pycache__
 **/node_modules/
 **/base_donnees/
