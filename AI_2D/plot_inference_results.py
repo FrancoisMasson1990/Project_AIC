@@ -121,7 +121,7 @@ def plot_results(model, imgs_validation, msks_validation,
         plt.imshow(msk[0, :, :, 0],origin="lower",vmin=0, vmax=1)
         plt.title("Ground Truth")
     else :
-        plt.imshow(msk_plot,origin="lower",vmin=0, vmax=2)
+        plt.imshow(msk_plot,origin="lower",vmin=0, vmax=1)
     plt.title("Ground Truth")
     plt.axis("off")   
     plt.subplot(1, 3, 3)
@@ -130,7 +130,7 @@ def plot_results(model, imgs_validation, msks_validation,
            plt.imshow(pred_mask[0, :, :, 0],origin="lower",vmin=0, vmax=1)
            plt.title("Prediction\n(Dice = {:.4f})".format(calc_dice(msk, pred_mask)))
        else :
-           plt.imshow(pred_plot,origin="lower",vmin=0, vmax=2)
+           plt.imshow(pred_plot,origin="lower",vmin=0, vmax=1)
            plt.title("Prediction\n(Dice = {:.4f})".format(calc_dice_multi(msk, pred_mask)))
        
     plt.axis("off")
