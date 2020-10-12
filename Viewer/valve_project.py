@@ -71,6 +71,9 @@ if __name__ == '__main__':
     unet_model = model_2D.unet()
     if arg.model_name is not None :
         model = unet_model.load_model(arg.model_name,False)
+        print("-" * 30)
+        print("Model load successfully")
+        print("-" * 30)
 
     sub_folders = os.listdir(arg.data_path)
     data = []
@@ -81,6 +84,6 @@ if __name__ == '__main__':
             data.append(os.path.join(root,sub))
     
     if arg.labels_2D :
-        main_2D(data,arg.folder_mask,arg.model_name)
+        main_2D(data,arg.folder_mask,model)
     else :
-        main_3D(data,arg.folder_mask,arg.npy_folder,arg.multi_label,arg.model_name)
+        main_3D(data,arg.folder_mask,arg.npy_folder,arg.multi_label,model)

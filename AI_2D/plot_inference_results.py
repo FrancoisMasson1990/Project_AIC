@@ -50,7 +50,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use("Agg")
 # Load model
-from model import unet  
+from aic_models import model_2D 
 from pathlib import Path 
 import yaml
 
@@ -99,7 +99,8 @@ def plot_results(model, imgs_validation, msks_validation,
 
     img = imgs_validation[[img_no], ]
     msk = msks_validation[[img_no], ]
-
+    print(img.shape)
+    exit()
     if model is not None:
         pred_mask = model.predict(img)
         if not intel_model:
@@ -162,7 +163,7 @@ if __name__ == "__main__":
     imgs = df["imgs_testing"]
     msks = df["msks_testing"]
  
-    unet_model = unet()
+    unet_model = model_2D.unet()
     try :
         model = unet_model.load_model(model_filename,intel_model)
     except :

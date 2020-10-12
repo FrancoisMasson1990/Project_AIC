@@ -19,6 +19,8 @@ from tqdm import tqdm
 from PIL import Image
 import matplotlib.pyplot as plt
 from scipy import ndimage as ndi
+from aic_models import data_preprocess as dp
+from tqdm import tqdm
 
 class Viewer3D(object):
 
@@ -30,6 +32,7 @@ class Viewer3D(object):
         self.data_path = data_path
         self.colors = vtk.vtkNamedColors()
         self.window_size = (1200, 800)
+        self.model = model
         if mode ==  1 :
             self.mode = ['ray_cast']
         elif mode == 2 :
@@ -43,6 +46,7 @@ class Viewer3D(object):
         self.axes_list = []
         self.grid_list = []
         self.score_list = []
+        self.actor_gt_list = []
         self.actor_infer_list = []
         self.cutter_tool = False
         self.window_2D = False
@@ -164,9 +168,8 @@ class Viewer3D(object):
                 self.ren.AddActor2D(self.score_name)
 
                 ## button used for inference and GT
-                ## button used for inference
                 states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.035],states=["Inference (On)","Inference (Off)"])
-                self.infer = Button(self.buttonviewMode, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
+                self.infer = Button(self.buttonfuncInference, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.infer.actor)
                 self.buttons.append(self.infer)
 
@@ -271,7 +274,7 @@ class Viewer3D(object):
             numpy_3d = glob.glob(os.path.join(self.npy_folder,self.title) + '/*.npy')
             if len(numpy_3d)>0:
                 actor_ = self.label_3d(numpy_3d[0],c=[1,0,0])
-                self.actor_infer_list.append(actor_)
+                self.actor_gt_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
                         render.AddActor(actor_)
@@ -282,17 +285,53 @@ class Viewer3D(object):
         else : 
             for render in self.render_list:
                 if render == self.render_score:
-                    for actor_ in self.actor_infer_list:
+                    for actor_ in self.actor_gt_list:
                         render.RemoveActor(actor_)
-            self.actor_infer_list = []
+            self.actor_gt_list = []
             self.rw.Render()
             self.gt_view_mode = not self.gt_view_mode
 
-    def buttoninference(self):
-        pass
+    def buttonfuncInference(self):
+        self.infer.switch()
+        if self.model is not None:
+            #Prediction
+            idx = os.path.join(self.data_path[self.frame])
+            img = dp.load_scan(idx)
+            img = dp.get_pixels_hu(img)
+            img = dp.preprocess_inputs(img)
+            pred_list = []
+            for i in tqdm(range(img.shape[0])):
+                pred = np.expand_dims(img[i,:,:,:], 0)
+                prediction = self.model.predict(pred)
+                prediction = np.argmax(prediction.squeeze(),axis=-1)
+                prediction = np.expand_dims(prediction,0)
+                pred_list.append(prediction)
 
-    def inference(self):
-        # Erase the score 
+            predictions = np.vstack(pred_list)
+            
+            if not self.infer_view_mode:
+                numpy_3d = glob.glob(os.path.join(self.npy_folder,self.title) + '/*.npy')
+                if len(numpy_3d)>0:
+                    actor_ = self.label_3d(numpy_3d[0],c=[0,1,0])
+                    self.actor_infer_list.append(actor_)
+                    for render in self.render_list:
+                        if render == self.render_score:
+                            render.AddActor(actor_)
+                self.rw.Render()
+                self.ren.ResetCamera()
+                self.camera_position()
+                self.infer_view_mode = not self.infer_view_mode
+            else :
+                for render in self.render_list:
+                    if render == self.render_score:
+                        for actor_ in self.actor_infer_list:
+                            render.RemoveActor(actor_)
+                self.actor_infer_list = []
+                self.rw.Render()
+                self.infer_view_mode = not self.infer_view_mode
+
+    def score_cylinder(self):
+        # # Erase the score 
         # for score in self.score_list:
         #     for render in self.render_list:
         #         try : 
@@ -503,9 +542,12 @@ class Viewer3D(object):
                     render.RemoveActor(actor)
                 for render in self.render_list:
                     if render == self.render_score:
+                        for actor_ in self.actor_gt_list:
+                            render.RemoveActor(actor_)
                         for actor_ in self.actor_infer_list:
                             render.RemoveActor(actor_)
                 self.actor_list = []
+                self.actor_gt_list = []
                 self.actor_infer_list = []
                 self.frame += -1
                 for mode in self.mode:
@@ -520,9 +562,12 @@ class Viewer3D(object):
                     render.RemoveActor(actor)
                 for render in self.render_list:
                     if render == self.render_score:
+                        for actor_ in self.actor_gt_list:
+                            render.RemoveActor(actor_)
                         for actor_ in self.actor_infer_list:
                             render.RemoveActor(actor_)
                 self.actor_list = []
+                self.actor_gt_list = []
                 self.actor_infer_list = []
                 self.frame += 1
                 for mode in self.mode:
