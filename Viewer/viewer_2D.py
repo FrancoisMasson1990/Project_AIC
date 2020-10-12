@@ -16,7 +16,7 @@ import pydicom
 from natsort import natsorted
 
 class Viewer2D(object):
-    def __init__(self, data_path: str, folder_mask: str, frame=0):
+    def __init__(self, data_path: str, folder_mask: str, model, frame=0):
 
         self.frame_init = 0
         self.data_path = data_path

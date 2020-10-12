@@ -51,7 +51,7 @@ from tensorflow import keras as K
 import yaml
 from data import load_data
 import numpy as np
-from model import unet
+from aic_models import model_2D 
 
 """
 For best CPU speed set the number of intra and inter threads
@@ -104,19 +104,19 @@ def train_and_predict(hdf5_filename = None,
     Step 2a: Define the model (Intel version)
     """
 
-    unet_model = unet(channels_first = channels_first,
-                    fms = featuremaps,
-                    output_path = output_path,
-                    inference_filename = inference_filename,
-                    batch_size = batch_size,
-                    blocktime = blocktime,
-                    num_threads = num_threads,
-                    learning_rate = learning_rate,
-                    weight_dice_loss = weight_dice_loss,
-                    num_inter_threads = num_inter_threads,
-                    use_upsampling = use_upsampling,
-                    use_dropout = use_dropout,
-                    print_model = print_model)
+    unet_model = model_2D.unet(channels_first = channels_first,
+                               fms = featuremaps,
+                               output_path = output_path,
+                               inference_filename = inference_filename,
+                               batch_size = batch_size,
+                               blocktime = blocktime,
+                               num_threads = num_threads,
+                               learning_rate = learning_rate,
+                               weight_dice_loss = weight_dice_loss,
+                               num_inter_threads = num_inter_threads,
+                               use_upsampling = use_upsampling,
+                               use_dropout = use_dropout,
+                               print_model = print_model)
         
 
     model = unet_model.create_model(imgs_train.shape, msks_train.shape,intel_model)
@@ -181,9 +181,7 @@ if __name__ == "__main__":
     print_model = config.get("print_model",None)
     intel_model = config.get("intel_model",None)
     
-
     # Set environment 
-
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
     os.environ["OMP_NUM_THREADS"] = str(num_threads)
     os.environ["KMP_BLOCKTIME"] = str(blocktime)
@@ -191,9 +189,6 @@ if __name__ == "__main__":
     os.environ["INTER_THREADS"] = str(num_inter_threads)
     os.environ["INTRA_THREADS"] = str(num_threads)
     os.environ["KMP_SETTINGS"] = "0"  # Show the settings at runtime
-
-    #tf.config.threading.set_inter_op_parallelism_threads(num_inter_threads)
-    #tf.config.threading.set_intra_op_parallelism_threads(num_threads)
     
     train_and_predict(hdf5_filename = data_filename,
                       output_path = output_path,

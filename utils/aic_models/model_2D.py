@@ -199,9 +199,9 @@ class unet(object):
         return (true_pos + smooth)/(true_pos + alpha*false_neg + (1-alpha)*false_pos + smooth)
 
     def tversky_loss(self,target, prediction):
-        return 1 - tversky(target, prediction)
+        return 1 - self.tversky(target, prediction)
 
-    def focal_tversky_loss(self, target, prediction, gamma=3):
+    def focal_tversky_loss(self, target, prediction, gamma=3.0):
         tv = self.tversky(target, prediction)
         return backend.pow((1 - tv), gamma)
 
@@ -209,8 +209,8 @@ class unet(object):
         # Segmentation models losses can be combined together by '+' and scaled by integer or float factor
         # set class weights for dice_loss (background: 0.5; bones: 1.; valve: 2.0;)
         if weights is None :
-            weights = np.ones(len(n_classes))
-        
+            weights = np.array([0.1,100])
+
         dice_loss = sm.losses.DiceLoss(class_weights=weights) 
         focal_loss = sm.losses.CategoricalFocalLoss()
         total_loss = dice_loss + (1 * focal_loss)
@@ -386,14 +386,6 @@ class unet(object):
         # define optomizer
         optim = K.optimizers.Adam(self.learningrate)
 
-        # actulally total_loss can be imported directly from library, above example just show you how to manipulate with losses
-        # total_loss = sm.losses.binary_focal_dice_loss # or sm.losses.categorical_focal_dice_loss 
-        
-        # compile keras model with defined optimozer, loss and metrics
-        #metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
-        #total_loss = self.total_coef_loss(classes)
-        #model.compile(optim, total_loss, metrics)
-        
         loss = self.focal_tversky_loss
         metrics = [self.dice_coef_multilabel]        
         model.compile(optim, loss, metrics)

@@ -6,7 +6,11 @@
 *.tar
 *.dcm
 *.yml
+*.txt
+*.hdf5
+*.egg-info
 __pycache__
+**/models/
 **/node_modules/
 **/base_donnees/
 **/data_folder/

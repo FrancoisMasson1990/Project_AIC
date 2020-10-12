@@ -22,7 +22,7 @@ from scipy import ndimage as ndi
 
 class Viewer3D(object):
 
-    def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/',npy=None,multi_label=False):
+    def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/',npy=None,multi_label=False,model=None):
         
         self.frame = 0
         self.init = True

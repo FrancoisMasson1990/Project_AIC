@@ -60,7 +60,6 @@ LABEL_CHANNELS = {"labels":{
 	 			  "Magna_valve":2,
 				 }}
 
-
 def calc_dice(target, prediction, smooth=0.01):
     """
     Sorenson Dice

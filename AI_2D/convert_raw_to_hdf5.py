@@ -49,7 +49,6 @@ import copy
 import yaml
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-
 LABEL_CHANNELS = {"labels":{
 	 			  "background":0,
 				  "other":1,
@@ -151,7 +150,7 @@ def preprocess_labels(msk):
 
 	# WIP : Trying to find labels with no data imbalanced 
 	# Remove one label
-	msk = np.delete(msk,1,3)
+	msk = np.delete(msk,1,3) #Removed Others
 
 	index = []
 	for l in range(msk.shape[0]):
@@ -159,9 +158,9 @@ def preprocess_labels(msk):
 		if not is_value :
 			index.append(l)
 
-	msk = msk[index]
+	#print("min layer : ",index[0]/msk.shape[0],"max layer : ", index[-1]/msk.shape[0])
 
-	return msk,index
+	return msk,np.array(index)
 
 def expand_list(data_path, format):
 
@@ -279,29 +278,22 @@ def imbalanced_data_augmentation(imgs,msks,total=20,seed=42):
 		vertical_flip=True,
 		fill_mode="nearest")
 	
-	# First find masks with label 1. Ignore the full 0
 	msks_stack = []
-	index = []
-	for i in range(msks.shape[0]):
+	for i in tqdm(range(msks.shape[0])):
 		msks_ = msks[i,:,:,:]
-		is_value = np.any((msks_ != 0))
-		if is_value:
-			index.append(i)
-			msks_ = np.expand_dims(msks_, 0)
-			# prepare iterator
-			it = aug.flow(msks_, batch_size=1,seed=seed)
-			# generate samples
-			for i in range(total):
-				batch = it.next()
-				msks_stack.append(batch)
-
-	index = np.array(index)
-	imgs_augmented = imgs[index,:,:,:]
+		extra_channel = np.zeros((msks.shape[1],msks.shape[2],1))
+		msks_ = np.concatenate((msks_,extra_channel),axis=2)
+		msks_ = np.expand_dims(msks_, 0)
+		# prepare iterator
+		it = aug.flow(msks_, batch_size=1,seed=seed)
+		# generate samples
+		for i in range(total):
+			batch = it.next()
+			msks_stack.append(batch)
 
 	imgs_stack = []
-	for i in range(imgs_augmented.shape[0]):
-		imgs_ = imgs_augmented[i,:,:,:]
-		imgs_ = np.expand_dims(imgs_, 0)
+	for i in tqdm(range(imgs.shape[0])):
+		imgs_ = np.expand_dims(imgs[i,:,:,:], 0)
 		# prepare iterator
 		it = aug.flow(imgs_, batch_size=1,seed=seed)
 		# generate samples
@@ -311,10 +303,7 @@ def imbalanced_data_augmentation(imgs,msks,total=20,seed=42):
 	
 	imgs_augmented = np.vstack(imgs_stack)
 	msks_augmented = np.vstack(msks_stack)
-
-	#Add the non augmented imgs/mask
-	imgs_augmented = np.vstack((imgs[~index,:,:,:],imgs_augmented))
-	msks_augmented = np.vstack((msks[~index,:,:,:],msks_augmented))
+	msks_augmented = msks_augmented[:,:,:,:2]
 	
 	return imgs_augmented,msks_augmented
 
@@ -392,16 +381,13 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 															imgs_[2]))
 		
 		msk = load_mask(label_files[0])
-		msk_ = preprocess_labels(msk).shape[1:]
+		msk_,_ = preprocess_labels(msk)
+		msk_ = msk_.shape[1:]
 		print("Process Masks shape = (?, {}, {}, {})".format(msk_[0],
 															msk_[1],
 															msk_[2]))
 	except :
 		pass
-
-	# Print out the ratio of one exemple
-
-	#imbalanced_data_counter(preprocess_inputs(imgs),preprocess_labels(msk))
 
 	# Save training set images
 	print("Step 1 of 3. Save training set images and masking set images.")
@@ -414,12 +400,22 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 
 		msk = load_mask(idx_)
 		msk,index = preprocess_labels(msk)
-		imgs = imgs[index]
+
+		if data_augmentation :
+			msk_ = msk[index]
+			imgs_ = imgs[index]
+			# Data augmentation for the training part
+			imgs_augmented,msks_augmented = imbalanced_data_augmentation(imgs_,msk_)
+			
+			#Add the non augmented imgs/mask
+			imgs = np.vstack((imgs[~index,:,:,:],imgs_augmented))
+			msk = np.vstack((msk[~index,:,:,:],msks_augmented))
+		if roi:
+			msk = msk[index]
+			imgs = imgs[index]
 
 		assert msk.shape[0] == imgs.shape[0]
 
-		# Data augmentation for the training part
-		#imgs,msk = imbalanced_data_augmentation(imgs,msk)
 		num_rows = imgs.shape[0]
 
 		if first:
@@ -464,12 +460,22 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 		
 		msk = load_mask(idx_)
 		msk,index = preprocess_labels(msk)
-		imgs = imgs[index]
-		
+
+		if data_augmentation :
+			msk_ = msk[index]
+			imgs_ = imgs[index]
+			# Data augmentation for the validation part
+			imgs_augmented,msks_augmented = imbalanced_data_augmentation(imgs_,msk_)
+			
+			#Add the non augmented imgs/mask
+			imgs = np.vstack((imgs[~index,:,:,:],imgs_augmented))
+			msk = np.vstack((msk[~index,:,:,:],msks_augmented))
+		if roi:
+			msk = msk[index]
+			imgs = imgs[index]
+			
 		assert msk.shape[0] == imgs.shape[0]
-		# Data augmentation for the validation part
-		# Required also because need to force model to improve for low imbalanced data in the val set
-		#imgs,msk = imbalanced_data_augmentation(imgs,msk)
+
 		num_rows = imgs.shape[0]
 
 		if first:
@@ -513,10 +519,10 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
 		imgs = preprocess_inputs(imgs)
 		
 		msk = load_mask(idx_)
-		msk,index = preprocess_labels(msk)
-		imgs = imgs[index]
+		msk,_ = preprocess_labels(msk)
 		
 		assert msk.shape[0] == imgs.shape[0]
+
 		num_rows = imgs.shape[0]
 
 		if first:
@@ -574,6 +580,8 @@ if __name__ == "__main__":
 	data_path = config.get("data_path",None)
 	output_filename = config.get("output_filename",None)
 	save_dir = config.get("save_path",None)
+	data_augmentation = config.get("data_augmentation",None)
+	roi = config.get("roi",None)
 	intel_model = config.get("intel_model",None)
 
 	if save_dir is None:
