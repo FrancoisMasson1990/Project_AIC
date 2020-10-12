@@ -292,31 +292,33 @@ class Viewer3D(object):
             self.gt_view_mode = not self.gt_view_mode
 
     def buttonfuncInference(self):
-        self.infer.switch()
+        self.infer.switch()        
         if self.model is not None:
-            #Prediction
-            idx = os.path.join(self.data_path[self.frame])
-            img = dp.load_scan(idx)
-            img = dp.get_pixels_hu(img)
-            img = dp.preprocess_inputs(img)
-            pred_list = []
-            for i in tqdm(range(img.shape[0])):
-                pred = np.expand_dims(img[i,:,:,:], 0)
-                prediction = self.model.predict(pred)
-                prediction = np.argmax(prediction.squeeze(),axis=-1)
-                prediction = np.expand_dims(prediction,0)
-                pred_list.append(prediction)
-
-            predictions = np.vstack(pred_list)
-            
             if not self.infer_view_mode:
-                numpy_3d = glob.glob(os.path.join(self.npy_folder,self.title) + '/*.npy')
-                if len(numpy_3d)>0:
-                    actor_ = self.label_3d(numpy_3d[0],c=[0,1,0])
-                    self.actor_infer_list.append(actor_)
-                    for render in self.render_list:
-                        if render == self.render_score:
-                            render.AddActor(actor_)
+                #Prediction
+                idx = os.path.join(self.data_path[self.frame])
+                img = dp.load_scan(idx)
+                img = dp.get_pixels_hu(img)
+                img = dp.preprocess_inputs(img)
+                pred_list = []
+                for i in tqdm(range(img.shape[0])):
+                    pred = np.expand_dims(img[i,:,:,:], 0)
+                    prediction = self.model.predict(pred)
+                    prediction = np.argmax(prediction.squeeze(),axis=-1)
+                    # rotation90 ?
+                    prediction[:,0] = prediction[:,0]*self.spacing[0]
+                    prediction[:,1] = prediction[:,1]*self.spacing[1] 
+                    index = np.where((self.all_numpy_nodes[:,2]>=i*self.spacing[2]) & (self.all_numpy_nodes[:,2]<(i+1)*self.spacing[2]))
+                    points_iso_surface = self.all_numpy_nodes[index]
+                    #points_iso_surface = points_iso_surface[points_iso_surface[:,0]==prediction[:,0]] 
+                    #points_iso_surface = points_iso_surface[points_iso_surface[:,1]==prediction[:,1]]
+                    pred_list.append(points_iso_surface)
+                predictions = np.vstack(pred_list)
+                actor_ = self.label_3d(predictions,c=[0,1,0])
+                self.actor_infer_list.append(actor_)
+                for render in self.render_list:
+                    if render == self.render_score:
+                        render.AddActor(actor_)
                 self.rw.Render()
                 self.ren.ResetCamera()
                 self.camera_position()
@@ -381,11 +383,10 @@ class Viewer3D(object):
         self.mask = np.zeros(self.mask,dtype=int)
         self.spacing = vtkio.load(data).imagedata().GetSpacing()
 
-        if self.multi_label:
-            # Get the all points in isosurface
-            self.points = self.img.GetMapper().GetInput()
-            self.all_array = self.points.GetPoints()
-            self.all_numpy_nodes = vtk_to_numpy(self.all_array.GetData())
+        # Get the all points in isosurface
+        self.points = self.img.GetMapper().GetInput()
+        self.all_array = self.points.GetPoints()
+        self.all_numpy_nodes = vtk_to_numpy(self.all_array.GetData())
             
         return self.img
 
@@ -419,8 +420,11 @@ class Viewer3D(object):
         return self.ia
 
     def label_3d(self,data,c=[1,0,0]):
-        with open(data, 'rb') as f:
-            self.img = np.load(f)  
+        if isinstance(data,str):
+            with open(data, 'rb') as f:
+                self.img = np.load(f)  
+        if isinstance(data,np.ndarray):
+            self.img = data
         self.points = vtk.vtkPoints()
         # Create the topology of the point (a vertex)
         self.vertices = vtk.vtkCellArray()
