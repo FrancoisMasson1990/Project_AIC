@@ -315,11 +315,14 @@ class Viewer3D(object):
                     pred_list.append(prediction)
                 
                 predictions = np.vstack(pred_list) 
-                predictions, spacing = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2],[1,1,1])
-                vertices, f = dp.make_mesh(predictions,-1)        
+                predictions,_ = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2],[1,1,1])
+                vertices,_ = dp.make_mesh(predictions,-1)
                 # Clustering
-                vertices = dp.clustering(vertices)
-                actor_ = self.label_3d(vertices,c=[0,1,0])
+                vertices = dp.clustering(vertices,threshold=3800)
+                # Fit with closest true points
+                predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices)
+                # Cylinder Fit
+                actor_ = self.label_3d(predictions_final,c=[0,1,0])
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:

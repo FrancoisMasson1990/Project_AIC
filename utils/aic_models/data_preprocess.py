@@ -296,11 +296,29 @@ def resample(image, pixelspacing, slicethickness, new_spacing=[1,1,1]):
 
     return image, new_spacing
 
-def clustering(data):
+def clustering(data,threshold=3800,eps=2.5,min_samples=2):
 	model = DBSCAN(eps=2.5, min_samples=2)
 	model.fit_predict(data)
 	print("number of cluster found: {}".format(len(set(model.labels_))))
-	index = Counter(model.labels_)
-	i = np.isin(model.labels_,np.array([index.most_common(1)[0][0]]))
+	index = Counter(model.labels_).most_common()
+	j = 0
+	while index[j][1] > threshold : # Arbitrary values
+		j += 1
+
+	i = np.isin(model.labels_,np.array([index[j][0]]))
 
 	return data[i,:]
+
+def boxe_3d(volume_array,predict):
+	z_max = np.max(predict[:,2])
+	z_min = np.min(predict[:,2])
+	x_min = np.min(predict[:,1])
+	x_max = np.max(predict[:,1])
+	y_min = np.min(predict[:,0])
+	y_max = np.max(predict[:,0])
+	index = np.where((volume_array[:,2]>z_min) & (volume_array[:,2]<z_max) \
+	 			   & (volume_array[:,1]>x_min) & (volume_array[:,1]<x_max) \
+				   & (volume_array[:,0]>y_min) & (volume_array[:,0]<y_max))
+	volume_array = volume_array[index]
+	
+	return volume_array
