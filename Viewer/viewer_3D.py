@@ -318,7 +318,7 @@ class Viewer3D(object):
                 predictions,_ = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2],[1,1,1])
                 vertices,_ = dp.make_mesh(predictions,-1)
                 # Clustering
-                vertices = dp.clustering(vertices,threshold=3800)
+                vertices = dp.clustering(vertices,self.center,ratio=0.3,threshold=3800)
                 # Fit with closest true points
                 predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices)
                 # Cylinder Fit
@@ -381,6 +381,8 @@ class Viewer3D(object):
             self.volume.jittering(True)
         else : 
             self.volume._update(self.img)
+        self.center = self.volume.center()
+        
         return self.volume
     
     def iso_surface(self,data):

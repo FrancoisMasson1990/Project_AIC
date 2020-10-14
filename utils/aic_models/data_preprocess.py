@@ -296,7 +296,16 @@ def resample(image, pixelspacing, slicethickness, new_spacing=[1,1,1]):
 
     return image, new_spacing
 
-def clustering(data,threshold=3800,eps=2.5,min_samples=2):
+def clustering(data,center_volume,ratio,threshold=3800,eps=2.5,min_samples=2):
+
+	# Crop border of images
+	x_min = center_volume[1]-ratio*center_volume[1]
+	x_max = center_volume[1]+ratio*center_volume[1]
+	y_min = center_volume[0]-ratio*center_volume[0]
+	y_max = center_volume[0]+ratio*center_volume[0]
+	index = np.where((data[:,1]>x_min) & (data[:,1]<x_max) & (data[:,0]>y_min) & (data[:,0]<y_max))
+	data = data[index]
+	
 	model = DBSCAN(eps=2.5, min_samples=2)
 	model.fit_predict(data)
 	print("number of cluster found: {}".format(len(set(model.labels_))))
