@@ -20,6 +20,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from scipy import ndimage as ndi
 from aic_models import data_preprocess as dp
+from skimage.transform import resize
+import SimpleITK as sitk
 from tqdm import tqdm
 
 class Viewer3D(object):
@@ -292,29 +294,31 @@ class Viewer3D(object):
             self.gt_view_mode = not self.gt_view_mode
 
     def buttonfuncInference(self):
-        self.infer.switch()        
+        self.infer.switch()
         if self.model is not None:
             if not self.infer_view_mode:
                 #Prediction
                 idx = os.path.join(self.data_path[self.frame])
                 img = dp.load_scan(idx)
                 img = dp.get_pixels_hu(img)
+                shape_x = img.shape[1]
+                shape_y = img.shape[2]
                 img = dp.preprocess_inputs(img)
                 pred_list = []
                 for i in tqdm(range(img.shape[0])):
                     pred = np.expand_dims(img[i,:,:,:], 0)
                     prediction = self.model.predict(pred)
                     prediction = np.argmax(prediction.squeeze(),axis=-1)
-                    # rotation90 ?
-                    prediction[:,0] = prediction[:,0]*self.spacing[0]
-                    prediction[:,1] = prediction[:,1]*self.spacing[1] 
-                    index = np.where((self.all_numpy_nodes[:,2]>=i*self.spacing[2]) & (self.all_numpy_nodes[:,2]<(i+1)*self.spacing[2]))
-                    points_iso_surface = self.all_numpy_nodes[index]
-                    #points_iso_surface = points_iso_surface[points_iso_surface[:,0]==prediction[:,0]] 
-                    #points_iso_surface = points_iso_surface[points_iso_surface[:,1]==prediction[:,1]]
-                    pred_list.append(points_iso_surface)
-                predictions = np.vstack(pred_list)
-                actor_ = self.label_3d(predictions,c=[0,1,0])
+                    prediction = np.rot90(prediction,axes=(1,0)) 
+                    prediction = np.expand_dims(prediction, 0)
+                    prediction[prediction == 0] = -1 # Validate
+                    pred_list.append(prediction)
+                
+                predictions = np.vstack(pred_list) 
+                predictions, spacing = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2], [1,1,1])
+                vertices, f = dp.make_mesh(predictions,-1)        
+
+                actor_ = self.label_3d(vertices,c=[0,1,0])
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:

@@ -48,6 +48,8 @@ from natsort import natsorted
 import copy
 import yaml
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from skimage import measure
+import scipy.ndimage
 
 LABEL_CHANNELS = {"labels":{
 	 			  "background":0,
@@ -271,3 +273,23 @@ def imbalanced_data_augmentation(imgs,msks,total=20,seed=42):
 	msks_augmented = msks_augmented[:,:,:,:2]
 	
 	return imgs_augmented,msks_augmented
+
+def make_mesh(image, threshold=-300, step_size=1):
+    p = image.transpose(1,2,0)
+    verts, faces, norm, val = measure.marching_cubes(p, threshold, step_size=step_size, allow_degenerate=True) 
+    return verts, faces
+
+def resample(image, pixelspacing, slicethickness, new_spacing=[1,1,1]):
+    # Determine current pixel spacing
+    spacing = map(float, ([slicethickness] + pixelspacing))
+    spacing = np.array(list(spacing))
+
+    resize_factor = spacing / new_spacing
+    new_real_shape = image.shape * resize_factor
+    new_shape = np.round(new_real_shape)
+    real_resize_factor = new_shape / image.shape
+    new_spacing = spacing / real_resize_factor
+    
+    image = scipy.ndimage.interpolation.zoom(image, real_resize_factor)
+    
+    return image, new_spacing
