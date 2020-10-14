@@ -315,9 +315,10 @@ class Viewer3D(object):
                     pred_list.append(prediction)
                 
                 predictions = np.vstack(pred_list) 
-                predictions, spacing = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2], [1,1,1])
+                predictions, spacing = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2],[1,1,1])
                 vertices, f = dp.make_mesh(predictions,-1)        
-
+                # Clustering
+                vertices = dp.clustering(vertices)
                 actor_ = self.label_3d(vertices,c=[0,1,0])
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:

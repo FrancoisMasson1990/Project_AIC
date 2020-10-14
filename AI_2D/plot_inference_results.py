@@ -99,8 +99,7 @@ def plot_results(model, imgs_validation, msks_validation,
 
     img = imgs_validation[[img_no], ]
     msk = msks_validation[[img_no], ]
-    print(img.shape)
-    exit()
+
     if model is not None:
         pred_mask = model.predict(img)
         if not intel_model:

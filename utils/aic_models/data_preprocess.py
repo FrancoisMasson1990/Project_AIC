@@ -50,6 +50,8 @@ import yaml
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from skimage import measure
 import scipy.ndimage
+from sklearn.cluster import DBSCAN
+from collections import Counter
 
 LABEL_CHANNELS = {"labels":{
 	 			  "background":0,
@@ -79,6 +81,7 @@ def crop_center(img, cropx, cropy, cropz):
 	If we are using a 2D model, then we'll just stack the
 	z dimension.
 	"""
+
 	z, x, y, c = img.shape
 
 	# Make sure starting index is >= 0
@@ -145,7 +148,6 @@ def preprocess_labels(msk,intel_model=False,resize=-1):
 		if not is_value :
 			index.append(l)
 
-	#print("min layer : ",index[0]/msk.shape[0],"max layer : ", index[-1]/msk.shape[0])
 
 	return msk,np.array(index)
 
@@ -291,5 +293,14 @@ def resample(image, pixelspacing, slicethickness, new_spacing=[1,1,1]):
     new_spacing = spacing / real_resize_factor
     
     image = scipy.ndimage.interpolation.zoom(image, real_resize_factor)
-    
+
     return image, new_spacing
+
+def clustering(data):
+	model = DBSCAN(eps=2.5, min_samples=2)
+	model.fit_predict(data)
+	print("number of cluster found: {}".format(len(set(model.labels_))))
+	index = Counter(model.labels_)
+	i = np.isin(model.labels_,np.array([index.most_common(1)[0][0]]))
+
+	return data[i,:]

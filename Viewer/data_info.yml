@@ -3,4 +3,4 @@ folder_mask : "/home/francoismasson/Project_AIC/data_folder/label_mask_magna/"
 npy_folder : "/home/francoismasson/Project_AIC/data_folder/data_label_npy/"
 labels_2D : False
 multi_label : True
-model_name : "/home/francoismasson/Project_AIC/Viewer/models/unet_model_for_aic.hdf5"
+model_name : "/home/francoismasson/Project_AIC/Viewer/models/unet_model_for_aic_512.hdf5"
