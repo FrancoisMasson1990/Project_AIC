@@ -21,8 +21,8 @@ import matplotlib.pyplot as plt
 from scipy import ndimage as ndi
 from aic_models import data_preprocess as dp
 from skimage.transform import resize
-import SimpleITK as sitk
 from tqdm import tqdm
+from cylinder_fitting import fit
 
 class Viewer3D(object):
 
@@ -50,6 +50,7 @@ class Viewer3D(object):
         self.score_list = []
         self.actor_gt_list = []
         self.actor_infer_list = []
+        self.actor_fitting_list = []
         self.cutter_tool = False
         self.window_2D = False
         self.window_3Dslice = False
@@ -59,6 +60,7 @@ class Viewer3D(object):
         self.render_score = None
         self.spacing = None
         self.title = None
+        self.predictions_final = None
         self.label_folder = label
         self.npy_folder = npy
         self.multi_label = multi_label
@@ -179,6 +181,11 @@ class Viewer3D(object):
                 self.ground_truth = Button(self.buttonfuncGroundTruth, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.ground_truth.actor)
                 self.buttons.append(self.ground_truth)
+
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.94],states=["Fitting (On)","Fitting (Off)"])
+                self.fitting = Button(self.buttonfuncFitting, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
+                self.ren.AddActor2D(self.fitting.actor)
+                self.buttons.append(self.fitting)
 
             
             self.ren.SetBackground(self.colors.GetColor3d(self.ren_bkg[0]))
@@ -320,9 +327,8 @@ class Viewer3D(object):
                 # Clustering
                 vertices = dp.clustering(vertices,self.center,ratio=0.3,threshold=3800)
                 # Fit with closest true points
-                predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices)
-                # Cylinder Fit
-                actor_ = self.label_3d(predictions_final,c=[0,1,0])
+                self.predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices)
+                actor_ = self.label_3d(self.predictions_final,c=[0,1,0])
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -340,24 +346,52 @@ class Viewer3D(object):
                 self.rw.Render()
                 self.infer_view_mode = not self.infer_view_mode
 
-    def score_cylinder(self):
-        # # Erase the score 
-        # for score in self.score_list:
-        #     for render in self.render_list:
-        #         try : 
-        #             render.RemoveActor(score)
-        #         except:
-        #             pass
-        # self.rw.Render()
-        # self.score_list = []
-        # # Update the score
-        # self.score_value = Text2D("10.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
-        # for render in self.render_list:
-        #     if render == self.render_score:
-        #         render.AddActor2D(self.score_value)
-        #         self.score_list.append(self.score_value)
-        # self.rw.Render()
-        pass
+    def buttonfuncFitting(self):
+        """
+        w_fit = Direction of the cylinder axis
+        C_fit = A point on the cylinder axis
+        r_fit = Radius of the cylinder
+        fit_err = Fitting error (G function)
+        """
+        self.fitting.switch()     
+        # Erase the score 
+        for score in self.score_list:
+            for render in self.render_list:
+                try : 
+                    render.RemoveActor(score)
+                except:
+                    pass
+        self.rw.Render()
+        self.score_list = []
+        # Update the score
+        if (self.fitting.status() == "Fitting (Off)") and (self.predictions_final is not None):
+            # Cylinder Fit
+            print("performing fitting...")
+            w_fit, C_fit, r_fit, fit_err = fit(self.predictions_final)
+            print("fitting done !")  
+            actor = Cylinder(pos=tuple(C_fit),r=r_fit,height=20,axis=tuple(w_fit),alpha=0.5,c="white")
+            self.actor_fitting_list.append(actor)
+            for render in self.render_list:
+                if render == self.render_score:
+                    render.AddActor(actor)
+            self.rw.Render()
+            self.ren.ResetCamera()
+            self.camera_position()
+            self.score_value = Text2D("10.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+        else :
+            for render in self.render_list:
+                if render == self.render_score:
+                    for actor_ in self.actor_fitting_list:
+                        render.RemoveActor(actor_)
+            self.actor_fitting_list = []
+            self.rw.Render()
+            self.score_value = Text2D("0.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+
+        for render in self.render_list:
+            if render == self.render_score:
+                render.AddActor2D(self.score_value)
+                self.score_list.append(self.score_value)
+        self.rw.Render()
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
@@ -560,9 +594,12 @@ class Viewer3D(object):
                             render.RemoveActor(actor_)
                         for actor_ in self.actor_infer_list:
                             render.RemoveActor(actor_)
+                        for actor_ in self.actor_fitting_list:
+                            render.RemoveActor(actor_)
                 self.actor_list = []
                 self.actor_gt_list = []
                 self.actor_infer_list = []
+                self.actor_fitting_list = []
                 self.frame += -1
                 for mode in self.mode:
                     _ = self.add_actors(mode,self.frame)
@@ -580,9 +617,12 @@ class Viewer3D(object):
                             render.RemoveActor(actor_)
                         for actor_ in self.actor_infer_list:
                             render.RemoveActor(actor_)
+                        for actor_ in self.actor_fitting_list:
+                            render.RemoveActor(actor_)
                 self.actor_list = []
                 self.actor_gt_list = []
                 self.actor_infer_list = []
+                self.actor_fitting_list = []
                 self.frame += 1
                 for mode in self.mode:
                    _ = self.add_actors(mode,self.frame)
