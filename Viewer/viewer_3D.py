@@ -369,9 +369,12 @@ class Viewer3D(object):
         if (self.fitting.status() == "Fitting (Off)") and (self.predictions_final is not None):
             # Cylinder Fit
             print("performing fitting...")
-            w_fit, C_fit, r_fit, fit_err = fit(self.predictions_final)
+            self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final)
+            print(self.w_fit)
+            print(self.C_fit)
+            print(self.r_fit)
             print("fitting done !")  
-            actor = Cylinder(pos=tuple(C_fit),r=r_fit,height=20,axis=tuple(w_fit),alpha=0.5,c="white")
+            actor = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")
             self.actor_fitting_list.append(actor)
             for render in self.render_list:
                 if render == self.render_score:
@@ -397,9 +400,17 @@ class Viewer3D(object):
                     render.RemoveActor(score)
                 except:
                     pass
-
         self.score_list = []
         if self.fitting_bool == True:
+            #Points in cylinder
+            r = self.valve_value/2
+            q = self.predictions_final
+            pt1 = self.C_fit
+            pt2 = 2*self.C_fit 
+            vec = pt2 - pt1
+            const = r * np.linalg.norm(vec)
+            points = self.predictions_final[np.where((np.dot(q - pt1, vec) >= 0) & (np.dot(q - pt2, vec) <= 0) & (np.linalg.norm(np.cross(q - pt1, vec)) <= const))]
+            print(points.shape)
             self.score_value = Text_2D("10.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
         else :
             self.score_value = Text_2D("0.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
@@ -408,6 +419,11 @@ class Viewer3D(object):
                 render.AddActor2D(self.score_value)
                 self.score_list.append(self.score_value)
         self.rw.Render()
+
+        def points_in_cylinder(pt1, pt2, r, q):
+            vec = pt2 - pt1
+            const = r * np.linalg.norm(vec)
+            return 
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
