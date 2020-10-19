@@ -52,8 +52,10 @@ class Viewer3D(object):
         self.actor_infer_list = []
         self.actor_fitting_list = []
         self.cutter_tool = False
+        self.valve_value = 20
         self.window_2D = False
         self.window_3Dslice = False
+        self.fitting_bool = False
         self.cutter_obj = []
         self.widget_cut = None
         self.mask = None
@@ -163,30 +165,40 @@ class Viewer3D(object):
 
             elif self.mode[i] == 'inference' :
                 ## button used for score and name 
-                self.score_value = Text2D("0.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+                self.score_value = Text_2D("0.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
                 self.ren.AddActor2D(self.score_value)
                 self.render_score = self.ren
                 self.score_list.append(self.score_value)
 
-                self.score_name = Text2D("Score :",pos=3,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+                self.score_name = Text_2D("Score :",pos=3,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
                 self.ren.AddActor2D(self.score_name)
 
+                self.valve_dia = Text_2D("Valve diameter :",pos=[0.01, 0.87],s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+                self.ren.AddActor2D(self.valve_dia)
+
+                self.valve_value_actor = Text_2D(str(self.valve_value),pos=[0.49, 0.87],s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+                self.ren.AddActor2D(self.valve_value_actor)
+
                 ## button used for inference and GT
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.035],states=["Inference (On)","Inference (Off)"])
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.5, 0.035],states=["Inference (On)","Inference (Off)"])
                 self.infer = Button(self.buttonfuncInference, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.infer.actor)
                 self.buttons.append(self.infer)
 
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.3, 0.035],states=["Ground Truth (On)","Ground Truth (Off)"])
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.15, 0.035],states=["Ground Truth (On)","Ground Truth (Off)"])
                 self.ground_truth = Button(self.buttonfuncGroundTruth, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.ground_truth.actor)
                 self.buttons.append(self.ground_truth)
 
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.94],states=["Fitting (On)","Fitting (Off)"])
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.8, 0.035],states=["Fitting (On)","Fitting (Off)"])
                 self.fitting = Button(self.buttonfuncFitting, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.fitting.actor)
                 self.buttons.append(self.fitting)
 
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.94],states=["Score Ratio"])
+                self.score_ratio = Button(self.buttonfuncRatio, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
+                self.ren.AddActor2D(self.score_ratio.actor)
+                self.buttons.append(self.score_ratio)
             
             self.ren.SetBackground(self.colors.GetColor3d(self.ren_bkg[0]))
             self.ren.ResetCamera()
@@ -286,7 +298,7 @@ class Viewer3D(object):
                 self.actor_gt_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
-                        render.AddActor(actor_)
+                        render.AddActor(actor_)                        
             self.rw.Render()
             self.ren.ResetCamera()
             self.camera_position()
@@ -354,16 +366,6 @@ class Viewer3D(object):
         fit_err = Fitting error (G function)
         """
         self.fitting.switch()     
-        # Erase the score 
-        for score in self.score_list:
-            for render in self.render_list:
-                try : 
-                    render.RemoveActor(score)
-                except:
-                    pass
-        self.rw.Render()
-        self.score_list = []
-        # Update the score
         if (self.fitting.status() == "Fitting (Off)") and (self.predictions_final is not None):
             # Cylinder Fit
             print("performing fitting...")
@@ -373,11 +375,11 @@ class Viewer3D(object):
             self.actor_fitting_list.append(actor)
             for render in self.render_list:
                 if render == self.render_score:
-                    render.AddActor(actor)
+                    render.AddActor(actor)          
             self.rw.Render()
             self.ren.ResetCamera()
             self.camera_position()
-            self.score_value = Text2D("10.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+            self.fitting_bool = True
         else :
             for render in self.render_list:
                 if render == self.render_score:
@@ -385,8 +387,22 @@ class Viewer3D(object):
                         render.RemoveActor(actor_)
             self.actor_fitting_list = []
             self.rw.Render()
-            self.score_value = Text2D("0.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+            self.fitting_bool = False
 
+    def buttonfuncRatio(self):
+        # Erase the score 
+        for score in self.score_list:
+            for render in self.render_list:
+                try : 
+                    render.RemoveActor(score)
+                except:
+                    pass
+
+        self.score_list = []
+        if self.fitting_bool == True:
+            self.score_value = Text_2D("10.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+        else :
+            self.score_value = Text_2D("0.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
         for render in self.render_list:
             if render == self.render_score:
                 render.AddActor2D(self.score_value)
@@ -633,7 +649,22 @@ class Viewer3D(object):
         elif key == 'p':
             for render in self.render_list:
                 render.ResetCamera()
-
+        elif key == 'plus':
+            self.valve_value += 1
+            for render in self.render_list:
+                if render == self.render_score:
+                    render.RemoveActor(self.valve_value_actor)
+                    self.valve_value_actor = Text_2D(str(self.valve_value),pos=[0.49, 0.87],s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+                    render.AddActor2D(self.valve_value_actor)
+            self.rw.Render()
+        elif key == 'minus':
+            self.valve_value -= 1
+            for render in self.render_list:
+                if render == self.render_score:
+                    render.RemoveActor(self.valve_value_actor)
+                    self.valve_value_actor = Text_2D(str(self.valve_value),pos=[0.49, 0.87],s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+                    render.AddActor2D(self.valve_value_actor)
+            self.rw.Render()
         else :
             pass
         return

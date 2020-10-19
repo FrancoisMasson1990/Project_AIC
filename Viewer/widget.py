@@ -609,7 +609,7 @@ class Cutter(object):
             self.origins.append(self.planes.GetPlane(faces).GetOrigin())
             self.normals.append(self.planes.GetPlane(faces).GetNormal())
 
-def Text2D(txt,pos=3,s=1,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False):
+def Text_2D(txt,pos=3,s=1,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False):
     """
         Returns a ``vtkActor2D`` representing 2D text.
             :param pos: text is placed in one of the 8 positions:
