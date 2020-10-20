@@ -331,3 +331,17 @@ def boxe_3d(volume_array,predict):
 	volume_array = volume_array[index]
 	
 	return volume_array
+
+def normalize(v):
+    '''Normalize a vector based on its 2 norm.'''
+    if 0 == np.linalg.norm(v):
+        return v
+    return v / np.linalg.norm(v)
+
+def point_line_distance(p, l_p, l_v):
+    '''Calculate the distance between a point and a line defined
+    by a point and a direction vector.
+    '''
+    l_v = normalize(l_v)
+    u = p - l_p
+    return np.linalg.norm(u - np.dot(u, l_v) * l_v)
