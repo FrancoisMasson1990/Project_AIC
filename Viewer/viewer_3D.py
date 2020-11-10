@@ -47,7 +47,6 @@ class Viewer3D(object):
         self.render_list = []
         self.axes_list = []
         self.grid_list = []
-        self.score_list = []
         self.actor_gt_list = []
         self.actor_infer_list = []
         self.actor_fitting_list = []
@@ -164,15 +163,8 @@ class Viewer3D(object):
                 self.buttons.append(self.but_)
 
             elif self.mode[i] == 'inference' :
-                ## button used for score and name 
-                self.score_value = Text_2D("0.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
-                self.ren.AddActor2D(self.score_value)
                 self.render_score = self.ren
-                self.score_list.append(self.score_value)
-
-                self.score_name = Text_2D("Score :",pos=3,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
-                self.ren.AddActor2D(self.score_name)
-
+                ## button used for diameter value
                 self.valve_dia = Text_2D("Valve diameter :",pos=[0.01, 0.87],s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
                 self.ren.AddActor2D(self.valve_dia)
 
@@ -195,8 +187,8 @@ class Viewer3D(object):
                 self.ren.AddActor2D(self.fitting.actor)
                 self.buttons.append(self.fitting)
 
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.7, 0.94],states=["Score Ratio"])
-                self.score_ratio = Button(self.buttonfuncRatio, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.12, 0.94],states=["Score Agatston"])
+                self.score_ratio = Button(self.buttonfuncAgatston, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.score_ratio.actor)
                 self.buttons.append(self.score_ratio)
             
@@ -389,30 +381,20 @@ class Viewer3D(object):
             self.rw.Render()
             self.fitting_bool = False
 
-    def buttonfuncRatio(self):
-        # Erase the score 
-        for score in self.score_list:
-            for render in self.render_list:
-                try : 
-                    render.RemoveActor(score)
-                except:
-                    pass
-        self.score_list = []
-        if self.fitting_bool == True:
-            #Points in cylinder
-            d = []
-            for point in tqdm(self.predictions_final):
-                d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
-            d = np.array(d)
-            points_filter = self.predictions_final[np.where(d<self.valve_value/2)]
-            self.score_value = Text_2D(str(points_filter),pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
-        else :
-            self.score_value = Text_2D("0.0",pos=8,s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
-        for render in self.render_list:
-            if render == self.render_score:
-                render.AddActor2D(self.score_value)
-                self.score_list.append(self.score_value)
-        self.rw.Render()
+    def buttonfuncAgatston(self):
+        plt.plot([1, 2, 3, 4])
+        plt.ylabel('some numbers')
+        plt.show()
+        # if self.fitting_bool == True:
+        #     #Points in cylinder
+        #     d = []
+        #     for point in tqdm(self.predictions_final):
+        #         d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
+        #     d = np.array(d)
+        #     points_filter = self.predictions_final[np.where(d<self.valve_value/2)]
+        # else :
+        #     pass
+        # self.rw.Render()
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
@@ -445,6 +427,7 @@ class Viewer3D(object):
         self.img = self.img.isosurface()
         ## Following lines used to get the mask 
         self.mask = tuple(reversed(vtkio.load(data).imagedata().GetDimensions()))
+
         self.mask = np.zeros(self.mask,dtype=int)
         self.spacing = vtkio.load(data).imagedata().GetSpacing()
 
