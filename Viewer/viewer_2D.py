@@ -16,11 +16,12 @@ import pydicom
 from natsort import natsorted
 
 class Viewer2D(object):
-    def __init__(self, data_path: str, folder_mask: str, model, frame=0):
+    def __init__(self, data_path: str, folder_mask: str, model, frame=0, agatston=False):
 
         self.frame_init = 0
         self.data_path = data_path
         self.folder_mask = folder_mask
+        self.agatston = agatston
         
         # Callback
         self.draw()
@@ -125,24 +126,37 @@ class Viewer2D(object):
     #     #print("Shape after resampling\t", imgs_after_resamp.shape)
 
     def draw(self):
-
-        fig, ax = plt.subplots(1, 2, figsize=(15, 10))
-        ax0, ax1 = ax[0], ax[1]
-        ax0.axis('off')
-        ax1.axis('off')
-        axslice = plt.axes([0.20, 0.9, 0.65, 0.03])
-        callback = Image_2D(self.data_path, self.folder_mask,
-                            self.frame_init, ax0, ax1, axslice, fig)
-        axprev = plt.axes([0.125, 0.05, 0.15, 0.075])
-        axnext = plt.axes([0.7, 0.05, 0.15, 0.075])
-        axsave = plt.axes([0.5, 0.05, 0.15, 0.075])
-        bnext = Button(axnext, 'Next Patient')
-        bnext.on_clicked(callback.next)
-        bprev = Button(axprev, 'Previous Patient')
-        bprev.on_clicked(callback.prev)
-        bsave = Button(axsave, 'Save Image')
-        bsave.on_clicked(callback.save_image)
-        plt.show()
+        
+        if self.agatston :
+            fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+            ax0 = ax
+            ax0.axis('off')
+            ax1 = None
+            axslice = plt.axes([0.20, 0.9, 0.65, 0.03])
+            callback = Image_2D(self.data_path, self.folder_mask,
+                               self.frame_init, ax0, ax1, axslice, fig)
+            axsave = plt.axes([0.05, 0.5, 0.15, 0.075])
+            bsave = Button(axsave, 'Save Image')
+            bsave.on_clicked(callback.save_image)
+            plt.show()
+        else :
+            fig, ax = plt.subplots(1, 2, figsize=(15, 10))
+            ax0, ax1 = ax[0], ax[1]
+            ax0.axis('off')
+            ax1.axis('off')
+            axslice = plt.axes([0.20, 0.9, 0.65, 0.03])
+            callback = Image_2D(self.data_path, self.folder_mask,
+                                self.frame_init, ax0, ax1, axslice, fig)
+            axprev = plt.axes([0.125, 0.05, 0.15, 0.075])
+            axnext = plt.axes([0.7, 0.05, 0.15, 0.075])
+            axsave = plt.axes([0.5, 0.05, 0.15, 0.075])
+            bnext = Button(axnext, 'Next Patient')
+            bnext.on_clicked(callback.next)
+            bprev = Button(axprev, 'Previous Patient')
+            bprev.on_clicked(callback.prev)
+            bsave = Button(axsave, 'Save Image')
+            bsave.on_clicked(callback.save_image)
+            plt.show()
 
 
 class Image_2D(Viewer2D):
@@ -159,26 +173,33 @@ class Image_2D(Viewer2D):
         self.slices = self.load_scan(self.data_path, self.frame)
         self.image = self.get_pixels_hu(self.slices)
         
-        self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
-        self.init_label = True
+        if self.label_folder != "":
+            self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
+            self.init_label = True
+        else :
+            self.label = None
 
         # Slider Gui
         self.index = len(self.image)//2
         self.slicer = Slider(self.axislicer, 'Image', 0, len(self.image)-1, valinit=len(self.image)//2, valstep=1)
         self.axis1 = axis1
-        self.axis2 = axis2
 
-        # Brush activate GUI
-        self.axbrush = plt.axes([0.3, 0.05, 0.15, 0.075])
-        self.bbrush = Button(self.axbrush, 'Brush OFF')
-        self.bbrush.on_clicked(self.brush_state)
-        self.brush_activate = False
+        if axis2 is not None:
+            self.axis2 = axis2
+            # Brush activate GUI
+            self.axbrush = plt.axes([0.3, 0.05, 0.15, 0.075])
+            self.bbrush = Button(self.axbrush, 'Brush OFF')
+            self.bbrush.on_clicked(self.brush_state)
 
-        # State Purple-Yellow GUI
-        self.axlabel_state = plt.axes([0.92, 0.7, 0.05, 0.075])
-        self.bpurple_yellow = Button(self.axlabel_state, 'Purple')
-        self.bpurple_yellow.on_clicked(self.brush_pixel)
-        self.purple_yellow_activate = False
+            # State Purple-Yellow GUI
+            self.axlabel_state = plt.axes([0.92, 0.7, 0.05, 0.075])
+            self.bpurple_yellow = Button(self.axlabel_state, 'Purple')
+            self.bpurple_yellow.on_clicked(self.brush_pixel)
+            self.purple_yellow_activate = False
+            self.brush_activate = False
+        else :
+            self.brush_activate = None
+            self.purple_yellow_activate = None
 
         # Need to activate Press and release
         self.pressed = False
@@ -189,8 +210,8 @@ class Image_2D(Viewer2D):
         self._image = None
         self._image = self.axis1.imshow(self.image[self.index], cmap='gray')
         
-        self.label_image = np.load(self.label[self.index])
         if self.label is not None:
+            self.label_image = np.load(self.label[self.index])
             self._label = self.axis2.imshow(self.label_image, vmin=np.min(self.label_image), vmax=np.max(self.label_image))
             self.init_label = False
 
@@ -203,7 +224,8 @@ class Image_2D(Viewer2D):
             self.frame += 1
         self.slices = self.load_scan(self.data_path, self.frame)
         self.image = self.get_pixels_hu(self.slices)
-        self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
+        if self.label is not None:
+            self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
 
         self.slicer.valmax = len(self.image)-1
         self.slicer.valinit = len(self.image)//2
@@ -217,8 +239,8 @@ class Image_2D(Viewer2D):
 
         self.slices = self.load_scan(self.data_path, self.frame)
         self.image = self.get_pixels_hu(self.slices)
-
-        self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
+        if self.label is not None:
+            self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
 
         self.slicer.valmax = len(self.image)-1
         self.slicer.valinit = len(self.image)//2
@@ -238,7 +260,10 @@ class Image_2D(Viewer2D):
             self.axis2.axis('off')
             self._label = self.axis2.imshow(self.label_image, vmin=np.min(self.label_image), vmax=np.max(self.label_image))
         else:
-            self.axis2.cla()
+            try :
+                self.axis2.cla()
+            except :
+                pass
             self.init_label = True
 
     def save_image(self, event):
@@ -246,20 +271,22 @@ class Image_2D(Viewer2D):
         print('Saved')
 
     def brush_state(self, event):
-        if not self.brush_activate:
-            self.bbrush.label.set_text('Brush ON')
-            self.brush_activate = not self.brush_activate
-        else:
-            self.bbrush.label.set_text('Brush OFF')
-            self.brush_activate = not self.brush_activate
+        if self.brush_activate is not None :
+            if not self.brush_activate:
+                self.bbrush.label.set_text('Brush ON')
+                self.brush_activate = not self.brush_activate
+            else:
+                self.bbrush.label.set_text('Brush OFF')
+                self.brush_activate = not self.brush_activate
 
     def brush_pixel(self, event):
-        if not self.purple_yellow_activate:
-            self.bpurple_yellow.label.set_text('Yellow')
-            self.purple_yellow_activate = not self.purple_yellow_activate
-        else:
-            self.bpurple_yellow.label.set_text('Purple')
-            self.purple_yellow_activate = not self.purple_yellow_activate
+        if self.purple_yellow_activate is not None :
+            if not self.purple_yellow_activate:
+                self.bpurple_yellow.label.set_text('Yellow')
+                self.purple_yellow_activate = not self.purple_yellow_activate
+            else:
+                self.bpurple_yellow.label.set_text('Purple')
+                self.purple_yellow_activate = not self.purple_yellow_activate
 
     def mouse_pressed(self, event):
         self.pressed = True
@@ -268,15 +295,16 @@ class Image_2D(Viewer2D):
         self.pressed = False
 
     def mouse_position(self, event):
-        if self.pressed and self.brush_activate:
-            if event.xdata is not None and event.ydata is not None :
-                x_coord = int(np.floor(event.xdata))
-                y_coord = int(np.floor(event.ydata))
-                if not self.purple_yellow_activate:
-                    self.label_image[y_coord, x_coord] = 1
-                    self._label.set_data(self.label_image)
-                    self.fig_canvas.canvas.draw()
-                else:
-                    self.label_image[y_coord, x_coord] = 0
-                    self._label.set_data(self.label_image)
-                    self.fig_canvas.canvas.draw()
+        if self.brush_activate is not None :
+            if self.pressed and self.brush_activate:
+                if event.xdata is not None and event.ydata is not None :
+                    x_coord = int(np.floor(event.xdata))
+                    y_coord = int(np.floor(event.ydata))
+                    if not self.purple_yellow_activate:
+                        self.label_image[y_coord, x_coord] = 1
+                        self._label.set_data(self.label_image)
+                        self.fig_canvas.canvas.draw()
+                    else:
+                        self.label_image[y_coord, x_coord] = 0
+                        self._label.set_data(self.label_image)
+                        self.fig_canvas.canvas.draw()

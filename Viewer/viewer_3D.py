@@ -23,6 +23,7 @@ from aic_models import data_preprocess as dp
 from skimage.transform import resize
 from tqdm import tqdm
 from cylinder_fitting import fit
+from viewer_2D import Viewer2D
 
 class Viewer3D(object):
 
@@ -382,9 +383,6 @@ class Viewer3D(object):
             self.fitting_bool = False
 
     def buttonfuncAgatston(self):
-        plt.plot([1, 2, 3, 4])
-        plt.ylabel('some numbers')
-        plt.show()
         # if self.fitting_bool == True:
         #     #Points in cylinder
         #     d = []
@@ -395,6 +393,9 @@ class Viewer3D(object):
         # else :
         #     pass
         # self.rw.Render()
+
+        # Show the score in two 2D mode
+        Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",agatston=True)
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
