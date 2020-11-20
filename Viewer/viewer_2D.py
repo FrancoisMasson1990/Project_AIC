@@ -129,8 +129,10 @@ class Viewer2D(object):
         
         if self.agatston :
             fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+            fig.canvas.set_window_title('Agatston Score')
             ax0 = ax
-            ax0.axis('off')
+            ax0.get_xaxis().set_ticks([])
+            ax0.get_yaxis().set_ticks([])
             ax1 = None
             axslice = plt.axes([0.20, 0.9, 0.65, 0.03])
             callback = Image_2D(self.data_path, self.folder_mask,
@@ -208,12 +210,17 @@ class Image_2D(Viewer2D):
         self.fig_canvas.canvas.mpl_connect('motion_notify_event', self.mouse_position)
 
         self._image = None
-        self._image = self.axis1.imshow(self.image[self.index], cmap='gray')
-        
+        self._image = self.axis1.imshow(self.image[self.index], cmap='gray',legend="Test")
+                
         if self.label is not None:
             self.label_image = np.load(self.label[self.index])
             self._label = self.axis2.imshow(self.label_image, vmin=np.min(self.label_image), vmax=np.max(self.label_image))
             self.init_label = False
+        else : 
+            pass
+            #Set colored point with legend
+            #self.axis1.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05))
+            #self.axis1.set_xlabel('common xlabel')
 
         self.slicer.on_changed(self.update)
 

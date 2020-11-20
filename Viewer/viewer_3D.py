@@ -188,7 +188,7 @@ class Viewer3D(object):
                 self.ren.AddActor2D(self.fitting.actor)
                 self.buttons.append(self.fitting)
 
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.12, 0.94],states=["Score Agatston"])
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.12, 0.94],states=["Agatston Score"])
                 self.score_ratio = Button(self.buttonfuncAgatston, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.score_ratio.actor)
                 self.buttons.append(self.score_ratio)
