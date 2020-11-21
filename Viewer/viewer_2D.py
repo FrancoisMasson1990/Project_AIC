@@ -16,12 +16,14 @@ import pydicom
 from natsort import natsorted
 
 class Viewer2D(object):
-    def __init__(self, data_path: str, folder_mask: str, model, frame=0, agatston=False):
+    def __init__(self, data_path: str, folder_mask: str, model, frame=0, mask_agatston=None, agatston=False, area=None):
 
         self.frame_init = 0
         self.data_path = data_path
         self.folder_mask = folder_mask
+        self.mask_agatston = mask_agatston
         self.agatston = agatston
+        self.area = area
         
         # Callback
         self.draw()
@@ -90,7 +92,7 @@ class Viewer2D(object):
             ax1 = None
             axslice = plt.axes([0.20, 0.9, 0.65, 0.03])
             callback = Image_2D(self.data_path, self.folder_mask,
-                               self.frame_init, ax0, ax1, axslice, fig,agatston=self.agatston)
+                               self.frame_init, ax0, ax1, axslice, fig, mask_agatston=self.mask_agatston, agatston=self.agatston, area=self.area)
             plt.show()
         else :
             fig, ax = plt.subplots(1, 2, figsize=(15, 10))
@@ -111,7 +113,7 @@ class Viewer2D(object):
             bsave.on_clicked(callback.save_image)
             plt.show()
 class Image_2D(Viewer2D):
-    def __init__(self, data_path, label_folder, frame, axis1, axis2, axislicer, fig,agatston=False):
+    def __init__(self, data_path, label_folder, frame, axis1, axis2, axislicer, fig, mask_agatston=None, agatston=False, area=None):
 
         self.data_path = data_path
         self.label_folder = label_folder
@@ -119,7 +121,10 @@ class Image_2D(Viewer2D):
         self.axislicer = axislicer
         self.fig_canvas = fig
         self.prediction = None
+        self.mask_agatston = mask_agatston
         self.agatston_bool = agatston
+        self.threshold = 130
+        self.area = area
 
         # Dicom image
         self.slices = None
@@ -170,20 +175,37 @@ class Image_2D(Viewer2D):
 
         if self.agatston_bool : 
             self._prediction_view = None
-            self.agatston_score()
-            #Set colored point with legend
+            self.agatston_score_slice()
             self._prediction_view = self.axis1.imshow(self.prediction, 'jet', interpolation='none', alpha=0.7)
+            score = self.agatston_score()
+            self.axis1.set_xlabel("Agatston score : {:.1f}".format(score))
 
         self.slicer.on_changed(self.update)
     
+    def agatston_score_slice(self):
+        self.prediction = np.ma.masked_where(self.mask_agatston[self.index] == 0, self.image[self.index])
+        self.prediction = np.ma.masked_where(self.prediction < self.threshold, self.prediction)
+    
     def agatston_score(self):
-        self.prediction = np.zeros((self.image[self.index].shape))
-        # Should change by estimate value of the valve !
-        self.prediction[100:150, 100:150] = 1 # white square in black background
-        self.prediction = np.ma.masked_where(self.prediction == 0, self.prediction)
+        score = 0.0
+        for i in range(len(self.image)):
+           prediction = np.ma.masked_where(self.mask_agatston[i] == 0, self.image[i])
+           prediction = np.ma.masked_where(prediction < self.threshold, prediction)
+           prediction_sum = np.sum(prediction)
+           if isinstance(prediction_sum,np.float64) or isinstance(prediction_sum,np.int64):
+               score += prediction_sum
+        
+        # Agatston boundaries 
+        # if 130 < i < 199 == 1
+        # if 200 < i < 299 == 2
+        # if 300 < i < 399 == 3
+        # if i >= 400 == 4
+
+        score = score * self.area
+
+        return score 
 
     def next(self, event):
-        # Should save with the Agatston Score as well
         if self.frame == len(self.data_path)-1:
             self.frame = len(self.data_path)-1
         else:
@@ -193,9 +215,6 @@ class Image_2D(Viewer2D):
         
         if self.label is not None:
             self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
-
-        if self.agatston_bool:
-            self.agatston_score()
 
         self.slicer.valmax = len(self.image)-1
         self.slicer.valinit = len(self.image)//2
@@ -213,21 +232,18 @@ class Image_2D(Viewer2D):
         if self.label is not None:
             self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
         
-        if self.agatston_bool:
-            self.agatston_score()
-
         self.slicer.valmax = len(self.image)-1
         self.slicer.valinit = len(self.image)//2
         self.slicer.reset()
 
     def update(self, val):
-        # Should save with the Agatston Score as well
         self.index = int(self.slicer.val)
         if self._image is None:
             self._image = self.axis1.imshow(self.image[self.index], cmap='gray')
         else:
             self._image.set_data(self.image[self.index])
-        if self.agatston_score:
+        if self.agatston_bool:
+            self.agatston_score_slice()
             if self._prediction_view is None :
                 self._prediction_view = self.axis1.imshow(self.prediction, 'jet', interpolation='none', alpha=0.7)
             else : 
@@ -247,7 +263,6 @@ class Image_2D(Viewer2D):
             self.init_label = True
 
     def save_image(self, event):
-        # Should save with the Agatston Score as well
         if self.label is not None :
             np.save(self.label[self.index],self.label_image)
         print('Saved')

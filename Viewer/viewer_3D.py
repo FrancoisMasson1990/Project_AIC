@@ -63,6 +63,7 @@ class Viewer3D(object):
         self.spacing = None
         self.title = None
         self.predictions_final = None
+        self.area = None
         self.label_folder = label
         self.npy_folder = npy
         self.multi_label = multi_label
@@ -391,10 +392,25 @@ class Viewer3D(object):
                 d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
             d = np.array(d)
             points_filter = self.predictions_agatston[np.where(d<self.valve_value/2)]
-            print(points_filter.shape)
+            points_filter [:,0] = np.around(points_filter [:,0]/self.spacing[0])
+            points_filter [:,1] = np.around(points_filter [:,1]/self.spacing[1])
+            points_filter [:,2] = np.around(points_filter [:,2]/self.spacing[2])
+            # Along the z axis : Later Along x axis and y axis ... (3D Object Detection from CT Scans using a Slice-and-fuse Approach)
+            slicer = np.unique(points_filter[:,2]).astype(int)
 
+            mask_agatston = self.mask.copy()
+            for z_axis in range(self.mask.shape[0]):
+                if z_axis in slicer:
+                    z = points_filter[points_filter[:,2]==z_axis]
+                    x_y = np.ndarray(shape=(z.shape[0],2), dtype=int)
+                    x_y[:] = z[:,0:2]
+                    x_y = np.unique(x_y, axis=0)
+                    for value in x_y :
+                        mask_agatston[z_axis,value[0],value[1]] = 1               
+                    mask_agatston[z_axis,::] = np.rot90(mask_agatston[z_axis,::])
+            
             # Show the score in 2D mode
-            #Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",agatston=True)
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
@@ -430,6 +446,7 @@ class Viewer3D(object):
 
         self.mask = np.zeros(self.mask,dtype=int)
         self.spacing = vtkio.load(data).imagedata().GetSpacing()
+        self.area = self.spacing[0]*self.spacing[1]
 
         # Get the all points in isosurface
         self.points = self.img.GetMapper().GetInput()
