@@ -191,17 +191,23 @@ class Image_2D(Viewer2D):
         for i in range(len(self.image)):
            prediction = np.ma.masked_where(self.mask_agatston[i] == 0, self.image[i])
            prediction = np.ma.masked_where(prediction < self.threshold, prediction)
-           prediction_sum = np.sum(prediction)
-           if isinstance(prediction_sum,np.float64) or isinstance(prediction_sum,np.int64):
-               score += prediction_sum
-        
-        # Agatston boundaries 
-        # if 130 < i < 199 == 1
-        # if 200 < i < 299 == 2
-        # if 300 < i < 399 == 3
-        # if i >= 400 == 4
-
-        score = score * self.area
+           # Should include cluster part
+           # Should iterate in every cluster
+           # Should exclude cluster where size < 1 mm2
+           # Should count the number of pixels remaining and attribuate that to number of pix 
+           number_of_pix = 1
+           prediction_max = np.max(prediction)
+           if isinstance(prediction_max,np.float64) or isinstance(prediction_max,np.integer) or isinstance(prediction_max,np.float32):
+               if (prediction_max >= 130) and (prediction_max < 200):
+                   score += 1*self.area*number_of_pix
+               elif (prediction_max >= 200) and (prediction_max < 300):
+                   score += 2*self.area*number_of_pix
+               elif (prediction_max >= 300) and (prediction_max < 400):
+                   score += 3*self.area*number_of_pix
+               elif (prediction_max >= 400):
+                   score += 4*self.area*number_of_pix
+               else : 
+                   score += 0*self.area
 
         return score 
 
