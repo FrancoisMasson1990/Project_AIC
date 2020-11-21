@@ -333,6 +333,7 @@ class Viewer3D(object):
                 vertices = dp.clustering(vertices,self.center,ratio=0.3,threshold=3800)
                 # Fit with closest true points
                 self.predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices)
+                self.predictions_agatston = dp.boxe_3d(self.all_numpy_nodes_agatston,vertices)
                 actor_ = self.label_3d(self.predictions_final,c=[0,1,0])
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
@@ -383,19 +384,17 @@ class Viewer3D(object):
             self.fitting_bool = False
 
     def buttonfuncAgatston(self):
-        # if self.fitting_bool == True:
-        #     #Points in cylinder
-        #     d = []
-        #     for point in tqdm(self.predictions_final):
-        #         d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
-        #     d = np.array(d)
-        #     points_filter = self.predictions_final[np.where(d<self.valve_value/2)]
-        # else :
-        #     pass
-        # self.rw.Render()
+        if self.fitting_bool == True:
+            #Points in cylinder
+            d = []
+            for point in tqdm(self.predictions_agatston):
+                d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
+            d = np.array(d)
+            points_filter = self.predictions_agatston[np.where(d<self.valve_value/2)]
+            print(points_filter.shape)
 
-        # Show the score in two 2D mode
-        Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",agatston=True)
+            # Show the score in 2D mode
+            #Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",agatston=True)
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
@@ -436,6 +435,13 @@ class Viewer3D(object):
         self.points = self.img.GetMapper().GetInput()
         self.all_array = self.points.GetPoints()
         self.all_numpy_nodes = vtk_to_numpy(self.all_array.GetData())
+
+        # Get the all points for agatston score
+        self.img_agatston = vtkio.load(data)
+        self.img_agatston = self.img_agatston.isosurface(threshold=130)
+        self.points_agatston = self.img_agatston.GetMapper().GetInput()
+        self.all_array_agatston = self.points_agatston.GetPoints()
+        self.all_numpy_nodes_agatston = vtk_to_numpy(self.all_array_agatston.GetData())
             
         return self.img
 

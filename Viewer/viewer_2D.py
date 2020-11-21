@@ -79,52 +79,6 @@ class Viewer2D(object):
         image += np.int16(intercept)
         return np.array(image, dtype=np.int16)
 
-    def resample(image, scan, new_spacing=[1, 1, 1]):
-        # Determine current pixel spacing
-        spacing = map(float, ([scan[0].SliceThickness,
-                               scan[0].PixelSpacing[0], scan[0].PixelSpacing[1]]))
-        spacing = np.array(list(spacing))
-
-        resize_factor = spacing / new_spacing
-        new_real_shape = image.shape * resize_factor
-        new_shape = np.round(new_real_shape)
-        real_resize_factor = new_shape / image.shape
-        new_spacing = spacing / real_resize_factor
-
-        image = scipy.ndimage.interpolation.zoom(image, real_resize_factor)
-
-        return image, new_spacing
-
-    def make_mesh(image, threshold=-300, step_size=1):
-
-        print("Transposing surface")
-        p = image.transpose(2, 1, 0)
-
-        print("Calculating surface")
-        verts, faces, norm, val = measure.marching_cubes_lewiner(p, threshold, step_size=step_size, allow_degenerate=True)
-        return verts, faces
-
-    ## WIP
-    ## Resemple function for the Deep Learning model
-    #     # Histogram of all the voxel data
-    #     #file_used=output_path+"fullimages_%d.npy" % idx
-    #     #imgs_to_process = np.load(file_used).astype(np.float64)
-
-    #     #plt.hist(imgs_to_process.flatten(), bins=50, color='c')
-    #     #plt.xlabel("Hounsfield Units (HU)")
-    #     #plt.ylabel("Frequency")
-    #     #plt.show()
-    #     #sample_stack(imgs_to_process)
-
-    #     sample_stack(imgs,idx=60)
-
-    #     #print("Slice Thickness: %f" % patient[0].SliceThickness)
-    #     #print("Pixel Spacing (row, col): (%f, %f) " % (patient[0].PixelSpacing[0], patient[0].PixelSpacing[1]))
-
-    #     #print("Shape before resampling\t", imgs_to_process.shape)
-    #     #imgs_after_resamp, spacing = resample(imgs_to_process, patient, [1,1,1])
-    #     #print("Shape after resampling\t", imgs_after_resamp.shape)
-
     def draw(self):
         
         if self.agatston :
@@ -136,10 +90,7 @@ class Viewer2D(object):
             ax1 = None
             axslice = plt.axes([0.20, 0.9, 0.65, 0.03])
             callback = Image_2D(self.data_path, self.folder_mask,
-                               self.frame_init, ax0, ax1, axslice, fig)
-            axsave = plt.axes([0.05, 0.5, 0.15, 0.075])
-            bsave = Button(axsave, 'Save Image')
-            bsave.on_clicked(callback.save_image)
+                               self.frame_init, ax0, ax1, axslice, fig,agatston=self.agatston)
             plt.show()
         else :
             fig, ax = plt.subplots(1, 2, figsize=(15, 10))
@@ -159,16 +110,16 @@ class Viewer2D(object):
             bsave = Button(axsave, 'Save Image')
             bsave.on_clicked(callback.save_image)
             plt.show()
-
-
 class Image_2D(Viewer2D):
-    def __init__(self, data_path, label_folder, frame, axis1, axis2, axislicer, fig):
+    def __init__(self, data_path, label_folder, frame, axis1, axis2, axislicer, fig,agatston=False):
 
         self.data_path = data_path
         self.label_folder = label_folder
         self.frame = frame
         self.axislicer = axislicer
         self.fig_canvas = fig
+        self.prediction = None
+        self.agatston_bool = agatston
 
         # Dicom image
         self.slices = None
@@ -210,29 +161,41 @@ class Image_2D(Viewer2D):
         self.fig_canvas.canvas.mpl_connect('motion_notify_event', self.mouse_position)
 
         self._image = None
-        self._image = self.axis1.imshow(self.image[self.index], cmap='gray',legend="Test")
+        self._image = self.axis1.imshow(self.image[self.index], cmap='gray')
                 
         if self.label is not None:
             self.label_image = np.load(self.label[self.index])
             self._label = self.axis2.imshow(self.label_image, vmin=np.min(self.label_image), vmax=np.max(self.label_image))
             self.init_label = False
-        else : 
-            pass
+
+        if self.agatston_bool : 
+            self._prediction_view = None
+            self.agatston_score()
             #Set colored point with legend
-            #self.axis1.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05))
-            #self.axis1.set_xlabel('common xlabel')
+            self._prediction_view = self.axis1.imshow(self.prediction, 'jet', interpolation='none', alpha=0.7)
 
         self.slicer.on_changed(self.update)
+    
+    def agatston_score(self):
+        self.prediction = np.zeros((self.image[self.index].shape))
+        # Should change by estimate value of the valve !
+        self.prediction[100:150, 100:150] = 1 # white square in black background
+        self.prediction = np.ma.masked_where(self.prediction == 0, self.prediction)
 
     def next(self, event):
+        # Should save with the Agatston Score as well
         if self.frame == len(self.data_path)-1:
             self.frame = len(self.data_path)-1
         else:
             self.frame += 1
         self.slices = self.load_scan(self.data_path, self.frame)
         self.image = self.get_pixels_hu(self.slices)
+        
         if self.label is not None:
             self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
+
+        if self.agatston_bool:
+            self.agatston_score()
 
         self.slicer.valmax = len(self.image)-1
         self.slicer.valinit = len(self.image)//2
@@ -246,19 +209,29 @@ class Image_2D(Viewer2D):
 
         self.slices = self.load_scan(self.data_path, self.frame)
         self.image = self.get_pixels_hu(self.slices)
+
         if self.label is not None:
             self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
+        
+        if self.agatston_bool:
+            self.agatston_score()
 
         self.slicer.valmax = len(self.image)-1
         self.slicer.valinit = len(self.image)//2
         self.slicer.reset()
 
     def update(self, val):
+        # Should save with the Agatston Score as well
         self.index = int(self.slicer.val)
         if self._image is None:
             self._image = self.axis1.imshow(self.image[self.index], cmap='gray')
         else:
             self._image.set_data(self.image[self.index])
+        if self.agatston_score:
+            if self._prediction_view is None :
+                self._prediction_view = self.axis1.imshow(self.prediction, 'jet', interpolation='none', alpha=0.7)
+            else : 
+                self._prediction_view.set_data(self.prediction)     
         if self.label is not None and not self.init_label:
             self.label_image = np.load(self.label[self.index])
             self._label.set_data(self.label_image)
@@ -274,7 +247,9 @@ class Image_2D(Viewer2D):
             self.init_label = True
 
     def save_image(self, event):
-        np.save(self.label[self.index],self.label_image)
+        # Should save with the Agatston Score as well
+        if self.label is not None :
+            np.save(self.label[self.index],self.label_image)
         print('Saved')
 
     def brush_state(self, event):
