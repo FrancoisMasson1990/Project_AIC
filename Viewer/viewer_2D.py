@@ -14,6 +14,7 @@ from sklearn.cluster import KMeans
 import math
 import pydicom
 from natsort import natsorted
+from scipy.ndimage import measurements
 
 class Viewer2D(object):
     def __init__(self, data_path: str, folder_mask: str, model, frame=0, mask_agatston=None, agatston=False, area=None):
@@ -189,25 +190,26 @@ class Image_2D(Viewer2D):
     def agatston_score(self):
         score = 0.0
         for i in range(len(self.image)):
-           prediction = np.ma.masked_where(self.mask_agatston[i] == 0, self.image[i])
-           prediction = np.ma.masked_where(prediction < self.threshold, prediction)
-           # Should include cluster part
-           # Should iterate in every cluster
-           # Should exclude cluster where size < 1 mm2
-           # Should count the number of pixels remaining and attribuate that to number of pix 
-           number_of_pix = 1
-           prediction_max = np.max(prediction)
-           if isinstance(prediction_max,np.float64) or isinstance(prediction_max,np.integer) or isinstance(prediction_max,np.float32):
-               if (prediction_max >= 130) and (prediction_max < 200):
-                   score += 1*self.area*number_of_pix
-               elif (prediction_max >= 200) and (prediction_max < 300):
-                   score += 2*self.area*number_of_pix
-               elif (prediction_max >= 300) and (prediction_max < 400):
-                   score += 3*self.area*number_of_pix
-               elif (prediction_max >= 400):
-                   score += 4*self.area*number_of_pix
-               else : 
-                   score += 0*self.area
+            prediction = self.mask_agatston[i]
+            prediction[self.image[i]<self.threshold] = 0.0
+            lw, num = measurements.label(prediction)
+            area_ = measurements.sum(prediction, lw, index=np.arange(lw.max() + 1))
+            for j,number_of_pix in enumerate(area_):
+                    if j != 0 :
+                        prediction_max = np.max(self.image[i][lw==j])
+                        print(prediction_max)
+                        print(number_of_pix)
+                        if number_of_pix*self.area > 1 : #(density higher than 1mm2)
+                            if (prediction_max >= 130) and (prediction_max < 200):
+                                score += 1*self.area*number_of_pix
+                            elif (prediction_max >= 200) and (prediction_max < 300):
+                                score += 2*self.area*number_of_pix
+                            elif (prediction_max >= 300) and (prediction_max < 400):
+                                score += 3*self.area*number_of_pix
+                            elif (prediction_max >= 400):
+                                score += 4*self.area*number_of_pix
+                            else : 
+                                score += 0*self.area
 
         return score 
 
