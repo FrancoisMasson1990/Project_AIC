@@ -44,8 +44,8 @@ except RuntimeError as e:
 
 from aic_models import model_2D 
 
-def main_3D(data,folder_mask,folder_npy,multi_label,model):
-    viewer = Viewer3D(data,mode=4,label=folder_mask,npy=folder_npy,multi_label=multi_label,model=model)
+def main_3D(data,folder_mask,folder_npy,multi_label,model,template):
+    viewer = Viewer3D(data,mode=4,label=folder_mask,npy=folder_npy,multi_label=multi_label,model=model,template=template)
     viewer.show()
 
 def main_2D(data,folder_mask,model):
@@ -67,6 +67,7 @@ if __name__ == '__main__':
     arg.npy_folder = config.get("npy_folder",None)
     arg.multi_label = config.get("multi_label",None)
     arg.model_name = config.get("model_name",None)
+    arg.template = config.get("template",None)
 
     unet_model = model_2D.unet()
     if arg.model_name is not None :
@@ -82,8 +83,8 @@ if __name__ == '__main__':
         sub_ = os.listdir(root)
         for sub in sub_ :
             data.append(os.path.join(root,sub))
-    
+        
     if arg.labels_2D :
         main_2D(data,arg.folder_mask,model)
     else :
-        main_3D(data,arg.folder_mask,arg.npy_folder,arg.multi_label,model)
+        main_3D(data,arg.folder_mask,arg.npy_folder,arg.multi_label,model,arg.template)

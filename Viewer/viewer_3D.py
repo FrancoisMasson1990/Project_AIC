@@ -27,7 +27,7 @@ from viewer_2D import Viewer2D
 
 class Viewer3D(object):
 
-    def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/',npy=None,multi_label=False,model=None):
+    def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/',npy=None,multi_label=False,model=None,template:bool=False):
         
         self.frame = 0
         self.init = True
@@ -67,6 +67,7 @@ class Viewer3D(object):
         self.label_folder = label
         self.npy_folder = npy
         self.multi_label = multi_label
+        self.template = template
 
         '''One render window, multiple viewports'''
         self.rw = vtk.vtkRenderWindow()
@@ -314,8 +315,6 @@ class Viewer3D(object):
                 idx = os.path.join(self.data_path[self.frame])
                 img = dp.load_scan(idx)
                 img = dp.get_pixels_hu(img)
-                shape_x = img.shape[1]
-                shape_y = img.shape[2]
                 img = dp.preprocess_inputs(img)
                 pred_list = []
                 for i in tqdm(range(img.shape[0])):
@@ -333,7 +332,7 @@ class Viewer3D(object):
                 # Clustering
                 vertices = dp.clustering(vertices,self.center,ratio=0.3,threshold=3800)
                 # Fit with closest true points
-                self.predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices)
+                self.predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices,template=self.template)
                 self.predictions_agatston = dp.boxe_3d(self.all_numpy_nodes_agatston,vertices)
                 actor_ = self.label_3d(self.predictions_final,c=[0,1,0])
                 self.actor_infer_list.append(actor_)

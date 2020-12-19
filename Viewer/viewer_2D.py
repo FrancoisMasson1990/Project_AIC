@@ -132,6 +132,13 @@ class Image_2D(Viewer2D):
         self.slices = self.load_scan(self.data_path, self.frame)
         self.image = self.get_pixels_hu(self.slices)
         
+        if self.mask_agatston is not None :
+            if self.mask_agatston.shape[0] != self.image.shape[0]:
+                medium = self.image.shape[0]//2
+                min_ = medium-self.mask_agatston.shape[0]//2
+                max_ = 1+medium+self.mask_agatston.shape[0]//2
+                self.image = self.image[min_:max_,:,:]
+
         if self.label_folder != "":
             self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
             self.init_label = True

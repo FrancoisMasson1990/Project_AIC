@@ -318,16 +318,30 @@ def clustering(data,center_volume,ratio,threshold=3800,eps=2.5,min_samples=2):
 
 	return data[i,:]
 
-def boxe_3d(volume_array,predict):
+def boxe_3d(volume_array,predict,template=False):
 	z_max = np.max(predict[:,2])
 	z_min = np.min(predict[:,2])
 	x_min = np.min(predict[:,1])
 	x_max = np.max(predict[:,1])
 	y_min = np.min(predict[:,0])
 	y_max = np.max(predict[:,0])
-	index = np.where((volume_array[:,2]>z_min) & (volume_array[:,2]<z_max) \
-	 			   & (volume_array[:,1]>x_min) & (volume_array[:,1]<x_max) \
-				   & (volume_array[:,0]>y_min) & (volume_array[:,0]<y_max))
+
+	# Boolean in the case of template.
+	# Median x,y and filter 
+	if template :
+		x_mean = np.mean(volume_array[:,1])
+		x_max = x_mean + 40
+		x_min = x_mean - 1
+		y_mean = np.mean(volume_array[:,0])
+		y_max = y_mean + 30
+		y_min = y_mean - 30
+		index = np.where((volume_array[:,1]>x_min) & (volume_array[:,1]<x_max) \
+			        &  (volume_array[:,0]>y_min) & (volume_array[:,0]<y_max))
+	else :
+		index = np.where((volume_array[:,2]>z_min) & (volume_array[:,2]<z_max) \
+					& (volume_array[:,1]>x_min) & (volume_array[:,1]<x_max) \
+					& (volume_array[:,0]>y_min) & (volume_array[:,0]<y_max))		
+	
 	volume_array = volume_array[index]
 	
 	return volume_array
