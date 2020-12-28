@@ -189,30 +189,31 @@ class Image_2D(Viewer2D):
                 
         if self.label is not None:
             self.label_image = np.load(self.label[self.index])
-            self._label = self.axis2.imshow(self.label_image, vmin=np.min(self.label_image), vmax=np.max(self.label_image))
+            self._label = self.axis2.imshow(self.label_image)
             self.init_label = False
         
         if self.agatston_bool : 
             score = 0.0
             self._prediction_view = None
             self.agatston_score_slice()
-            self._prediction_view = self.axis2.imshow(self.prediction, vmin=0, vmax=1)
-            #score = self.agatston_score()
+            self._prediction_view = self.axis2.imshow(self.prediction, cmap='jet')
+            score = self.agatston_score()
             self.axis2.set_xlabel("Agatston score : {:.1f}".format(score))
 
         self.slicer.on_changed(self.update)
     
     def agatston_score_slice(self):
-        self.prediction = self.mask_agatston[self.index]
-        # TODO 
-        #self.prediction = np.ma.masked_where(self.mask_agatston[self.index] == 0, self.image[self.index])
-        #self.prediction = np.ma.masked_where(self.prediction < self.threshold, self.prediction)
+        self.prediction = self.image[self.index].copy()
+        self.prediction[self.mask_agatston[self.index] == 0] = 0
+        self.prediction[self.prediction < self.threshold] = 0
     
     def agatston_score(self):
         score = 0.0
         for i in range(len(self.image)):
-            prediction = self.mask_agatston[i]
-            prediction[self.image[i]<self.threshold] = 0.0
+            prediction = self.image[i].copy()
+            prediction[self.mask_agatston[i] == 0] = 0
+            prediction[prediction < self.threshold] = 0
+            prediction[prediction > 0] = 1
             lw, num = measurements.label(prediction)
             area_ = measurements.sum(prediction, lw, index=np.arange(lw.max() + 1))
             for j,number_of_pix in enumerate(area_):
@@ -273,7 +274,7 @@ class Image_2D(Viewer2D):
         if self.agatston_bool:
             self.agatston_score_slice()
             if self._prediction_view is None :
-                self._prediction_view = self.axis2.imshow(self.prediction, vmin=0, vmax=1)
+                self._prediction_view = self.axis2.imshow(self.prediction,cmap='jet')
             else : 
                 self._prediction_view.set_data(self.prediction)   
 

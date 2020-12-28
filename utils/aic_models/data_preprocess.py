@@ -304,7 +304,8 @@ def clustering(data,center_volume,ratio,threshold=3800,eps=2.5,min_samples=2):
 	y_min = center_volume[0]-ratio*center_volume[0]
 	y_max = center_volume[0]+ratio*center_volume[0]
 	index = np.where((data[:,1]>x_min) & (data[:,1]<x_max) & (data[:,0]>y_min) & (data[:,0]<y_max))
-	data = data[index]
+	if data[index].shape[0] != 0 :
+		data = data[index]
 	
 	model = DBSCAN(eps=2.5, min_samples=2)
 	model.fit_predict(data)

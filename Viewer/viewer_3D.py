@@ -359,13 +359,14 @@ class Viewer3D(object):
         r_fit = Radius of the cylinder
         fit_err = Fitting error (G function)
         """
-        self.fitting.switch()     
+        self.fitting.switch()
         if (self.fitting.status() == "Fitting (Off)") and (self.predictions_final is not None):
             # Cylinder Fit
             print("performing fitting...")
-            self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final)
+            self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final,guess_angles=None)
             print("fitting done !")  
             actor = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")
+            # 
             self.actor_fitting_list.append(actor)
             for render in self.render_list:
                 if render == self.render_score:
