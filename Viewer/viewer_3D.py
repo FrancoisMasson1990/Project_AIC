@@ -168,7 +168,7 @@ class Viewer3D(object):
             elif self.mode[i] == 'inference' :
                 self.render_score = self.ren
                 ## button used for diameter value
-                self.valve_dia = Text_2D("Valve diameter :",pos=[0.01, 0.87],s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
+                self.valve_dia = Text_2D("Internal Valve Diameter (OD-1) :",pos=[0.01, 0.87],s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
                 self.ren.AddActor2D(self.valve_dia)
 
                 self.valve_value_actor = Text_2D(str(self.valve_value),pos=[0.49, 0.87],s=0.8,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False)
@@ -390,7 +390,7 @@ class Viewer3D(object):
             for point in tqdm(self.predictions_agatston):
                 d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
             d = np.array(d)
-            points_filter = self.predictions_agatston[np.where(d<self.valve_value/2)]
+            points_filter = self.predictions_agatston[np.where(d<=self.valve_value/2)]
             points_filter [:,0] = np.around(points_filter [:,0]/self.spacing[0])
             points_filter [:,1] = np.around(points_filter [:,1]/self.spacing[1])
             points_filter [:,2] = np.around(points_filter [:,2]/self.spacing[2])
@@ -407,9 +407,10 @@ class Viewer3D(object):
                     for value in x_y :
                         mask_agatston[z_axis,value[0],value[1]] = 1               
                     mask_agatston[z_axis,::] = np.rot90(mask_agatston[z_axis,::])
-            
             # Show the score in 2D mode
             Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
+        else : 
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask.copy(),agatston=True,area=self.area)
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]

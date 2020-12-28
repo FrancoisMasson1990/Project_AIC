@@ -19,7 +19,7 @@ from scipy.ndimage import measurements
 class Viewer2D(object):
     def __init__(self, data_path: str, folder_mask: str, model, frame=0, mask_agatston=None, agatston=False, area=None):
 
-        self.frame_init = 0
+        self.frame_init = frame
         self.data_path = data_path
         self.folder_mask = folder_mask
         self.mask_agatston = mask_agatston
@@ -85,15 +85,25 @@ class Viewer2D(object):
     def draw(self):
         
         if self.agatston :
-            fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+            fig, ax = plt.subplots(1, 2, figsize=(15, 10))
             fig.canvas.set_window_title('Agatston Score')
-            ax0 = ax
+            ax0, ax1 = ax[0], ax[1]
             ax0.get_xaxis().set_ticks([])
             ax0.get_yaxis().set_ticks([])
-            ax1 = None
+            ax1.get_xaxis().set_ticks([])
+            ax1.get_yaxis().set_ticks([])
             axslice = plt.axes([0.20, 0.9, 0.65, 0.03])
-            callback = Image_2D(self.data_path, self.folder_mask,
-                               self.frame_init, ax0, ax1, axslice, fig, mask_agatston=self.mask_agatston, agatston=self.agatston, area=self.area)
+            callback = Image_2D(self.data_path, 
+                                self.folder_mask,
+                                self.frame_init, 
+                                ax0, 
+                                ax1, 
+                                axslice, 
+                                fig, 
+                                mask_agatston=self.mask_agatston, 
+                                agatston=self.agatston, 
+                                area=self.area)
+            
             plt.show()
         else :
             fig, ax = plt.subplots(1, 2, figsize=(15, 10))
@@ -101,8 +111,13 @@ class Viewer2D(object):
             ax0.axis('off')
             ax1.axis('off')
             axslice = plt.axes([0.20, 0.9, 0.65, 0.03])
-            callback = Image_2D(self.data_path, self.folder_mask,
-                                self.frame_init, ax0, ax1, axslice, fig)
+            callback = Image_2D(self.data_path, 
+                                self.folder_mask,
+                                self.frame_init, 
+                                ax0, 
+                                ax1, 
+                                axslice, 
+                                fig)
             axprev = plt.axes([0.125, 0.05, 0.15, 0.075])
             axnext = plt.axes([0.7, 0.05, 0.15, 0.075])
             axsave = plt.axes([0.5, 0.05, 0.15, 0.075])
@@ -132,19 +147,12 @@ class Image_2D(Viewer2D):
         self.slices = self.load_scan(self.data_path, self.frame)
         self.image = self.get_pixels_hu(self.slices)
         
-        if self.mask_agatston is not None :
-            if self.mask_agatston.shape[0] != self.image.shape[0]:
-                medium = self.image.shape[0]//2
-                min_ = medium-self.mask_agatston.shape[0]//2
-                max_ = 1+medium+self.mask_agatston.shape[0]//2
-                self.image = self.image[min_:max_,:,:]
-
         if self.label_folder != "":
             self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
             self.init_label = True
         else :
             self.label = None
-
+        
         # Slider Gui
         self.index = len(self.image)//2
         self.slicer = Slider(self.axislicer, 'Image', 0, len(self.image)-1, valinit=len(self.image)//2, valstep=1)
@@ -152,17 +160,20 @@ class Image_2D(Viewer2D):
 
         if axis2 is not None:
             self.axis2 = axis2
-            # Brush activate GUI
-            self.axbrush = plt.axes([0.3, 0.05, 0.15, 0.075])
-            self.bbrush = Button(self.axbrush, 'Brush OFF')
-            self.bbrush.on_clicked(self.brush_state)
+            self.brush_activate = None
+            self.purple_yellow_activate = None
+            if not self.agatston_bool:
+                # Brush activate GUI
+                self.axbrush = plt.axes([0.3, 0.05, 0.15, 0.075])
+                self.bbrush = Button(self.axbrush, 'Brush OFF')
+                self.bbrush.on_clicked(self.brush_state)
 
-            # State Purple-Yellow GUI
-            self.axlabel_state = plt.axes([0.92, 0.7, 0.05, 0.075])
-            self.bpurple_yellow = Button(self.axlabel_state, 'Purple')
-            self.bpurple_yellow.on_clicked(self.brush_pixel)
-            self.purple_yellow_activate = False
-            self.brush_activate = False
+                # State Purple-Yellow GUI
+                self.axlabel_state = plt.axes([0.92, 0.7, 0.05, 0.075])
+                self.bpurple_yellow = Button(self.axlabel_state, 'Purple')
+                self.bpurple_yellow.on_clicked(self.brush_pixel)
+                self.purple_yellow_activate = False
+                self.brush_activate = False
         else :
             self.brush_activate = None
             self.purple_yellow_activate = None
@@ -180,19 +191,22 @@ class Image_2D(Viewer2D):
             self.label_image = np.load(self.label[self.index])
             self._label = self.axis2.imshow(self.label_image, vmin=np.min(self.label_image), vmax=np.max(self.label_image))
             self.init_label = False
-
+        
         if self.agatston_bool : 
+            score = 0.0
             self._prediction_view = None
             self.agatston_score_slice()
-            self._prediction_view = self.axis1.imshow(self.prediction, 'jet', interpolation='none', alpha=0.7)
-            score = self.agatston_score()
-            self.axis1.set_xlabel("Agatston score : {:.1f}".format(score))
+            self._prediction_view = self.axis2.imshow(self.prediction, vmin=0, vmax=1)
+            #score = self.agatston_score()
+            self.axis2.set_xlabel("Agatston score : {:.1f}".format(score))
 
         self.slicer.on_changed(self.update)
     
     def agatston_score_slice(self):
-        self.prediction = np.ma.masked_where(self.mask_agatston[self.index] == 0, self.image[self.index])
-        self.prediction = np.ma.masked_where(self.prediction < self.threshold, self.prediction)
+        self.prediction = self.mask_agatston[self.index]
+        # TODO 
+        #self.prediction = np.ma.masked_where(self.mask_agatston[self.index] == 0, self.image[self.index])
+        #self.prediction = np.ma.masked_where(self.prediction < self.threshold, self.prediction)
     
     def agatston_score(self):
         score = 0.0
@@ -204,8 +218,6 @@ class Image_2D(Viewer2D):
             for j,number_of_pix in enumerate(area_):
                     if j != 0 :
                         prediction_max = np.max(self.image[i][lw==j])
-                        print(prediction_max)
-                        print(number_of_pix)
                         if number_of_pix*self.area > 1 : #(density higher than 1mm2)
                             if (prediction_max >= 130) and (prediction_max < 200):
                                 score += 1*self.area*number_of_pix
@@ -257,24 +269,29 @@ class Image_2D(Viewer2D):
             self._image = self.axis1.imshow(self.image[self.index], cmap='gray')
         else:
             self._image.set_data(self.image[self.index])
+
         if self.agatston_bool:
             self.agatston_score_slice()
             if self._prediction_view is None :
-                self._prediction_view = self.axis1.imshow(self.prediction, 'jet', interpolation='none', alpha=0.7)
+                self._prediction_view = self.axis2.imshow(self.prediction, vmin=0, vmax=1)
             else : 
-                self._prediction_view.set_data(self.prediction)     
+                self._prediction_view.set_data(self.prediction)   
+
         if self.label is not None and not self.init_label:
             self.label_image = np.load(self.label[self.index])
             self._label.set_data(self.label_image)
+
         elif self.label is not None and self.init_label:
             self.label_image = np.load(self.label[self.index])
             self.axis2.axis('off')
             self._label = self.axis2.imshow(self.label_image, vmin=np.min(self.label_image), vmax=np.max(self.label_image))
+
         else:
-            try :
-                self.axis2.cla()
-            except :
-                pass
+            if not self.agatston_bool:
+                try :
+                    self.axis2.cla()
+                except :
+                    pass
             self.init_label = True
 
     def save_image(self, event):
