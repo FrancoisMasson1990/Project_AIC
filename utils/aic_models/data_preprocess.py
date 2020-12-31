@@ -296,24 +296,40 @@ def resample(image, pixelspacing, slicethickness, new_spacing=[1,1,1]):
 
     return image, new_spacing
 
-def clustering(data,center_volume,ratio,threshold=3800,eps=2.5,min_samples=2):
+def clustering(data,center_volume,gt_data,ratio,threshold=3800,eps=2.5,min_samples=2):
 
 	# Crop border of images
-	x_min = center_volume[1]-ratio*center_volume[1]
-	x_max = center_volume[1]+ratio*center_volume[1]
-	y_min = center_volume[0]-ratio*center_volume[0]
-	y_max = center_volume[0]+ratio*center_volume[0]
-	index = np.where((data[:,1]>x_min) & (data[:,1]<x_max) & (data[:,0]>y_min) & (data[:,0]<y_max))
-	if data[index].shape[0] != 0 :
-		data = data[index]
+	x_min = float(center_volume[0]-0.8*center_volume[0])
+	x_max = float(center_volume[0]+0.8*center_volume[0])
+	y_min = float(center_volume[1]-ratio*center_volume[1])
+	y_max = float(center_volume[1]+ratio*center_volume[1])
+	z_min = float(center_volume[2]-ratio*center_volume[2])
+	z_max = float(center_volume[2]+ratio*center_volume[2])
+	first = False
+	index = np.where((data[:,0]>x_min) & (data[:,0]<x_max) & (data[:,1]>y_min) & (data[:,1]<y_max) & (data[:,2]>z_min) & (data[:,2]<z_max))
+	if data[index].shape[0] < 1500 :
+		# Bad prediction : Border detection most of the time
+		data = gt_data
+		z_min = float(center_volume[2]-0.3*center_volume[2])
+		z_max = float(center_volume[2]+0.3*center_volume[2])
+		y_min = float(center_volume[1]-0.3*center_volume[1])
+		y_max = float(center_volume[1]+0.3*center_volume[1])
+		index = np.where((data[:,0]>x_min) & (data[:,0]<x_max) & (data[:,1]>y_min) & (data[:,1]<y_max) & (data[:,2]>z_min) & (data[:,2]<z_max))
+		first = True
+
+	data = data[index]
 	
 	model = DBSCAN(eps=2.5, min_samples=2)
 	model.fit_predict(data)
 	print("number of cluster found: {}".format(len(set(model.labels_))))
 	index = Counter(model.labels_).most_common()
+
 	j = 0
-	while index[j][1] > threshold : # Arbitrary values
-		j += 1
+	if filter :
+		pass
+	else :
+		while index[j][1] > threshold : # Arbitrary values
+			j += 1
 
 	i = np.isin(model.labels_,np.array([index[j][0]]))
 
@@ -322,10 +338,10 @@ def clustering(data,center_volume,ratio,threshold=3800,eps=2.5,min_samples=2):
 def boxe_3d(volume_array,predict,template=False):
 	z_max = np.max(predict[:,2])
 	z_min = np.min(predict[:,2])
-	x_min = np.min(predict[:,1])
-	x_max = np.max(predict[:,1])
-	y_min = np.min(predict[:,0])
-	y_max = np.max(predict[:,0])
+	x_min = np.min(predict[:,0])
+	x_max = np.max(predict[:,0])
+	y_min = np.min(predict[:,1])
+	y_max = np.max(predict[:,1])
 
 	# Boolean in the case of template.
 	# Median x,y and filter 
@@ -336,12 +352,13 @@ def boxe_3d(volume_array,predict,template=False):
 		y_mean = np.mean(volume_array[:,0])
 		y_max = y_mean + 30
 		y_min = y_mean - 30
-		index = np.where((volume_array[:,1]>x_min) & (volume_array[:,1]<x_max) \
-			        &  (volume_array[:,0]>y_min) & (volume_array[:,0]<y_max))
+		index = np.where((volume_array[:,0]>=x_min) & (volume_array[:,0]=<x_max) \
+			        &  (volume_array[:,1]>=y_min) & (volume_array[:,1]=<y_max))
 	else :
-		index = np.where((volume_array[:,2]>z_min) & (volume_array[:,2]<z_max) \
-					& (volume_array[:,1]>x_min) & (volume_array[:,1]<x_max) \
-					& (volume_array[:,0]>y_min) & (volume_array[:,0]<y_max))		
+		index = np.where((volume_array[:,2]>=z_min) & (volume_array[:,2]=<z_max) \
+					& (volume_array[:,0]>=x_min) & (volume_array[:,0]=<x_max) \
+					& (volume_array[:,1]>=y_min) & (volume_array[:,1]=<y_max)
+					)		
 	
 	volume_array = volume_array[index]
 	

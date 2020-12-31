@@ -330,7 +330,7 @@ class Viewer3D(object):
                 predictions,_ = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2],[1,1,1])
                 vertices,_ = dp.make_mesh(predictions,-1)
                 # Clustering
-                vertices = dp.clustering(vertices,self.center,ratio=0.3,threshold=3800)
+                vertices = dp.clustering(vertices,self.center,self.all_numpy_nodes,ratio=0.4,threshold=3800)
                 # Fit with closest true points
                 self.predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices,template=self.template)
                 self.predictions_agatston = dp.boxe_3d(self.all_numpy_nodes_agatston,vertices)
@@ -435,8 +435,7 @@ class Viewer3D(object):
             self.volume.jittering(True)
         else : 
             self.volume._update(self.img)
-        self.center = self.volume.center()
-        
+            
         return self.volume
     
     def iso_surface(self,data):
@@ -444,16 +443,20 @@ class Viewer3D(object):
         self.img = self.img.isosurface()
         ## Following lines used to get the mask 
         self.mask = tuple(reversed(vtkio.load(data).imagedata().GetDimensions()))
-
+        
         self.mask = np.zeros(self.mask,dtype=int)
         self.spacing = vtkio.load(data).imagedata().GetSpacing()
         self.area = self.spacing[0]*self.spacing[1]
-
+        
         # Get the all points in isosurface
         self.points = self.img.GetMapper().GetInput()
         self.all_array = self.points.GetPoints()
         self.all_numpy_nodes = vtk_to_numpy(self.all_array.GetData())
-
+        #x y z center from isovolume
+        self.center = np.array([(np.min(self.all_numpy_nodes[:,0]) + np.max(self.all_numpy_nodes[:,0]))/2, \
+                                (np.min(self.all_numpy_nodes[:,1]) + np.max(self.all_numpy_nodes[:,1]))/2, \
+                                (np.min(self.all_numpy_nodes[:,2]) + np.max(self.all_numpy_nodes[:,2]))/2])
+        
         # Get the all points for agatston score
         self.img_agatston = vtkio.load(data)
         self.img_agatston = self.img_agatston.isosurface(threshold=130)
