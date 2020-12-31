@@ -352,12 +352,12 @@ def boxe_3d(volume_array,predict,template=False):
 		y_mean = np.mean(volume_array[:,0])
 		y_max = y_mean + 30
 		y_min = y_mean - 30
-		index = np.where((volume_array[:,0]>=x_min) & (volume_array[:,0]=<x_max) \
-			        &  (volume_array[:,1]>=y_min) & (volume_array[:,1]=<y_max))
+		index = np.where((volume_array[:,0]>=x_min) & (volume_array[:,0]<=x_max) \
+			        &  (volume_array[:,1]>=y_min) & (volume_array[:,1]<=y_max))
 	else :
-		index = np.where((volume_array[:,2]>=z_min) & (volume_array[:,2]=<z_max) \
-					& (volume_array[:,0]>=x_min) & (volume_array[:,0]=<x_max) \
-					& (volume_array[:,1]>=y_min) & (volume_array[:,1]=<y_max)
+		index = np.where((volume_array[:,2]>=z_min) & (volume_array[:,2]<=z_max) \
+					& (volume_array[:,0]>=x_min) & (volume_array[:,0]<=x_max) \
+					& (volume_array[:,1]>=y_min) & (volume_array[:,1]<=y_max)
 					)		
 	
 	volume_array = volume_array[index]
