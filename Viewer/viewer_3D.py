@@ -52,11 +52,13 @@ class Viewer3D(object):
         self.actor_infer_list = []
         self.actor_fitting_list = []
         self.cutter_tool = False
+        self.mover_tool = False
         self.valve_value = 20
         self.window_2D = False
         self.window_3Dslice = False
         self.fitting_bool = False
         self.cutter_obj = []
+        self.mover_obj = []
         self.widget_cut = None
         self.mask = None
         self.render_score = None
@@ -194,6 +196,12 @@ class Viewer3D(object):
                 self.score_ratio = Button(self.buttonfuncAgatston, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.score_ratio.actor)
                 self.buttons.append(self.score_ratio)
+
+                ## button used for the slicer 2d
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.8, 0.135],states=["Move On", "Move Off"])
+                self.mover = Button(self.buttonfuncMode_mover, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
+                self.ren.AddActor2D(self.mover.actor)
+                self.buttons.append(self.mover)
             
             self.ren.SetBackground(self.colors.GetColor3d(self.ren_bkg[0]))
             self.ren.ResetCamera()
@@ -266,6 +274,23 @@ class Viewer3D(object):
             self.cutter_tool = not self.cutter_tool
             self.cutter_obj = []
         self.cutter.switch()
+    
+    def buttonfuncMode_mover(self):
+        if self.fitting_bool == True:
+            if not self.mover_tool:
+                self.mover_obj.append(Mover(self.render_list[-1],self.iren,self.cylinder))
+                for mov in self.mover_obj:
+                    self.widget_mov = mov.boxWidget
+                    self.widget_mov.On()
+                self.mover_tool = not self.mover_tool
+            else : 
+                for mov in self.mover_obj:
+                    self.widget_mov = mov.boxWidget
+                    self.widget_mov.Off()
+                    #cut.actor.mapper().RemoveAllClippingPlanes()
+                self.mover_tool = not self.mover_tool
+                self.mover_obj = []
+            self.mover.switch()
 
     def buttonfuncMode_saving(self):
         if self.cutter_tool:
@@ -365,12 +390,11 @@ class Viewer3D(object):
             print("performing fitting...")
             self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final,guess_angles=None)
             print("fitting done !")  
-            actor = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")
-            # 
-            self.actor_fitting_list.append(actor)
+            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")
+            self.actor_fitting_list.append(self.cylinder)
             for render in self.render_list:
                 if render == self.render_score:
-                    render.AddActor(actor)          
+                    render.AddActor(self.cylinder)          
             self.rw.Render()
             self.ren.ResetCamera()
             self.camera_position()

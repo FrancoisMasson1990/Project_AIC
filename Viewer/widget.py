@@ -609,6 +609,33 @@ class Cutter(object):
             self.origins.append(self.planes.GetPlane(faces).GetOrigin())
             self.normals.append(self.planes.GetPlane(faces).GetNormal())
 
+class Mover(object):
+
+    def __init__(self,renderer,interactor,actor):
+
+        self.boxWidget = vtk.vtkBoxWidget()
+        self.renderer = renderer
+        self.interactor = interactor
+        self.actor = actor
+        self.properties()
+
+    def properties(self):
+
+        # A Box widget
+        self.boxWidget = vtk.vtkBoxWidget()
+        self.boxWidget.SetInteractor(self.interactor)
+        self.boxWidget.SetProp3D(self.actor)
+        self.boxWidget.SetPlaceFactor(1.0)
+        self.boxWidget.PlaceWidget()
+
+        # Connect the event to a function
+        self.boxWidget.AddObserver('InteractionEvent', self.boxCallback)
+
+    def boxCallback(self,obj, event):
+        t = vtk.vtkTransform()
+        obj.GetTransform(t)
+        obj.GetProp3D().SetUserTransform(t)
+
 def Text_2D(txt,pos=3,s=1,c=None,alpha=1,bg=None,font="Montserrat",justify="bottom-left",bold=False,italic=False):
     """
         Returns a ``vtkActor2D`` representing 2D text.
