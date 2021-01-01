@@ -283,11 +283,11 @@ class Viewer3D(object):
                     self.widget_mov = mov.boxWidget
                     self.widget_mov.On()
                 self.mover_tool = not self.mover_tool
+
             else : 
                 for mov in self.mover_obj:
                     self.widget_mov = mov.boxWidget
                     self.widget_mov.Off()
-                    #cut.actor.mapper().RemoveAllClippingPlanes()
                 self.mover_tool = not self.mover_tool
                 self.mover_obj = []
             self.mover.switch()
@@ -390,7 +390,7 @@ class Viewer3D(object):
             print("performing fitting...")
             self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final,guess_angles=None)
             print("fitting done !")  
-            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")
+            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")       
             self.actor_fitting_list.append(self.cylinder)
             for render in self.render_list:
                 if render == self.render_score:
@@ -411,6 +411,9 @@ class Viewer3D(object):
     def buttonfuncAgatston(self):
         if self.fitting_bool == True:
             #Points in cylinder
+            # Update center and axis if object was moved
+            self.C_fit = np.asarray(self.cylinder.GetCenter())
+            self.w_fit = np.asarray(self.cylinder.normalAt(48))
             d = []
             for point in tqdm(self.predictions_agatston):
                 d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))

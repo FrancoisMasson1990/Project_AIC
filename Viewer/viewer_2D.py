@@ -198,7 +198,7 @@ class Image_2D(Viewer2D):
             self.agatston_score_slice()
             self._prediction_view = self.axis2.imshow(self.prediction, cmap='jet')
             score = self.agatston_score()
-            self.axis2.set_xlabel("Agatston score : {:.1f}".format(score))
+            self.axis2.set_xlabel("Agatston score : {:.3f}".format(score))
 
         self.slicer.on_changed(self.update)
     
