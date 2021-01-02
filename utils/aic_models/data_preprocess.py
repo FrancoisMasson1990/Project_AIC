@@ -346,14 +346,14 @@ def boxe_3d(volume_array,predict,template=False):
 	# Boolean in the case of template.
 	# Median x,y and filter 
 	if template :
-		x_mean = np.mean(volume_array[:,1])
-		x_max = x_mean + 40
-		x_min = x_mean - 1
-		y_mean = np.mean(volume_array[:,0])
-		y_max = y_mean + 30
-		y_min = y_mean - 30
-		index = np.where((volume_array[:,0]>=x_min) & (volume_array[:,0]<=x_max) \
-			        &  (volume_array[:,1]>=y_min) & (volume_array[:,1]<=y_max))
+		x = np.mean(volume_array[:,0])
+		y = np.mean(volume_array[:,1])
+		x_max = x + 0.2*x
+		x_min = x - 0.35*x
+		y_max = y + 0.5*y
+		y_min = y - 0.2*y
+		index = np.where((volume_array[:,0]>x_min) & (volume_array[:,0]<x_max) & (volume_array[:,1]>y_min) & (volume_array[:,1]<y_max))
+
 	else :
 		index = np.where((volume_array[:,2]>=z_min) & (volume_array[:,2]<=z_max) \
 					& (volume_array[:,0]>=x_min) & (volume_array[:,0]<=x_max) \
