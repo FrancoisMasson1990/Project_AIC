@@ -350,7 +350,7 @@ def boxe_3d(volume_array,predict,template=False):
 		y = np.mean(volume_array[:,1])
 		x_max = x + 0.2*x
 		x_min = x - 0.35*x
-		y_max = y + 0.5*y
+		y_max = y + 0.55*y
 		y_min = y - 0.2*y
 		index = np.where((volume_array[:,0]>x_min) & (volume_array[:,0]<x_max) & (volume_array[:,1]>y_min) & (volume_array[:,1]<y_max))
 

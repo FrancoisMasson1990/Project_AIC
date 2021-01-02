@@ -71,6 +71,9 @@ class Viewer3D(object):
         self.multi_label = multi_label
         self.template = template
 
+        self.slices = dp.load_scan(self.data_path[self.frame])
+        self.shape = dp.get_pixels_hu(self.slices)
+
         '''One render window, multiple viewports'''
         self.rw = vtk.vtkRenderWindow()
         self.rw.SetSize(int(self.window_size[0]), int(self.window_size[1]))
@@ -358,7 +361,7 @@ class Viewer3D(object):
                 vertices = dp.clustering(vertices,self.center,self.all_numpy_nodes,ratio=0.4,threshold=3800)
                 # Fit with closest true points
                 self.predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices,template=self.template)
-                self.predictions_agatston = dp.boxe_3d(self.all_numpy_nodes_agatston,vertices)
+                self.predictions_agatston = dp.boxe_3d(self.all_numpy_nodes_agatston,vertices,template=self.template)
                 actor_ = self.label_3d(self.predictions_final,c=[0,1,0])
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
@@ -470,8 +473,12 @@ class Viewer3D(object):
         self.img = self.img.isosurface()
         ## Following lines used to get the mask 
         self.mask = tuple(reversed(vtkio.load(data).imagedata().GetDimensions()))
-        
+
+        if self.mask != self.shape.shape:
+            self.mask = self.shape.shape
+
         self.mask = np.zeros(self.mask,dtype=int)
+        
         self.spacing = vtkio.load(data).imagedata().GetSpacing()
         self.area = self.spacing[0]*self.spacing[1]
         
