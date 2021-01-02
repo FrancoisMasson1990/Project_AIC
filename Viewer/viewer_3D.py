@@ -470,18 +470,18 @@ class Viewer3D(object):
     
     def iso_surface(self,data):
         self.img = vtkio.load(data)
-        self.img = self.img.isosurface()
         ## Following lines used to get the mask 
         self.mask = tuple(reversed(vtkio.load(data).imagedata().GetDimensions()))
 
         if self.mask != self.shape.shape:
+            self.img.resize(self.shape.shape[1],self.shape.shape[2],self.shape.shape[0])
             self.mask = self.shape.shape
 
         self.mask = np.zeros(self.mask,dtype=int)
-        
-        self.spacing = vtkio.load(data).imagedata().GetSpacing()
+        self.spacing = self.img.imagedata().GetSpacing()
         self.area = self.spacing[0]*self.spacing[1]
-        
+        self.img = self.img.isosurface()
+
         # Get the all points in isosurface
         self.points = self.img.GetMapper().GetInput()
         self.all_array = self.points.GetPoints()
@@ -490,9 +490,11 @@ class Viewer3D(object):
         self.center = np.array([(np.min(self.all_numpy_nodes[:,0]) + np.max(self.all_numpy_nodes[:,0]))/2, \
                                 (np.min(self.all_numpy_nodes[:,1]) + np.max(self.all_numpy_nodes[:,1]))/2, \
                                 (np.min(self.all_numpy_nodes[:,2]) + np.max(self.all_numpy_nodes[:,2]))/2])
-        
+
         # Get the all points for agatston score
         self.img_agatston = vtkio.load(data)
+        if self.mask != self.shape.shape:
+           self.img_agatston.resize(self.shape.shape[1],self.shape.shape[2],self.shape.shape[0])
         self.img_agatston = self.img_agatston.isosurface(threshold=130)
         self.points_agatston = self.img_agatston.GetMapper().GetInput()
         self.all_array_agatston = self.points_agatston.GetPoints()
