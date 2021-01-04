@@ -7,6 +7,7 @@ import numpy as np
 from vtkplotter import settings
 import vtkplotter.settings as settings
 import vtkplotter.addons as addons
+from vtkplotter.mesh import Mesh
 from vtk.util.numpy_support import vtk_to_numpy,numpy_to_vtk
 import numpy as np
 import pydicom
@@ -294,7 +295,7 @@ class Viewer3D(object):
                 self.mover_tool = not self.mover_tool
                 self.mover_obj = []
             self.mover.switch()
-
+    
     def buttonfuncMode_saving(self):
         if self.cutter_tool:
             for cut in self.cutter_obj:
@@ -361,8 +362,12 @@ class Viewer3D(object):
                 vertices = dp.clustering(vertices,self.center,self.all_numpy_nodes,ratio=0.4,threshold=3800)
                 # Fit with closest true points
                 self.predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices,template=self.template)
-                self.predictions_agatston = dp.boxe_3d(self.all_numpy_nodes_agatston,vertices,template=self.template)
+                #self.predictions_agatston = dp.boxe_3d(self.all_numpy_nodes_agatston,vertices,template=self.template)
+                self.predictions_agatston = dp.boxe_3d(self.all_numpy_gt,vertices,template=self.template)
                 actor_ = self.label_3d(self.predictions_final,c=[0,1,0])
+                ##################################
+                self.get_mask_2D(self.predictions_agatston)
+                ###################################
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -393,7 +398,7 @@ class Viewer3D(object):
             print("performing fitting...")
             self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final,guess_angles=None)
             print("fitting done !")  
-            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")       
+            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")     
             self.actor_fitting_list.append(self.cylinder)
             for render in self.render_list:
                 if render == self.render_score:
@@ -421,25 +426,12 @@ class Viewer3D(object):
             for point in tqdm(self.predictions_agatston):
                 d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
             d = np.array(d)
-            points_filter = self.predictions_agatston[np.where(d<=self.valve_value/2)]
-            points_filter [:,0] = np.around(points_filter [:,0]/self.spacing[0])
-            points_filter [:,1] = np.around(points_filter [:,1]/self.spacing[1])
-            points_filter [:,2] = np.around(points_filter [:,2]/self.spacing[2])
-            # Along the z axis : Later Along x axis and y axis ... (3D Object Detection from CT Scans using a Slice-and-fuse Approach)
-            slicer = np.unique(points_filter[:,2]).astype(int)
+            # points_filter = self.predictions_agatston[np.where(d<=self.valve_value/2)]
+            
+            # #Replace by function generating mask...
 
-            mask_agatston = self.mask.copy()
-            for z_axis in range(self.mask.shape[0]):
-                if z_axis in slicer:
-                    z = points_filter[points_filter[:,2]==z_axis]
-                    x_y = np.ndarray(shape=(z.shape[0],2), dtype=int)
-                    x_y[:] = z[:,0:2]
-                    x_y = np.unique(x_y, axis=0)
-                    for value in x_y :
-                        mask_agatston[z_axis,value[0],value[1]] = 1               
-                    mask_agatston[z_axis,::] = np.rot90(mask_agatston[z_axis,::])
             # Show the score in 2D mode
-            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask_agatston,agatston=True,area=self.area)
         else : 
             Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask.copy(),agatston=True,area=self.area)
 
@@ -465,40 +457,40 @@ class Viewer3D(object):
             self.volume.jittering(True)
         else : 
             self.volume._update(self.img)
-            
+        
+        self.points = self.volume.toPoints()
+        print(type(self.points))
+        self.points = self.points.GetMapper().GetInput()
+        self.all_array = self.points.GetPoints()
+        self.all_numpy_gt = vtk_to_numpy(self.all_array.GetData())
+
         return self.volume
     
     def iso_surface(self,data):
         self.img = vtkio.load(data)
+        self.img_agatston = vtkio.load(data)
         ## Following lines used to get the mask 
         self.mask = tuple(reversed(vtkio.load(data).imagedata().GetDimensions()))
 
         if self.mask != self.shape.shape:
             self.img.resize(self.shape.shape[1],self.shape.shape[2],self.shape.shape[0])
+            self.img_agatston.resize(self.shape.shape[1],self.shape.shape[2],self.shape.shape[0])
             self.mask = self.shape.shape
-
+           
         self.mask = np.zeros(self.mask,dtype=int)
         self.spacing = self.img.imagedata().GetSpacing()
         self.area = self.spacing[0]*self.spacing[1]
+        self.dimensions = self.img.imagedata().GetDimensions()
         self.img = self.img.isosurface()
-
+        
         # Get the all points in isosurface
         self.points = self.img.GetMapper().GetInput()
         self.all_array = self.points.GetPoints()
         self.all_numpy_nodes = vtk_to_numpy(self.all_array.GetData())
         #x y z center from isovolume
         self.center = np.array([(np.min(self.all_numpy_nodes[:,0]) + np.max(self.all_numpy_nodes[:,0]))/2, \
-                                (np.min(self.all_numpy_nodes[:,1]) + np.max(self.all_numpy_nodes[:,1]))/2, \
-                                (np.min(self.all_numpy_nodes[:,2]) + np.max(self.all_numpy_nodes[:,2]))/2])
-
-        # Get the all points for agatston score
-        self.img_agatston = vtkio.load(data)
-        if self.mask != self.shape.shape:
-           self.img_agatston.resize(self.shape.shape[1],self.shape.shape[2],self.shape.shape[0])
-        self.img_agatston = self.img_agatston.isosurface(threshold=130)
-        self.points_agatston = self.img_agatston.GetMapper().GetInput()
-        self.all_array_agatston = self.points_agatston.GetPoints()
-        self.all_numpy_nodes_agatston = vtk_to_numpy(self.all_array_agatston.GetData())
+                               (np.min(self.all_numpy_nodes[:,1]) + np.max(self.all_numpy_nodes[:,1]))/2, \
+                               (np.min(self.all_numpy_nodes[:,2]) + np.max(self.all_numpy_nodes[:,2]))/2])
             
         return self.img
 
@@ -531,6 +523,21 @@ class Viewer3D(object):
         
         return self.ia
 
+    def get_mask_2D(self,data):
+        print("Generating mask...")
+
+        self.mask_agatston = np.zeros([self.dimensions[2],self.dimensions[0],self.dimensions[1]], dtype=np.uint8)
+
+        # all voxels have value zero except ones predicted:
+        for d in tqdm(data):
+            x = int(d[0]/self.spacing[0])
+            y = int(d[1]/self.spacing[1])
+            z = int(d[2]/self.spacing[2])
+            self.mask_agatston[z,x,y] = 1
+
+        for k in range(self.dimensions[2]):
+            self.mask_agatston[k,::] = np.rot90(self.mask_agatston[k,::])
+
     def label_3d(self,data,c=[1,0,0]):
         if isinstance(data,str):
             with open(data, 'rb') as f:
@@ -552,6 +559,7 @@ class Viewer3D(object):
         polydata.SetPoints(self.points)
         polydata.SetVerts(self.vertices)
         polydata.Modified()
+
         # Mapper for points
         mapper = vtk.vtkPolyDataMapper()
         mapper.SetInputData(polydata)
