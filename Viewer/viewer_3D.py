@@ -362,12 +362,8 @@ class Viewer3D(object):
                 vertices = dp.clustering(vertices,self.center,self.all_numpy_nodes,ratio=0.4,threshold=3800)
                 # Fit with closest true points
                 self.predictions_final = dp.boxe_3d(self.all_numpy_nodes,vertices,template=self.template)
-                #self.predictions_agatston = dp.boxe_3d(self.all_numpy_nodes_agatston,vertices,template=self.template)
                 self.predictions_agatston = dp.boxe_3d(self.all_numpy_gt,vertices,template=self.template)
                 actor_ = self.label_3d(self.predictions_final,c=[0,1,0])
-                ##################################
-                self.get_mask_2D(self.predictions_agatston)
-                ###################################
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -423,15 +419,15 @@ class Viewer3D(object):
             self.C_fit = np.asarray(self.cylinder.GetCenter())
             self.w_fit = np.asarray(self.cylinder.normalAt(48))
             d = []
-            for point in tqdm(self.predictions_agatston):
+            for point in tqdm(self.predictions_agatston[:,:3]): #Exclude intensity points
                 d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
             d = np.array(d)
-            # points_filter = self.predictions_agatston[np.where(d<=self.valve_value/2)]
-            
-            # #Replace by function generating mask...
+            predictions_agatston = self.predictions_agatston.copy()
+            predictions_agatston = predictions_agatston[np.where(d<=self.valve_value/2)]
+            mask_agatston = self.get_mask_2D(predictions_agatston)
 
             # Show the score in 2D mode
-            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask_agatston,agatston=True,area=self.area)
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
         else : 
             Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask.copy(),agatston=True,area=self.area)
 
@@ -459,10 +455,12 @@ class Viewer3D(object):
             self.volume._update(self.img)
         
         self.points = self.volume.toPoints()
-        print(type(self.points))
         self.points = self.points.GetMapper().GetInput()
         self.all_array = self.points.GetPoints()
         self.all_numpy_gt = vtk_to_numpy(self.all_array.GetData())
+        self.scalar = np.expand_dims(vtk_to_numpy(self.img.GetPointData().GetScalars()),axis=1) #Pixel value intensity
+        self.all_numpy_gt = np.concatenate((self.all_numpy_gt,self.scalar), axis=1)
+        self.all_numpy_gt = self.all_numpy_gt[self.all_numpy_gt[:,3] > 130]
 
         return self.volume
     
@@ -525,18 +523,19 @@ class Viewer3D(object):
 
     def get_mask_2D(self,data):
         print("Generating mask...")
-
-        self.mask_agatston = np.zeros([self.dimensions[2],self.dimensions[0],self.dimensions[1]], dtype=np.uint8)
+        mask_agatston = np.zeros([self.dimensions[2],self.dimensions[0],self.dimensions[1]], dtype=np.uint8)
 
         # all voxels have value zero except ones predicted:
         for d in tqdm(data):
             x = int(d[0]/self.spacing[0])
             y = int(d[1]/self.spacing[1])
             z = int(d[2]/self.spacing[2])
-            self.mask_agatston[z,x,y] = 1
+            mask_agatston[z,x,y] = 1
 
         for k in range(self.dimensions[2]):
-            self.mask_agatston[k,::] = np.rot90(self.mask_agatston[k,::])
+            mask_agatston[k,::] = np.rot90(mask_agatston[k,::])
+        
+        return mask_agatston
 
     def label_3d(self,data,c=[1,0,0]):
         if isinstance(data,str):
@@ -550,6 +549,8 @@ class Viewer3D(object):
         # Add points
         for i in range(0, len(self.img)):
             p = self.img[i].tolist()
+            if len(p) > 3 :
+                p = p[:3]
             point_id = self.points.InsertNextPoint(p)
             self.vertices.InsertNextCell(1)
             self.vertices.InsertCellPoint(point_id)
