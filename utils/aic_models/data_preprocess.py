@@ -53,6 +53,11 @@ import scipy.ndimage
 from sklearn.cluster import DBSCAN
 from collections import Counter
 
+## Main class to visualize data dicom
+import vtk
+from vtk.util.numpy_support import vtk_to_numpy,numpy_to_vtk
+from vedo import *
+
 LABEL_CHANNELS = {"labels":{
 	 			  "background":0,
 				  "other":1,
@@ -335,7 +340,7 @@ def clustering(data,center_volume,gt_data,ratio,threshold=3800,eps=2.5,min_sampl
 
 	return data[i,:]
 
-def boxe_3d(volume_array,predict,template=False):
+def boxe_3d(volume_array,predict):
 	z_max = np.max(predict[:,2])
 	z_min = np.min(predict[:,2])
 	x_min = np.min(predict[:,0])
@@ -343,25 +348,19 @@ def boxe_3d(volume_array,predict,template=False):
 	y_min = np.min(predict[:,1])
 	y_max = np.max(predict[:,1])
 
-	# Boolean in the case of template.
-	# Median x,y and filter 
-	if template :
-		x = np.mean(volume_array[:,0])
-		y = np.mean(volume_array[:,1])
-		x_max = x + 0.2*x
-		x_min = x - 0.35*x
-		y_max = y + 0.55*y
-		y_min = y - 0.2*y
-		index = np.where((volume_array[:,0]>x_min) & (volume_array[:,0]<x_max) & (volume_array[:,1]>y_min) & (volume_array[:,1]<y_max))
-
-	else :
-		index = np.where((volume_array[:,2]>=z_min) & (volume_array[:,2]<=z_max) \
-					& (volume_array[:,0]>=x_min) & (volume_array[:,0]<=x_max) \
-					& (volume_array[:,1]>=y_min) & (volume_array[:,1]<=y_max)
-					)		
-	
-	volume_array = volume_array[index]
-	
+	if isinstance(volume_array,volume.Volume):
+		dimensions = volume_array.dimensions()
+		spacing = volume_array.spacing()
+		volume_array = volume_array.crop(top=1-(z_max/(dimensions[2]*spacing[2])), #z_max
+										 bottom=(z_min/(dimensions[2]*spacing[2])), #z_min
+             							 right=1-(x_max/(dimensions[0]*spacing[0])), #x_max
+										 left=(y_min/(dimensions[1]*spacing[1])), #x_min
+										 front=1-(y_max/(dimensions[1]*spacing[1])), #y_max
+										 back=(y_min/(dimensions[1]*spacing[1])) #y_min
+										)
+	if isinstance(volume_array,mesh.Mesh):
+		volume_array = volume_array.crop(bounds=[x_min,x_max,y_min,y_max,z_min,z_max])
+		
 	return volume_array
 
 def normalize(v):
@@ -377,3 +376,17 @@ def point_line_distance(p, l_p, l_v):
     l_v = normalize(l_v)
     u = p - l_p
     return np.linalg.norm(u - np.dot(u, l_v) * l_v)
+
+def to_points(data):
+	'''Extract point from VOlume/Mesh polydata.
+    '''
+
+	if isinstance(data,volume.Volume):
+		points = vtk_to_numpy(data.toPoints().GetMapper().GetInput().GetPoints().GetData())
+		scalar = np.expand_dims(vtk_to_numpy(data.imagedata().GetPointData().GetScalars()),axis=1) #Pixel value intensity
+		points = np.concatenate((points,scalar), axis=1)
+		points = points[points[:,3] > 130]
+	if isinstance(data,mesh.Mesh):
+		points = vtk_to_numpy(data.GetMapper().GetInput().GetPoints().GetData())
+		
+	return points

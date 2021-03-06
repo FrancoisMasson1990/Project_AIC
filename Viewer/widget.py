@@ -1,9 +1,10 @@
 import vtk
-from vtkplotter import *
+from vedo import *
 import numpy as np
-from vtkplotter import settings
-import vtkplotter.settings as settings
-import vtkplotter.addons as addons
+from vedo import settings
+import vedo.settings as settings
+import vedo.addons as addons 
+from vedo.mesh import Mesh
 from vtk.util.numpy_support import vtk_to_numpy
 import numpy as np
 import pydicom

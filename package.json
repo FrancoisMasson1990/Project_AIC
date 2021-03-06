@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/FrancoisMasson1990/Project_AIC#readme",
   "devDependencies": {
-    "cz-conventional-changelog": "^3.2.0"
+    "cz-conventional-changelog": "^3.3.0"
   },
   "config": {
     "commitizen": {
