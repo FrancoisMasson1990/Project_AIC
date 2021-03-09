@@ -377,15 +377,16 @@ def point_line_distance(p, l_p, l_v):
     u = p - l_p
     return np.linalg.norm(u - np.dot(u, l_v) * l_v)
 
-def to_points(data):
-	'''Extract point from VOlume/Mesh polydata.
+def to_points(data,threshold=None):
+	'''Extract point from Volume/Mesh polydata.
     '''
-
 	if isinstance(data,volume.Volume):
 		points = vtk_to_numpy(data.toPoints().GetMapper().GetInput().GetPoints().GetData())
 		scalar = np.expand_dims(vtk_to_numpy(data.imagedata().GetPointData().GetScalars()),axis=1) #Pixel value intensity
 		points = np.concatenate((points,scalar), axis=1)
-		points = points[points[:,3] > 130]
+		points = points[points[:,3] > 130] # Minimal value of interest for Agatston score
+		if threshold is not None:
+			points = points[points[:,3] < threshold]
 	if isinstance(data,mesh.Mesh):
 		points = vtk_to_numpy(data.GetMapper().GetInput().GetPoints().GetData())
 		

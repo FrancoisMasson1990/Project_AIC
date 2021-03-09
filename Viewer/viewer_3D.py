@@ -194,6 +194,12 @@ class Viewer3D(object):
                 self.score_ratio = Button(self.buttonfuncAgatston, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
                 self.ren.AddActor2D(self.score_ratio.actor)
                 self.buttons.append(self.score_ratio)
+
+                ## button used for the cylinder properties
+                states, c, bc, pos, size, font, bold, italic, alpha, angle = self.button_cast(pos=[0.8, 0.135],states=["Move On", "Move Off"])
+                self.mover = Button(self.buttonfuncMode_mover, states, c, bc, pos, size, font, bold, italic, alpha, angle).status(int(0))
+                self.ren.AddActor2D(self.mover.actor)
+                self.buttons.append(self.mover)
             
             self.ren.SetBackground(self.colors.GetColor3d(self.ren_bkg[0]))
             self.ren.ResetCamera()
@@ -268,7 +274,7 @@ class Viewer3D(object):
         self.cutter.switch()
     
     def buttonfuncMode_mover(self):
-        if self.fitting_bool == True:
+        if self.fitting_view_mode == True:
             if not self.mover_tool:
                 self.mover_obj.append(Mover(self.render_list[-1],self.iren,self.cylinder))
                 for mov in self.mover_obj:
@@ -354,16 +360,9 @@ class Viewer3D(object):
                 self.predictions_agatston = self.volume.clone()
                 self.predictions_agatston = dp.boxe_3d(self.predictions_agatston,vertices)
                 # Get the all points in isosurface Mesh/Volume
-                self.predictions_points = dp.to_points(self.predictions_final)
-                actor_ = self.label_3d(self.predictions_points,c=[0,1,0])
-                test = self.predictions_agatston.clone().tomesh()
-                #test = dp.cutWithMesh(test,self.predictions_final)
-                # .cutWithMesh(msh).c("gold").bc("t")
-                #actor_ = self.predictions_agatston
-                #actor_ = self.predictions_agatston.tomesh()
-                #actor_ = dp.to_points(actor_)
-                #actor_ = self.label_3d(actor_,c=[0,1,0])
-                
+                self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)
+                self.predictions_final_points = dp.to_points(self.predictions_final)
+                actor_ = self.label_3d(self.predictions_final_points,c=[0,1,0])
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -382,31 +381,49 @@ class Viewer3D(object):
                 self.infer_view_mode = not self.infer_view_mode
 
     def buttonfuncFitting(self):
+        """
+        w_fit = Direction of the cylinder axis
+        C_fit = A point on the cylinder axis
+        r_fit = Radius of the cylinder
+        fit_err = Fitting error (G function)
+        """
         self.fitting.switch()
-        if self.infer_view_mode:
-            if not self.fitting_view_mode:
-                print("A faire")
-                
-                self.fitting_view_mode = not self.fitting_view_mode
-            else : 
-                print("Deja fait")
-                self.fitting_view_mode = not self.fitting_view_mode
+        if (self.fitting.status() == "Fitting (Off)") and (self.predictions_final is not None):
+            # Cylinder Fit
+            print("performing fitting...")
+            self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final_points,guess_angles=None)
+            print("fitting done !")  
+            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")       
+            self.actor_fitting_list.append(self.cylinder)
+            for render in self.render_list:
+                if render == self.render_score:
+                    render.AddActor(self.cylinder)          
+            self.rw.Render()
+            self.ren.ResetCamera()
+            self.camera_position()
+            self.fitting_view_mode = True
+        else :
+            for render in self.render_list:
+                if render == self.render_score:
+                    for actor_ in self.actor_fitting_list:
+                        render.RemoveActor(actor_)
+            self.actor_fitting_list = []
+            self.rw.Render()
+            self.fitting_view_mode = False
 
     def buttonfuncAgatston(self):
-        pass 
-        # if self.fitting_view_mode == True:
-        #     d = []
-        #     for point in tqdm(self.predictions_agatston[:,:3]): #Exclude intensity points
-        #         d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
-        #     d = np.array(d)
-        #     predictions_agatston = self.predictions_agatston.copy()
-        #     predictions_agatston = predictions_agatston[np.where(d<=self.valve_value/2)]
-        #     mask_agatston = self.get_mask_2D(predictions_agatston)
-
-        #     # Show the score in 2D mode
-        #     Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
-        # else : 
-        #     Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask.copy(),agatston=True,area=self.area)
+        if self.fitting_view_mode == True:
+            d = []
+            for point in tqdm(self.predictions_agatston_points[:,:3]): #Exclude intensity points
+               d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
+            d = np.array(d)
+            predictions_agatston = self.predictions_agatston_points.copy()
+            predictions_agatston = predictions_agatston[np.where(d<=self.r_fit)]
+            mask_agatston = self.get_mask_2D(predictions_agatston)
+            # Show the score in 2D mode
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
+        else : 
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask.copy(),agatston=True,area=self.area)
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
@@ -430,6 +447,9 @@ class Viewer3D(object):
             self.volume.jittering(True)
         else : 
             self.volume._update(self.img)
+
+        scrange = self.img.GetScalarRange()
+        self.threshold = (2 * scrange[0] + scrange[1]) / 3.0
         
         return self.volume
     
@@ -456,7 +476,7 @@ class Viewer3D(object):
         self.center = np.array([(np.min(self.all_numpy_nodes[:,0]) + np.max(self.all_numpy_nodes[:,0]))/2, \
                                (np.min(self.all_numpy_nodes[:,1]) + np.max(self.all_numpy_nodes[:,1]))/2, \
                                (np.min(self.all_numpy_nodes[:,2]) + np.max(self.all_numpy_nodes[:,2]))/2])
-
+        
         return self.img
 
     def slicer_2d(self,data):
