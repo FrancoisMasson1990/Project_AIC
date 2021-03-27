@@ -26,6 +26,8 @@ from tqdm import tqdm
 from cylinder_fitting import fit
 from viewer_2D import Viewer2D
 
+from vedo.volume import mesh2Volume
+
 class Viewer3D(object):
 
     def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/',npy=None,multi_label=False,model=None,template:bool=False):
@@ -65,6 +67,7 @@ class Viewer3D(object):
         self.spacing = None
         self.title = None
         self.predictions_final = None
+        self.predictions_fitting = None
         self.area = None
         self.label_folder = label
         self.npy_folder = npy
@@ -360,7 +363,7 @@ class Viewer3D(object):
                 self.predictions_agatston = self.volume.clone()
                 self.predictions_agatston = dp.boxe_3d(self.predictions_agatston,vertices)
                 # Get the all points in isosurface Mesh/Volume
-                self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)
+                self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)               
                 self.predictions_final_points = dp.to_points(self.predictions_final)
                 actor_ = self.label_3d(self.predictions_final_points,c=[0,1,0])
                 self.actor_infer_list.append(actor_)
@@ -413,12 +416,26 @@ class Viewer3D(object):
 
     def buttonfuncAgatston(self):
         if self.fitting_view_mode == True:
-            d = []
-            for point in tqdm(self.predictions_agatston_points[:,:3]): #Exclude intensity points
-               d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
-            d = np.array(d)
-            predictions_agatston = self.predictions_agatston_points.copy()
-            predictions_agatston = predictions_agatston[np.where(d<=self.r_fit)]
+            for z in np.unique(self.predictions_agatston_points[:,2]):
+                r_fit = []
+                index = np.where((self.predictions_final_points[:,2]>(z+self.spacing[1]/2)) & (self.predictions_final_points[:,2]<(z-self.spacing[1]/2)))
+                predictions_final_tmp = self.predictions_final_points.copy()
+                predictions_final_tmp = predictions_final_tmp[index]
+                predictions_agatston = self.predictions_agatston_points.copy()
+                predictions_agatston = predictions_agatston[predictions_agatston[:,2]==z]
+                # Estimate the min value by slices for the iso surface
+                for point in predictions_final_tmp[:,:3]: #Exclude intensity points
+                    r_fit.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
+                r_fit = np.array(r_fit)
+                r_fit = np.min(r_fit)
+                # Estimate the distance of each point for the agatston
+                d = []
+                for point in predictions_agatston[:,:3]: #Exclude intensity points
+                    d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
+                d = np.array(d)
+                predictions_agatston = predictions_agatston[np.where(d<=r_fit)]
+                print(predictions_agatston)
+                exit()
             mask_agatston = self.get_mask_2D(predictions_agatston)
             # Show the score in 2D mode
             Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
@@ -450,7 +467,7 @@ class Viewer3D(object):
 
         scrange = self.img.GetScalarRange()
         self.threshold = (2 * scrange[0] + scrange[1]) / 3.0
-        
+
         return self.volume
     
     def iso_surface(self,data):
