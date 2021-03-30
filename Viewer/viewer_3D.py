@@ -416,9 +416,10 @@ class Viewer3D(object):
 
     def buttonfuncAgatston(self):
         if self.fitting_view_mode == True:
+            predictions_filter = []
             for z in np.unique(self.predictions_agatston_points[:,2]):
                 r_fit = []
-                index = np.where((self.predictions_final_points[:,2]>(z+self.spacing[1]/2)) & (self.predictions_final_points[:,2]<(z-self.spacing[1]/2)))
+                index = np.where((self.predictions_final_points[:,2]>(z-self.spacing[2]/2)) & (self.predictions_final_points[:,2]<(z+self.spacing[2]/2)))
                 predictions_final_tmp = self.predictions_final_points.copy()
                 predictions_final_tmp = predictions_final_tmp[index]
                 predictions_agatston = self.predictions_agatston_points.copy()
@@ -426,17 +427,18 @@ class Viewer3D(object):
                 # Estimate the min value by slices for the iso surface
                 for point in predictions_final_tmp[:,:3]: #Exclude intensity points
                     r_fit.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
-                r_fit = np.array(r_fit)
-                r_fit = np.min(r_fit)
-                # Estimate the distance of each point for the agatston
-                d = []
-                for point in predictions_agatston[:,:3]: #Exclude intensity points
-                    d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
-                d = np.array(d)
-                predictions_agatston = predictions_agatston[np.where(d<=r_fit)]
-                print(predictions_agatston)
-                exit()
-            mask_agatston = self.get_mask_2D(predictions_agatston)
+                if len(r_fit) > 0 :
+                    r_fit = np.array(r_fit)
+                    r_fit = np.min(r_fit)
+                    # Estimate the distance of each point for the agatston
+                    d = []
+                    for point in predictions_agatston[:,:3]: #Exclude intensity points
+                        d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
+                    d = np.array(d)
+                    predictions_agatston = predictions_agatston[np.where(d<=r_fit)]
+                predictions_filter.append(predictions_agatston)
+            predictions_filter = np.concatenate(predictions_filter)
+            mask_agatston = self.get_mask_2D(predictions_filter)
             # Show the score in 2D mode
             Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
         else : 
