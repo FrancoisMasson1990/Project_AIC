@@ -442,7 +442,7 @@ class Viewer3D(object):
             # Show the score in 2D mode
             Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
         else : 
-            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask.copy(),agatston=True,area=self.area)
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask.copy(),agatston=False,area=self.area)
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]

@@ -185,7 +185,9 @@ class Image_2D(Viewer2D):
         self.fig_canvas.canvas.mpl_connect('motion_notify_event', self.mouse_position)
 
         self._image = None
+        self._image = None
         self._image = self.axis1.imshow(self.image[self.index], cmap='gray')
+        self._image2 = self.axis2.imshow(self.image[self.index], cmap='gray')
                 
         if self.label is not None:
             self.label_image = np.load(self.label[self.index])
@@ -206,6 +208,7 @@ class Image_2D(Viewer2D):
         self.prediction = self.image[self.index].copy()
         self.prediction[self.mask_agatston[self.index] == 0] = 0
         self.prediction[self.prediction < self.threshold] = 0
+        self.prediction = np.ma.masked_where(self.prediction == 0, self.prediction)
     
     def agatston_score(self):
         score = 0.0
@@ -268,8 +271,10 @@ class Image_2D(Viewer2D):
         self.index = int(self.slicer.val)
         if self._image is None:
             self._image = self.axis1.imshow(self.image[self.index], cmap='gray')
+            self._image2 = self.axis2.imshow(self.image[self.index], cmap='gray')
         else:
             self._image.set_data(self.image[self.index])
+            self._image2.set_data(self.image[self.index])
 
         if self.agatston_bool:
             self.agatston_score_slice()
@@ -288,11 +293,6 @@ class Image_2D(Viewer2D):
             self._label = self.axis2.imshow(self.label_image, vmin=np.min(self.label_image), vmax=np.max(self.label_image))
 
         else:
-            if not self.agatston_bool:
-                try :
-                    self.axis2.cla()
-                except :
-                    pass
             self.init_label = True
 
     def save_image(self, event):
