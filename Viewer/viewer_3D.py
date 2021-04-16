@@ -418,7 +418,7 @@ class Viewer3D(object):
     def buttonfuncAgatston(self):
         if self.fitting_view_mode == True:
             predictions_filter = []
-            for z in np.unique(self.predictions_agatston_points[:,2]):
+            for i,z in enumerate(np.unique(self.predictions_agatston_points[:,2])):
                 r_fit = []
                 index = np.where((self.predictions_final_points[:,2]>(z-self.spacing[2]/2)) & (self.predictions_final_points[:,2]<(z+self.spacing[2]/2)))
                 predictions_final_tmp = self.predictions_final_points.copy()
@@ -437,6 +437,8 @@ class Viewer3D(object):
                         d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
                     d = np.array(d)
                     predictions_agatston = predictions_agatston[np.where(d<=r_fit)]
+                else : 
+                    predictions_agatston = np.empty((0,4))
                 predictions_filter.append(predictions_agatston)
             predictions_filter = np.concatenate(predictions_filter)
             mask_agatston = self.get_mask_2D(predictions_filter)
