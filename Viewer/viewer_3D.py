@@ -73,6 +73,7 @@ class Viewer3D(object):
         self.npy_folder = npy
         self.multi_label = multi_label
         self.template = template
+        self.max = None
 
         self.slices = dp.load_scan(self.data_path[self.frame])
         self.shape = dp.get_pixels_hu(self.slices)
@@ -356,12 +357,12 @@ class Viewer3D(object):
                 predictions,_ = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2],[1,1,1])
                 vertices,_ = dp.make_mesh(predictions,-1)
                 # Clustering
-                vertices = dp.clustering(vertices,self.center,self.all_numpy_nodes,ratio=0.4,threshold=3800)
+                vertices = dp.clustering(vertices,self.center,self.all_numpy_nodes,ratio=0.4,threshold=3800,max_=self.max)
                 # Volume Cropping
                 self.predictions_final = self.img.clone()
-                self.predictions_final = dp.boxe_3d(self.predictions_final,vertices)
+                self.predictions_final = dp.boxe_3d(self.predictions_final,vertices,max_=self.max)
                 self.predictions_agatston = self.volume.clone()
-                self.predictions_agatston = dp.boxe_3d(self.predictions_agatston,vertices)
+                self.predictions_agatston = dp.boxe_3d(self.predictions_agatston,vertices,max_=self.max)
                 # Get the all points in isosurface Mesh/Volume
                 self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)               
                 self.predictions_final_points = dp.to_points(self.predictions_final)
@@ -469,6 +470,12 @@ class Viewer3D(object):
 
         scrange = self.img.GetScalarRange()
         self.threshold = (2 * scrange[0] + scrange[1]) / 3.0
+
+        if self.template:
+            points = vtk_to_numpy(self.volume.toPoints().GetMapper().GetInput().GetPoints().GetData())
+            intensity = vtk_to_numpy(self.volume.imagedata().GetPointData().GetScalars()) #Pixel value intensity
+            index = np.argmax(intensity)
+            self.max = points[index]
 
         return self.volume
     

@@ -179,7 +179,7 @@ def load_scan(path):
 			file_dcm.append(f)
 	slices = [pydicom.read_file(path + '/' + s) for s in file_dcm]
 	slices.sort(key = lambda x: int(x.InstanceNumber))
-	
+
 	try:
 		slice_thickness = np.abs(slices[0].ImagePositionPatient[2] - slices[1].ImagePositionPatient[2])
 	except:
@@ -197,13 +197,14 @@ def load_mask(path):
 	return mask
 
 def get_pixels_hu(scans):
+
 	image = np.stack([s.pixel_array for s in scans])
 	image = image.astype(np.int16)
 	image[image == -2000] = 0
     # Convert to Hounsfield units (HU)
 	intercept = scans[0].RescaleIntercept
 	slope = scans[0].RescaleSlope
-
+	
 	if slope != 1:
 		image = slope * image.astype(np.float64)
 		image = image.astype(np.int16)
@@ -301,29 +302,32 @@ def resample(image, pixelspacing, slicethickness, new_spacing=[1,1,1]):
 
     return image, new_spacing
 
-def clustering(data,center_volume,gt_data,ratio,threshold=3800,eps=2.5,min_samples=2):
+def clustering(data,center_volume,gt_data,ratio,threshold=3800,eps=2.5,min_samples=2,max_=None):
 
-	# Crop border of images
-	x_min = float(center_volume[0]-0.8*center_volume[0])
-	x_max = float(center_volume[0]+0.8*center_volume[0])
-	y_min = float(center_volume[1]-ratio*center_volume[1])
-	y_max = float(center_volume[1]+ratio*center_volume[1])
-	z_min = float(center_volume[2]-ratio*center_volume[2])
-	z_max = float(center_volume[2]+ratio*center_volume[2])
-	first = False
-	index = np.where((data[:,0]>x_min) & (data[:,0]<x_max) & (data[:,1]>y_min) & (data[:,1]<y_max) & (data[:,2]>z_min) & (data[:,2]<z_max))
-	if data[index].shape[0] < 1500 :
-		# Bad prediction : Border detection most of the time
-		data = gt_data
-		z_min = float(center_volume[2]-0.3*center_volume[2])
-		z_max = float(center_volume[2]+0.3*center_volume[2])
-		y_min = float(center_volume[1]-0.3*center_volume[1])
-		y_max = float(center_volume[1]+0.3*center_volume[1])
+	if max_ is None:
+		# Crop border of images
+		x_min = float(center_volume[0]-0.8*center_volume[0])
+		x_max = float(center_volume[0]+0.8*center_volume[0])
+		y_min = float(center_volume[1]-ratio*center_volume[1])
+		y_max = float(center_volume[1]+ratio*center_volume[1])
+		z_min = float(center_volume[2]-ratio*center_volume[2])
+		z_max = float(center_volume[2]+ratio*center_volume[2])
+
 		index = np.where((data[:,0]>x_min) & (data[:,0]<x_max) & (data[:,1]>y_min) & (data[:,1]<y_max) & (data[:,2]>z_min) & (data[:,2]<z_max))
-		first = True
+		if data[index].shape[0] < 1500 :
+			# Bad prediction : Border detection most of the time
+			data = gt_data
+			z_min = float(center_volume[2]-0.3*center_volume[2])
+			z_max = float(center_volume[2]+0.3*center_volume[2])
+			y_min = float(center_volume[1]-0.3*center_volume[1])
+			y_max = float(center_volume[1]+0.3*center_volume[1])
+			index = np.where((data[:,0]>x_min) & (data[:,0]<x_max) & (data[:,1]>y_min) & (data[:,1]<y_max) & (data[:,2]>z_min) & (data[:,2]<z_max))
+
+	else :
+		index = np.where((data[:,0]>max_[0]-25) & (data[:,0]<max_[0]+25) & (data[:,1]>max_[1]-25) & (data[:,1]<max_[1]+25) & (data[:,2]>max_[2]-25) & (data[:,2]<max_[2]+25))
 
 	data = data[index]
-	
+		
 	model = DBSCAN(eps=2.5, min_samples=2)
 	model.fit_predict(data)
 	print("number of cluster found: {}".format(len(set(model.labels_))))
@@ -340,27 +344,36 @@ def clustering(data,center_volume,gt_data,ratio,threshold=3800,eps=2.5,min_sampl
 
 	return data[i,:]
 
-def boxe_3d(volume_array,predict):
-	z_max = np.max(predict[:,2])
-	z_min = np.min(predict[:,2])
-	x_min = np.min(predict[:,0])
-	x_max = np.max(predict[:,0])
-	y_min = np.min(predict[:,1])
-	y_max = np.max(predict[:,1])
+def boxe_3d(volume_array,predict,max_=None):
+
+	if max_ is None :
+		x_min = np.min(predict[:,0])
+		x_max = np.max(predict[:,0])
+		y_min = np.min(predict[:,1])
+		y_max = np.max(predict[:,1])
+		z_min = np.min(predict[:,2])
+		z_max = np.max(predict[:,2])
+	else : 
+		x_min = max_[0]-25
+		x_max = max_[0]+25
+		y_min = max_[1]-25
+		y_max = max_[1]+25
+		z_min = max_[2]-25
+		z_max = max_[2]+25
 
 	if isinstance(volume_array,volume.Volume):
 		dimensions = volume_array.dimensions()
 		spacing = volume_array.spacing()
 		volume_array = volume_array.crop(top=1-(z_max/(dimensions[2]*spacing[2])), #z_max
-										 bottom=(z_min/(dimensions[2]*spacing[2])), #z_min
-             							 right=1-(x_max/(dimensions[0]*spacing[0])), #x_max
-										 left=(y_min/(dimensions[1]*spacing[1])), #x_min
-										 front=1-(y_max/(dimensions[1]*spacing[1])), #y_max
-										 back=(y_min/(dimensions[1]*spacing[1])) #y_min
+										bottom=(z_min/(dimensions[2]*spacing[2])), #z_min
+										right=1-(x_max/(dimensions[0]*spacing[0])), #x_max
+										left=(y_min/(dimensions[1]*spacing[1])), #x_min
+										front=1-(y_max/(dimensions[1]*spacing[1])), #y_max
+										back=(y_min/(dimensions[1]*spacing[1])) #y_min
 										)
 	if isinstance(volume_array,mesh.Mesh):
 		volume_array = volume_array.crop(bounds=[x_min,x_max,y_min,y_max,z_min,z_max])
-		
+	
 	return volume_array
 
 def normalize(v):
