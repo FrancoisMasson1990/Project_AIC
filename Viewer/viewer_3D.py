@@ -75,9 +75,6 @@ class Viewer3D(object):
         self.template = template
         self.max = None
 
-        self.slices = dp.load_scan(self.data_path[self.frame])
-        self.shape = dp.get_pixels_hu(self.slices)
-
         '''One render window, multiple viewports'''
         self.rw = vtk.vtkRenderWindow()
         self.rw.SetSize(int(self.window_size[0]), int(self.window_size[1]))
@@ -356,6 +353,7 @@ class Viewer3D(object):
                 predictions = np.vstack(pred_list) 
                 predictions,_ = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2],[1,1,1])
                 vertices,_ = dp.make_mesh(predictions,-1)
+
                 # Clustering
                 vertices = dp.clustering(vertices,self.center,self.all_numpy_nodes,ratio=0.4,threshold=3800,max_=self.max)
                 # Volume Cropping
@@ -367,6 +365,7 @@ class Viewer3D(object):
                 self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)               
                 self.predictions_final_points = dp.to_points(self.predictions_final)
                 actor_ = self.label_3d(self.predictions_final_points,c=[0,1,0])
+
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -482,6 +481,11 @@ class Viewer3D(object):
         return self.volume
     
     def iso_surface(self,data):
+        
+        # Check that mask and image have the same size
+        self.slices = dp.load_scan(self.data_path[self.frame])
+        self.shape = dp.get_pixels_hu(self.slices)
+
         self.img = load(data)
         ## Following lines used to get the mask 
         self.mask = tuple(reversed(load(data).imagedata().GetDimensions()))
@@ -504,7 +508,7 @@ class Viewer3D(object):
         self.center = np.array([(np.min(self.all_numpy_nodes[:,0]) + np.max(self.all_numpy_nodes[:,0]))/2, \
                                (np.min(self.all_numpy_nodes[:,1]) + np.max(self.all_numpy_nodes[:,1]))/2, \
                                (np.min(self.all_numpy_nodes[:,2]) + np.max(self.all_numpy_nodes[:,2]))/2])
-        
+                
         return self.img
 
     def slicer_2d(self,data):

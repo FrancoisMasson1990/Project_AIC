@@ -50,7 +50,7 @@ import yaml
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from skimage import measure
 import scipy.ndimage
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import DBSCAN, OPTICS
 from collections import Counter
 
 ## Main class to visualize data dicom
@@ -326,8 +326,9 @@ def clustering(data,center_volume,gt_data,ratio,threshold=3800,eps=2.5,min_sampl
 	else :
 		index = np.where((data[:,0]>max_[0]-25) & (data[:,0]<max_[0]+25) & (data[:,1]>max_[1]-25) & (data[:,1]<max_[1]+25) & (data[:,2]>max_[2]-25) & (data[:,2]<max_[2]+25))
 
-	data = data[index]
-		
+	if data[index].shape[0] !=0 :
+		data = data[index]
+
 	model = DBSCAN(eps=2.5, min_samples=2)
 	model.fit_predict(data)
 	print("number of cluster found: {}".format(len(set(model.labels_))))
