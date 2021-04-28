@@ -397,7 +397,6 @@ def to_points(data,threshold=None):
     '''
 	if isinstance(data,volume.Volume):
 		points = vtk_to_numpy(data.toPoints().GetMapper().GetInput().GetPoints().GetData())
-		print(points.shape)
 		scalar = np.expand_dims(vtk_to_numpy(data.imagedata().GetPointData().GetScalars()),axis=1) #Pixel value intensity
 		points = np.concatenate((points,scalar), axis=1)
 		points = points[points[:,3] > 130] # Minimal value of interest for Agatston score
