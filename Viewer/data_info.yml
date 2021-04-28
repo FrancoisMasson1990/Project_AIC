@@ -1,7 +1,7 @@
-#data_path : "/home/francoismasson/Project_AIC/data_folder/data_preprocess_magna/"
+data_path : "/home/francoismasson/Project_AIC/data_folder/data_preprocess_magna/"
 #data_path : "/home/francoismasson/Project_AIC/data_folder/template_valve/"
-data_path : "/home/francoismasson/Project_AIC/data_folder/baseline_valve/"
-template : True
+#data_path : "/home/francoismasson/Project_AIC/data_folder/baseline_valve/"
+template : False
 folder_mask : "/home/francoismasson/Project_AIC/data_folder/label_mask_magna/"
 npy_folder : "/home/francoismasson/Project_AIC/data_folder/data_label_npy/"
 labels_2D : False

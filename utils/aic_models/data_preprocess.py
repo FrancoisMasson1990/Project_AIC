@@ -354,6 +354,7 @@ def boxe_3d(volume_array,predict,max_=None):
 		y_max = np.max(predict[:,1])
 		z_min = np.min(predict[:,2])
 		z_max = np.max(predict[:,2])
+
 	else : 
 		x_min = max_[0]-25
 		x_max = max_[0]+25
@@ -366,11 +367,11 @@ def boxe_3d(volume_array,predict,max_=None):
 		dimensions = volume_array.dimensions()
 		spacing = volume_array.spacing()
 		volume_array = volume_array.crop(top=1-(z_max/(dimensions[2]*spacing[2])), #z_max
-										bottom=(z_min/(dimensions[2]*spacing[2])), #z_min
-										right=1-(x_max/(dimensions[0]*spacing[0])), #x_max
-										left=(y_min/(dimensions[1]*spacing[1])), #x_min
-										front=1-(y_max/(dimensions[1]*spacing[1])), #y_max
-										back=(y_min/(dimensions[1]*spacing[1])) #y_min
+									     bottom=(z_min/(dimensions[2]*spacing[2])), #z_min
+										 front=1-(y_max/(dimensions[1]*spacing[1])), #y_max
+										 back=(y_min/(dimensions[1]*spacing[1])), #y_min
+										 right=1-(x_max/(dimensions[0]*spacing[0])), #x_max
+										 left=(x_min/(dimensions[1]*spacing[1])), #x_min
 										)
 	if isinstance(volume_array,mesh.Mesh):
 		volume_array = volume_array.crop(bounds=[x_min,x_max,y_min,y_max,z_min,z_max])
@@ -396,6 +397,7 @@ def to_points(data,threshold=None):
     '''
 	if isinstance(data,volume.Volume):
 		points = vtk_to_numpy(data.toPoints().GetMapper().GetInput().GetPoints().GetData())
+		print(points.shape)
 		scalar = np.expand_dims(vtk_to_numpy(data.imagedata().GetPointData().GetScalars()),axis=1) #Pixel value intensity
 		points = np.concatenate((points,scalar), axis=1)
 		points = points[points[:,3] > 130] # Minimal value of interest for Agatston score
