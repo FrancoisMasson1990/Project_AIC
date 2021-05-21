@@ -7,6 +7,7 @@ from glob import glob
 from matplotlib.widgets import Button, Slider
 from natsort import natsorted
 from scipy.ndimage import measurements
+import pickle
 
 class Viewer2D(object):
     def __init__(self, data_path: str, folder_mask: str, model, frame=0, mask_agatston=None, agatston=False, area=None):
@@ -187,14 +188,27 @@ class Image_2D(Viewer2D):
             self.init_label = False
         
         if self.agatston_bool : 
-            score = 0.0
+            self.score = 0.0
             self._prediction_view = None
             self.agatston_score_slice()
             self._prediction_view = self.axis2.imshow(self.prediction, cmap='jet')
-            score = self.agatston_score()
-            self.axis2.set_xlabel("Agatston score : {:.3f}".format(score))
+            self.score = self.agatston_score()
+            self.axis2.set_xlabel("Agatston score : {:.3f}".format(self.score))
 
         self.slicer.on_changed(self.update)
+        self.save_prediction()
+
+    def save_prediction(self):
+        # Save prediction in dictionnary
+        save_predict = {}
+        save_predict["data_path"] = "/".join([self.data_path[self.frame].split("/")[-2],self.data_path[self.frame].split("/")[-1]])
+        save_predict["score"] = self.score
+        save_predict["image"] = self.image
+        save_predict["mask_agatston"] = self.mask_agatston
+        folder =  os.path.expanduser("~") + "/Project_AIC/data_folder/data_prediction/" + save_predict["data_path"]
+        os.makedirs(folder,exist_ok=True)
+        with open(folder + "/prediction.pkl",'wb') as f:
+            pickle.dump(save_predict,f)
     
     def agatston_score_slice(self):
         self.prediction = self.image[self.index].copy()
