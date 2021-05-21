@@ -4,15 +4,7 @@ import pydicom
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from glob import glob
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.widgets import Button, Slider
-import scipy.ndimage
-from skimage import morphology
-from skimage import measure
-from skimage.transform import resize
-from sklearn.cluster import KMeans
-import math
-import pydicom
 from natsort import natsorted
 from scipy.ndimage import measurements
 

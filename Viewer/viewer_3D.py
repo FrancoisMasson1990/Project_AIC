@@ -448,7 +448,7 @@ class Viewer3D(object):
             save_predict["data_path"] = "/".join([self.data_path[self.frame].split("/")[-2],self.data_path[self.frame].split("/")[-1]])
             save_predict["area"] = self.area
             save_predict["mask_agatston"] = mask_agatston
-            folder =  os.path.expanduser("~") + "/Project_AIC/data_prediction/" + save_predict["data_path"]
+            folder =  os.path.expanduser("~") + "/Project_AIC/data_folder/data_prediction/" + save_predict["data_path"]
             os.makedirs(folder,exist_ok=True)
             with open(os.path.join(folder + "prediction.pkl"),'wb') as f:
                 pickle.dump(save_predict,f)

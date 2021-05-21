@@ -5,6 +5,7 @@
 *.avi
 *.tar
 *.dcm
+*.pkl
 *.yml
 *.txt
 *.hdf5
