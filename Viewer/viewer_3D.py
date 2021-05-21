@@ -450,7 +450,7 @@ class Viewer3D(object):
             save_predict["mask_agatston"] = mask_agatston
             folder =  os.path.expanduser("~") + "/Project_AIC/data_folder/data_prediction/" + save_predict["data_path"]
             os.makedirs(folder,exist_ok=True)
-            with open(os.path.join(folder + "prediction.pkl"),'wb') as f:
+            with open(folder + "/prediction.pkl",'wb') as f:
                 pickle.dump(save_predict,f)
             # Show the score in 2D mode
             Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
