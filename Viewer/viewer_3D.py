@@ -4,6 +4,8 @@ import vtk
 vtk.vtkObject.GlobalWarningDisplayOff()
 from vedo import *
 import numpy as np
+import os 
+import pickle
 from vedo import settings
 import vedo.settings as settings
 import vedo.addons as addons 
@@ -441,6 +443,15 @@ class Viewer3D(object):
                 predictions_filter.append(predictions_agatston)
             predictions_filter = np.concatenate(predictions_filter)
             mask_agatston = self.get_mask_2D(predictions_filter)
+            # Save prediction in dictionnary
+            save_predict = {}
+            save_predict["data_path"] = "/".join([self.data_path[self.frame].split("/")[-2],self.data_path[self.frame].split("/")[-1]])
+            save_predict["area"] = self.area
+            save_predict["mask_agatston"] = mask_agatston
+            folder =  os.path.expanduser("~") + "/Project_AIC/data_prediction/" + save_predict["data_path"]
+            os.makedirs(folder,exist_ok=True)
+            with open(os.path.join(folder + "prediction.pkl"),'wb') as f:
+                pickle.dump(save_predict,f)
             # Show the score in 2D mode
             Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
         else : 
