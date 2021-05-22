@@ -2,7 +2,6 @@ import os
 import numpy as np
 import pydicom
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 from glob import glob
 from matplotlib.widgets import Button, Slider
 from natsort import natsorted
