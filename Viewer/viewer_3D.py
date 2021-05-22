@@ -5,30 +5,18 @@ vtk.vtkObject.GlobalWarningDisplayOff()
 from vedo import *
 import numpy as np
 import os 
-import pickle
 from vedo import settings
-import vedo.settings as settings
-import vedo.addons as addons 
-from vedo.mesh import Mesh
-from vtk.util.numpy_support import vtk_to_numpy,numpy_to_vtk
+from vtk.util.numpy_support import vtk_to_numpy
 import numpy as np
-import pydicom
-from pydicom.dataset import Dataset, FileDataset
-from pydicom.uid import ExplicitVRLittleEndian
-import pydicom._storage_sopclass_uids
 import glob
 from widget import *
 from tqdm import tqdm 
-from PIL import Image
-import matplotlib.pyplot as plt
 from scipy import ndimage as ndi
 from aic_models import data_preprocess as dp
 from skimage.transform import resize
 from tqdm import tqdm
 from cylinder_fitting import fit
 from viewer_2D import Viewer2D
-
-from vedo.volume import mesh2Volume
 
 class Viewer3D(object):
 

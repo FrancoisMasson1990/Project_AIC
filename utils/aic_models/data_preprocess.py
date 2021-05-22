@@ -40,22 +40,19 @@ from tqdm import tqdm  # pip install tqdm
 import h5py   # pip install h5py
 import json
 from os.path import expanduser
-import argparse
 import glob
 import pydicom
 from skimage.transform import resize
 from natsort import natsorted
-import copy
-import yaml
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from skimage import measure
 import scipy.ndimage
-from sklearn.cluster import DBSCAN, OPTICS
+from sklearn.cluster import DBSCAN
 from collections import Counter
 
 ## Main class to visualize data dicom
 import vtk
-from vtk.util.numpy_support import vtk_to_numpy,numpy_to_vtk
+from vtk.util.numpy_support import vtk_to_numpy
 from vedo import *
 
 LABEL_CHANNELS = {"labels":{
