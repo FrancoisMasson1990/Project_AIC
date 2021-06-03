@@ -156,7 +156,6 @@ if __name__ == "__main__":
               verbose=1,
               callbacks=model_callbacks)
 
-    exit()
     """
     Step 4: Evaluate the best model
     """
