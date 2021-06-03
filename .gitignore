@@ -1,7 +1,5 @@
 *.pyc
 *.h5
-*.png
-*.gif
 *.avi
 *.tar
 *.dcm
@@ -23,5 +21,6 @@ __pycache__
 **/output/
 **/.vscode/
 **/backup/
+**/inference_examples/
 **/data_preprocess_magna_/
 **/label_mask_magna_/
