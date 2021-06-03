@@ -115,7 +115,7 @@ def preprocess_inputs(img,resize=-1):
 	if (resize != -1):
 		img = crop_center(img, resize, resize, -1)
 
-	img = normalize_img(img)
+	#img = normalize_img(img)
 
 	return img
 
@@ -127,7 +127,7 @@ def preprocess_labels(msk,intel_model=False,resize=-1):
 	## Stack the loaded npy files
 	msk = [np.load(msk[i]) for i in range(len(msk))]
 	msk = np.stack(msk, axis=0)
-
+	
 	if intel_model :
 		if len(msk.shape) != 4:  # Make sure 4D
 			msk = np.expand_dims(msk, -1)
@@ -135,14 +135,14 @@ def preprocess_labels(msk,intel_model=False,resize=-1):
 		# extract certain classes from mask
 		msks = [(msk == v) for v in LABEL_CHANNELS["labels"].values()]
 		msk = np.stack(msks, axis=-1).astype('float')
-    	
+	
 	# Cropping
 	if (resize != -1):
 		msk = crop_center(msk, resize, resize, -1)
 
 	# WIP : Trying to find labels with no data imbalanced 
 	# Remove one label
-	msk = np.delete(msk,1,3) #Removed Others
+	# msk = np.delete(msk,1,3) #Removed Others
 
 	index = []
 	for l in range(msk.shape[0]):
@@ -150,23 +150,24 @@ def preprocess_labels(msk,intel_model=False,resize=-1):
 		if not is_value :
 			index.append(l)
 
-
 	return msk,np.array(index)
 
-def expand_list(data_path, format):
+def expand_list(data_path, format=None):
 
 	sub_folders = os.listdir(data_path)
 	data = []
 	for sub_folder in sub_folders:
 		root = os.path.join(data_path, sub_folder)
 		sub_ = os.listdir(root)
-		for sub in sub_:
-			data.append(os.path.join(root, sub))
+		for i,sub in enumerate(sub_):
+			if format is not None:
+				data.append(glob.glob(os.path.join(root, sub) + format))
+			else :
+				data.append(os.path.join(root, sub))		
 
 	data = natsorted(data)
 
 	return data
-
 
 def load_scan(path):
 	files = os.listdir(path)

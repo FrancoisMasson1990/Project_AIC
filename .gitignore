@@ -9,6 +9,8 @@
 *.yml
 *.txt
 *.hdf5
+*.npy
+*.json
 *.egg-info
 __pycache__
 **/models/

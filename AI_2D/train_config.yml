@@ -1,7 +1,7 @@
-data_path: "/home/francoismasson/Project_AIC/data_folder/" #the path to the data
+data_path: "/home/francoismasson/Project_AIC/data_folder_one/" #the path to the data
 data_filename: "/home/francoismasson/Project_AIC/hdf5_files/project_aic.h5" #the HDF5 data filename
 output_path: "/home/francoismasson/Project_AIC/output" #the folder to save the model and checkpoints
-inference_filename: "unet_model_for_aic.hdf5"
+inference_filename: "unet_model_for_aic_test.hdf5"
 use_upsampling: False #use upsampling instead of transposed convolution
 num_inter_threads: 1 #the number of intraop threads
 batch_size: 4 #the batch size for training
@@ -10,7 +10,7 @@ crop_dim: -1 #Size to crop images (square, in pixels). If -1, then no cropping
 blocktime: 1000 #blocktime
 epochs: 40 #number of epochs to train
 learning_rate: 0.0001 #learning rate
-#weight_dice_loss: 0.9 #Set to None if dice_loss used : Weight for the Dice loss compared to crossentropy
+weight_dice_loss: 0.9 #Set to None if dice_loss used : Weight for the Dice loss compared to crossentropy
 featuremaps: 32 #How many feature maps in the model
 keras_api: False #use keras instead of tf.keras
 use_pconv: False #use partial convolution based padding
@@ -18,4 +18,4 @@ channels_first: False #use channels first data format
 print_model: True #print the model
 use_dropout: False #add spatial dropout layers 3/4
 use_augmentation: True #use data augmentation on training images 
-intel_model: False # Use prebuild model if true
+intel_model: True # Use prebuild model if true

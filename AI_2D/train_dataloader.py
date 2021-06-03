@@ -29,16 +29,11 @@ import psutil
 import datetime
 import os
 import tensorflow as tf
-from tensorflow import keras as K
 import sys 
 import yaml
+from aic_models.model import unet
 from aic_models.dataloader import DatasetGenerator,get_filelist,slice_filelist
 import psutil
-import yaml
-import matplotlib.pyplot as plt
-from pathlib import Path
-
-from aic_models.model import unet
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 # If hyperthreading is enabled, then use
@@ -75,74 +70,10 @@ try:
 except RuntimeError as e:
     print(e)
 
-def dice_coef(target, prediction, axis=(1, 2), smooth=0.0001):
-    """
-    Sorenson Dice
-    \frac{  2 \times \left | T \right | \cap \left | P \right |}{ \left | T \right | +  \left | P \right |  }
-    where T is ground truth mask and P is the prediction mask
-    """
-    prediction = K.backend.round(prediction)  # Round to 0 or 1
-
-    intersection = tf.reduce_sum(target * prediction, axis=axis)
-    union = tf.reduce_sum(target + prediction, axis=axis)
-    numerator = tf.constant(2.) * intersection + smooth
-    denominator = union + smooth
-    coef = numerator / denominator
-
-    return tf.reduce_mean(coef)
-
-def soft_dice_coef(target, prediction, axis=(1, 2), smooth=0.0001):
-    """
-    Sorenson (Soft) Dice  - Don't round the predictions
-    \frac{  2 \times \left | T \right | \cap \left | P \right |}{ \left | T \right | +  \left | P \right |  }
-    where T is ground truth mask and P is the prediction mask
-    """
-
-    intersection = tf.reduce_sum(target * prediction, axis=axis)
-    union = tf.reduce_sum(target + prediction, axis=axis)
-    numerator = tf.constant(2.) * intersection + smooth
-    denominator = union + smooth
-    coef = numerator / denominator
-
-    return tf.reduce_mean(coef)
-
-def plot_results(imgs,labels,model,folder,number):
-    """
-    Calculate the Dice and plot the predicted masks for image # img_no
-    """
-
-    # Prediction
-    if model is not None:
-        predictions = model.predict(imgs)
-    
-    for i in range(imgs.shape[0]):
-        # Init Figure
-        plt.figure(figsize=(20,20))
-
-        # Image 
-        plt.subplot(1,3,1)
-        plt.imshow(imgs[i, :, :, 0], cmap="bone", origin="lower")
-        plt.title("MRI")
-        plt.axis("off")
-
-        # Label
-        plt.subplot(1, 3, 2)
-        plt.imshow(labels[i, :, :, 0],origin="lower",vmin=0, vmax=1)
-        plt.title("Ground Truth")
-        plt.axis("off")
-
-        if model is not None:
-            plt.subplot(1, 3, 3)
-            plt.imshow(predictions[i, :, :, 0],origin="lower",vmin=0, vmax=1)
-            plt.title("Predictions\n(Dice {:.4f}, Soft Dice {:.4f})".\
-                      format(dice_coef(labels[i],predictions[i]),soft_dice_coef(labels[i],predictions[i])))
-            plt.axis("off")
-        
-        png_filename = os.path.join(folder, "pred_{}.png".format(number+i))
-        plt.savefig(png_filename, bbox_inches="tight", pad_inches=0)
-
-
 if __name__ == "__main__":
+
+    START_TIME = datetime.datetime.now()
+    print("Started script on {}".format(START_TIME))
 
     """
     Load the config required for the model
@@ -160,12 +91,16 @@ if __name__ == "__main__":
     featuremaps = config.get("featuremaps",None)
     output_path = config.get("output_path",None)
     inference_filename = config.get("inference_filename",None)
+    use_dropout = config.get("use_dropout",None)
+    use_upsampling = config.get("use_upsampling",None)
+    learning_rate = config.get("learning_rate",None)
+    weight_dice_loss = config.get("weight_dice_loss",None)
+    print_model = config.get("print_model",None)
 
-    #model_filename = "/home/francoismasson/Project_AIC/Viewer/models/unet_model_for_aic_512.hdf5"
-    model_filename = "/home/francoismasson/Project_AIC/output/unet_model_for_aic_test.hdf5"
-
+    epochs = config.get("epochs",None)
+    
     """
-    Load a model, load the data, and see inference.
+    Create a model, load the data, and train it.
     """
 
     """
@@ -183,24 +118,54 @@ if __name__ == "__main__":
     ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=True)
     ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=False)
     ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=False)
+  
+    print("-" * 30)
+    print("Creating and compiling model ...")
+    print("-" * 30)
+
+    """
+    Step 2: Define the model
+    """
     
- 
-    unet_model = unet()
-    try :
-        model = unet_model.load_model(model_filename)
-    except :
-        model = None
+    unet_model = unet(channels_first=channels_first,
+                      fms=featuremaps,
+                      output_path=output_path,
+                      inference_filename=inference_filename,
+                      learning_rate=learning_rate,
+                      weight_dice_loss=weight_dice_loss,
+                      use_upsampling=use_upsampling,
+                      use_dropout=use_dropout,
+                      print_model=print_model,
+                      blocktime=blocktime,
+                      num_threads=num_threads,
+                      num_inter_threads=num_inter_threads)
 
-    # Create output directory for images
-    png_directory = "inference_examples"
+    model = unet_model.create_model(ds_train.get_input_shape(), ds_train.get_output_shape())
+    model_filename, model_callbacks = unet_model.get_callbacks()
 
-    if not os.path.exists(png_directory):
-        os.makedirs(png_directory)
+    """
+    Step 3: Train the model on the data
+    """
+    print("-" * 30)
+    print("Fitting model with training data ...")
+    print("-" * 30)
 
-    png_folder = os.path.join(Path.cwd(),png_directory)
+    model.fit(ds_train,
+              epochs=epochs,
+              validation_data=ds_validation,
+              verbose=1,
+              callbacks=model_callbacks)
 
-    # The plots will be saved to the png_directory (Keep only the first batch for now)
-    number = 0
-    for img,label in ds_train.ds:
-        plot_results(img,label,model,png_folder,number)
-        number += img.shape[0]
+    exit()
+    """
+    Step 4: Evaluate the best model
+    """
+    print("-" * 30)
+    print("Loading the best trained model ...")
+    print("-" * 30)
+
+    unet_model.evaluate_model(model_filename, ds_test)
+
+    print("Total time elapsed for program = {} seconds".format(
+          datetime.datetime.now() - START_TIME))
+    print("Stopped script on {}".format(datetime.datetime.now()))
