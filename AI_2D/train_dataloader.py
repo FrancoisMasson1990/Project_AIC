@@ -120,7 +120,7 @@ if __name__ == "__main__":
     ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=True)
     ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=False)
     ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=False)
-  
+    
     print("-" * 30)
     print("Creating and compiling model ...")
     print("-" * 30)

@@ -3,6 +3,7 @@ from tensorflow.keras.utils import Sequence
 import numpy as np
 import os
 import json
+import matplotlib.pyplot as plt
 from aic_models import data_preprocess as dp
 
 LABEL_CHANNELS = {"labels":{
@@ -148,6 +149,7 @@ class DatasetGenerator(Sequence):
         # Investigate how VTK select filter
         # Processing of data... Over Z ? 
         img[img < 130] = 0
+        img[img > 1000] = 1
         return (img - img.mean()) / img.std()
 
     def preprocess_label(self, label):
@@ -358,7 +360,6 @@ class DatasetGenerator(Sequence):
         """
         Plot some random samples
         """
-        import matplotlib.pyplot as plt
         
         img, label = next(self.ds)
         
@@ -366,7 +367,7 @@ class DatasetGenerator(Sequence):
  
         plt.figure(figsize=(10,10))
         
-        slice_num = 3
+        slice_num = 2
         plt.subplot(2,2,1)
         plt.imshow(img[slice_num,:,:,0])
         plt.title("Image, Slice #{}".format(slice_num))
@@ -383,3 +384,5 @@ class DatasetGenerator(Sequence):
         plt.subplot(2,2,4)
         plt.imshow(label[slice_num,:,:,0])
         plt.title("Label, Slice #{}".format(slice_num))
+
+        plt.show()

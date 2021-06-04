@@ -77,8 +77,8 @@ class unet(object):
 
         self.metrics = [self.dice_coef, self.soft_dice_coef]
 
-        #self.loss = self.dice_coef_loss
-        self.loss = self.combined_dice_ce_loss
+        self.loss = self.dice_coef_loss
+        #self.loss = self.combined_dice_ce_loss
         #self.loss = self.focal_tversky_loss
 
         self.optimizer = K.optimizers.Adam(lr=self.learningrate)
