@@ -4,6 +4,12 @@ import numpy as np
 import os
 import json
 from aic_models import data_preprocess as dp
+
+LABEL_CHANNELS = {"labels":{
+	 			  "background":0,
+				  "other":1,
+	 			  "Magna_valve":2,
+				 }}
     
 def get_filelist(data_path, seed=816, split=0.85):
     """
@@ -47,19 +53,20 @@ def get_filelist(data_path, seed=816, split=0.85):
     np.random.seed(seed)
     numFiles = len(image_files)
     idxList = np.arange(numFiles)  # List of file indices
-    # np.random.shuffle(idxList) # Shuffle the indices to randomize train/test/split
+    np.random.shuffle(idxList) # Shuffle the indices to randomize train/test/split
     
-    # trainIdx = int(np.floor(numFiles*split)) # index for the end of the training files
-    # trainList = idxList[:trainIdx]
+    trainIdx = int(np.floor(numFiles*split)) # index for the end of the training files
+    trainList = idxList[:trainIdx]
 
-    # otherList = idxList[trainIdx:]
-    # numOther = len(otherList)
-    # otherIdx = numOther//2  # index for the end of the testing files
-    # validateList = otherList[:otherIdx]
-    # testList = otherList[otherIdx:]
+    otherList = idxList[trainIdx:]
+    numOther = len(otherList)
+    otherIdx = numOther//2  # index for the end of the testing files
+    validateList = otherList[:otherIdx]
+    testList = otherList[otherIdx:]
 
-    trainList = idxList
-    testList = validateList = trainList
+    #trainList = idxList
+    #testList = validateList = trainList
+    
     trainFiles = []
     trainLabels = []
     for idx in trainList:
@@ -138,6 +145,9 @@ class DatasetGenerator(Sequence):
         Preprocessing for the image
         z-score normalize
         """
+        # Investigate how VTK select filter
+        # Processing of data... Over Z ? 
+        img[img < 130] = 0
         return (img - img.mean()) / img.std()
 
     def preprocess_label(self, label):
@@ -149,7 +159,7 @@ class DatasetGenerator(Sequence):
         ## Stack the loaded npy files
         label = [np.load(label[i]) for i in range(len(label))]
         label = np.stack(label, axis=0)
-        label[label > 0] = 1.0
+        label[label > 1] = 0.0
 
         return label
     

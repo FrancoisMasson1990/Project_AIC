@@ -201,6 +201,6 @@ if __name__ == "__main__":
 
     # The plots will be saved to the png_directory (Keep only the first batch for now)
     number = 0
-    for img,label in ds_train.ds:
+    for img,label in ds_test.ds:
         plot_results(img,label,model,png_folder,number)
         number += img.shape[0]

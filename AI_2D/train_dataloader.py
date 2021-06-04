@@ -70,6 +70,8 @@ try:
 except RuntimeError as e:
     print(e)
 
+# https://www.raddq.com/dicom-processing-segmentation-visualization-in-python/
+
 if __name__ == "__main__":
 
     START_TIME = datetime.datetime.now()
@@ -126,7 +128,7 @@ if __name__ == "__main__":
     """
     Step 2: Define the model
     """
-    
+
     unet_model = unet(channels_first=channels_first,
                       fms=featuremaps,
                       output_path=output_path,
@@ -156,6 +158,7 @@ if __name__ == "__main__":
               verbose=1,
               callbacks=model_callbacks)
 
+    exit()
     """
     Step 4: Evaluate the best model
     """

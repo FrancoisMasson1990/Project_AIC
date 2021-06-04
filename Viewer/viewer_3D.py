@@ -323,6 +323,11 @@ class Viewer3D(object):
 
     def buttonfuncInference(self):
         self.infer.switch()
+        # Need to work on that section
+        # Rebuild volume 
+        # Use DBSCAN 
+        # Find volume which envelop predictions
+        # Then grap volume of Dicom
         if self.model is not None:
             if not self.infer_view_mode:
                 #Prediction
@@ -331,6 +336,7 @@ class Viewer3D(object):
                 img = dp.get_pixels_hu(img)
                 img = dp.preprocess_inputs(img)
                 pred_list = []
+                # https://www.raddq.com/dicom-processing-segmentation-visualization-in-python/
                 for i in tqdm(range(img.shape[0])):
                     pred = np.expand_dims(img[i,:,:,:], 0)
                     prediction = self.model.predict(pred)

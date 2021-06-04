@@ -77,8 +77,9 @@ class unet(object):
 
         self.metrics = [self.dice_coef, self.soft_dice_coef]
 
-        self.loss = self.dice_coef_loss
-        #self.loss = self.combined_dice_ce_loss
+        #self.loss = self.dice_coef_loss
+        self.loss = self.combined_dice_ce_loss
+        #self.loss = self.focal_tversky_loss
 
         self.optimizer = K.optimizers.Adam(lr=self.learningrate)
 
@@ -149,6 +150,26 @@ class unet(object):
         """
         return self.weight_dice_loss*self.dice_coef_loss(target, prediction, axis, smooth) + \
             (1-self.weight_dice_loss)*K.losses.binary_crossentropy(target, prediction)
+    
+    def tversky(self, target, prediction, smooth=1, alpha=0.7):
+        # Flatten the input data
+        if self.channels_first:
+            y_true = K.backend.permute_dimensions(target, (3,1,2,0))
+            y_pred = K.backend.permute_dimensions(prediction, (3,1,2,0))
+        else :
+            y_true = target
+            y_pred = prediction
+
+        y_true_pos = K.backend.batch_flatten(y_true)
+        y_pred_pos = K.backend.batch_flatten(y_pred)
+        true_pos = K.backend.sum(y_true_pos * y_pred_pos, 1)
+        false_neg = K.backend.sum(y_true_pos * (1-y_pred_pos), 1)
+        false_pos = K.backend.sum((1-y_true_pos)*y_pred_pos, 1)
+        return (true_pos + smooth)/(true_pos + alpha*false_neg + (1-alpha)*false_pos + smooth)
+
+    def focal_tversky_loss(self, target, prediction, gamma=1.5):
+        tv = self.tversky(target, prediction)
+        return K.backend.pow((1 - tv), gamma)
 
     def unet_model(self, imgs_shape, msks_shape,
                    dropout=0.2,
