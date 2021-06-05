@@ -117,10 +117,13 @@ if __name__ == "__main__":
     # This is the maximum value one of the files haves. 
     # Required because model built with assumption all file same z slice.
     num_slices_per_scan = slice_filelist(data_path=data_path)
-    ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=True)
-    ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=False)
-    ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=False)
-    
+    ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size,\
+                                crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=True)
+    ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size,\
+                                crop_dim=[crop_dim,crop_dim], augment=False, imbalanced=True)
+    ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size,\
+                                crop_dim=[crop_dim,crop_dim], augment=False)
+       
     print("-" * 30)
     print("Creating and compiling model ...")
     print("-" * 30)

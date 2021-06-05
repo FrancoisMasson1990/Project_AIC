@@ -76,9 +76,10 @@ class unet(object):
         self.inference_filename = inference_filename
 
         self.metrics = [self.dice_coef, self.soft_dice_coef]
+        #self.metrics = [self.tversky]
 
-        self.loss = self.dice_coef_loss
-        #self.loss = self.combined_dice_ce_loss
+        #self.loss = self.dice_coef_loss
+        self.loss = self.combined_dice_ce_loss
         #self.loss = self.focal_tversky_loss
 
         self.optimizer = K.optimizers.Adam(lr=self.learningrate)
@@ -87,7 +88,9 @@ class unet(object):
             "combined_dice_ce_loss": self.combined_dice_ce_loss,
             "dice_coef_loss": self.dice_coef_loss,
             "dice_coef": self.dice_coef,
-            "soft_dice_coef": self.soft_dice_coef}
+            "soft_dice_coef": self.soft_dice_coef,
+            "focal_tversky_loss" : self.focal_tversky_loss,
+            "tversky": self.tversky}
 
         self.blocktime = blocktime
         self.num_threads = num_threads
@@ -152,6 +155,7 @@ class unet(object):
             (1-self.weight_dice_loss)*K.losses.binary_crossentropy(target, prediction)
     
     def tversky(self, target, prediction, smooth=1, alpha=0.7):
+
         # Flatten the input data
         if self.channels_first:
             y_true = K.backend.permute_dimensions(target, (3,1,2,0))
@@ -160,12 +164,13 @@ class unet(object):
             y_true = target
             y_pred = prediction
 
-        y_true_pos = K.backend.batch_flatten(y_true)
-        y_pred_pos = K.backend.batch_flatten(y_pred)
-        true_pos = K.backend.sum(y_true_pos * y_pred_pos, 1)
-        false_neg = K.backend.sum(y_true_pos * (1-y_pred_pos), 1)
-        false_pos = K.backend.sum((1-y_true_pos)*y_pred_pos, 1)
-        return (true_pos + smooth)/(true_pos + alpha*false_neg + (1-alpha)*false_pos + smooth)
+        y_true_pos = K.backend.flatten(y_true)
+        y_pred_pos = K.backend.flatten(y_pred)
+        true_pos = K.backend.sum(y_true_pos * y_pred_pos)
+        false_neg = K.backend.sum(y_true_pos * (1 - y_pred_pos))
+        false_pos = K.backend.sum((1 - y_true_pos) * y_pred_pos)
+        return (true_pos + smooth) / (true_pos + alpha * false_neg +
+                                  (1 - alpha) * false_pos + smooth)
 
     def focal_tversky_loss(self, target, prediction, gamma=1.5):
         tv = self.tversky(target, prediction)

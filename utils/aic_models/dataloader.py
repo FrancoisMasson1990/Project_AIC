@@ -4,6 +4,7 @@ import numpy as np
 import os
 import json
 import matplotlib.pyplot as plt
+from pathlib import Path
 from aic_models import data_preprocess as dp
 
 LABEL_CHANNELS = {"labels":{
@@ -14,16 +15,9 @@ LABEL_CHANNELS = {"labels":{
     
 def get_filelist(data_path, seed=816, split=0.85):
     """
-    Get the paths for the original decathlon files
+    Shuffling of the dataset required for the model training/evaluation
     """
-    json_filename = os.path.join(data_path, "dataset.json")
-
-    try:
-        with open(json_filename, "r") as fp:
-            experiment_data = json.load(fp)
-    except IOError as e:
-        raise Exception("File {} doesn't exist. It should be part of the "
-              "Decathlon directory".format(json_filename))
+    experiment_data = json_export(data_path)
 
     # Print information about the Decathlon experiment data
     print("*" * 30)
@@ -65,7 +59,9 @@ def get_filelist(data_path, seed=816, split=0.85):
     validateList = otherList[:otherIdx]
     testList = otherList[otherIdx:]
 
-    #trainList = idxList
+    #trainList = [0]
+    #validateList = [1]
+    #testList = [2]
     #testList = validateList = trainList
     
     trainFiles = []
@@ -96,6 +92,16 @@ def slice_filelist(data_path):
     """
     Get the max number of slice in the dataset. Required for the Dataloader Generator
     """
+    experiment_data = json_export(data_path)
+    num_slice_max = dp.expand_list(experiment_data["dataset_folder"],format='/*.dcm')
+    num_slice_max = max(len(x) for x in num_slice_max)
+
+    return num_slice_max
+
+def json_export(data_path):
+    """
+    Extract dataset informations contained into a json file
+    """
     json_filename = os.path.join(data_path, "dataset.json")
 
     try:
@@ -104,24 +110,22 @@ def slice_filelist(data_path):
     except IOError as e:
         raise Exception("File {} doesn't exist. It should be part of the "
               "Decathlon directory".format(json_filename))
-
-    num_slice_max = dp.expand_list(experiment_data["dataset_folder"],format='/*.dcm')
-    num_slice_max = max(len(x) for x in num_slice_max)
-
-    return num_slice_max
+    
+    return experiment_data
 
 class DatasetGenerator(Sequence):
     """
     TensorFlow Dataset from Python/NumPy Iterator
     """
     
-    def __init__(self, filenames,labelnames, num_slices_per_scan, batch_size=8, crop_dim=[240,240], augment=False, seed=816):
+    def __init__(self, filenames,labelnames, num_slices_per_scan, batch_size=8, crop_dim=[240,240], augment=False, seed=816, imbalanced=False):
         
         img = dp.load_scan(filenames[0])
         img = dp.get_pixels_hu(img)
         self.slice_dim = 2  # We'll assume z-dimension (slice) is last so we will invert dim in the batch
         # Determine the number of slices (we'll assume this is consistent for the other images)
         self.num_slices_per_scan = num_slices_per_scan 
+        self.imbalanced = imbalanced
 
         # If crop_dim == -1, then don't crop
         if crop_dim[0] == -1:
@@ -148,8 +152,8 @@ class DatasetGenerator(Sequence):
         """
         # Investigate how VTK select filter
         # Processing of data... Over Z ? 
-        img[img < 130] = 0
-        img[img > 1000] = 1
+        img[img < 0] = 0
+        img[img > 500] = 500
         return (img - img.mean()) / img.std()
 
     def preprocess_label(self, label):
@@ -161,7 +165,8 @@ class DatasetGenerator(Sequence):
         ## Stack the loaded npy files
         label = [np.load(label[i]) for i in range(len(label))]
         label = np.stack(label, axis=0)
-        label[label > 1] = 0.0
+        label[label == 1] = 0.0
+        label[label == 2] = 1.0
 
         return label
     
@@ -245,23 +250,37 @@ class DatasetGenerator(Sequence):
                 image_filename = self.filenames[idx]
                 label_filename = self.labelnames[idx]
 
-                img = dp.load_scan(image_filename)
-                img = dp.get_pixels_hu(img)
-                while img.shape[0] < self.num_slices_per_scan :
-                    stack = self.num_slices_per_scan - img.shape[0]
-                    img = np.concatenate((img,img[:stack]),axis=0)
-
-                img = self.preprocess_img(img)
-                img = np.moveaxis(img, 0, -1)
-
                 label = dp.load_mask(label_filename)
                 label = self.preprocess_label(label)
+
+                index = []
+                if self.imbalanced:
+                    for z in range(label.shape[0]):
+                        # Check if all 2D numpy array contains only 0
+                        result = np.all((label[z] == 0))
+                        if not result:
+                            index.append(z)
+                    index = np.array(index)
+                    label = label[index]
 
                 while label.shape[0] < self.num_slices_per_scan :
                     stack = self.num_slices_per_scan - label.shape[0]
                     label = np.concatenate((label,label[:stack]),axis=0)
 
                 label = np.moveaxis(label, 0, -1)
+
+                img = dp.load_scan(image_filename)
+                img = dp.get_pixels_hu(img)
+
+                if self.imbalanced:
+                    img = img[index]
+
+                while img.shape[0] < self.num_slices_per_scan :
+                    stack = self.num_slices_per_scan - img.shape[0]
+                    img = np.concatenate((img,img[:stack]),axis=0)
+
+                img = self.preprocess_img(img)
+                img = np.moveaxis(img, 0, -1)
 
                 # Crop input and label
                 img, label = self.crop_input(img, label)
@@ -278,7 +297,12 @@ class DatasetGenerator(Sequence):
                 idx += 1 
                 if idx >= len(self.filenames):
                     idx = 0
-                    np.random.shuffle(self.filenames) # Shuffle the filenames for the next iteration
+                    # Shuffle the filenames/labelnames for the next iteration
+                    shuffle = list(zip(self.filenames, self.labelnames))
+                    np.random.shuffle(shuffle)
+                    self.filenames, self.labelnames = zip(*shuffle)
+                    self.filenames = list(self.filenames)
+                    self.labelnames = list(self.labelnames)
             
             img = img_stack
             label = label_stack
@@ -327,7 +351,12 @@ class DatasetGenerator(Sequence):
 
             if idx >= len(self.filenames):
                 idx = 0
-                np.random.shuffle(self.filenames) # Shuffle the filenames for the next iteration
+                # Shuffle the filenames/labelnames for the next iteration
+                shuffle = list(zip(self.filenames, self.labelnames))
+                np.random.shuffle(shuffle)
+                self.filenames, self.labelnames = zip(*shuffle)
+                self.filenames = list(self.filenames)
+                self.labelnames = list(self.labelnames)
                 
     def get_input_shape(self):
         """

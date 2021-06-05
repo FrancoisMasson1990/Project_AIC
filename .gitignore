@@ -9,6 +9,7 @@
 *.hdf5
 *.npy
 *.json
+*.tmp
 *.egg-info
 __pycache__
 **/models/

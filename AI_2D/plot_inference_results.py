@@ -106,6 +106,24 @@ def soft_dice_coef(target, prediction, axis=(1, 2), smooth=0.0001):
 
     return tf.reduce_mean(coef)
 
+def tversky(self, target, prediction, smooth=1, alpha=0.7):
+
+    # Flatten the input data
+    if self.channels_first:
+        y_true = K.backend.permute_dimensions(target, (3,1,2,0))
+        y_pred = K.backend.permute_dimensions(prediction, (3,1,2,0))
+    else :
+        y_true = target
+        y_pred = prediction
+
+    y_true_pos = K.backend.flatten(y_true)
+    y_pred_pos = K.backend.flatten(y_pred)
+    true_pos = K.backend.sum(y_true_pos * y_pred_pos)
+    false_neg = K.backend.sum(y_true_pos * (1 - y_pred_pos))
+    false_pos = K.backend.sum((1 - y_true_pos) * y_pred_pos)
+    return (true_pos + smooth) / (true_pos + alpha * false_neg +
+                                (1 - alpha) * false_pos + smooth)
+
 def plot_results(imgs,labels,model,folder,number):
     """
     Calculate the Dice and plot the predicted masks for image # img_no
@@ -136,6 +154,8 @@ def plot_results(imgs,labels,model,folder,number):
             plt.imshow(predictions[i, :, :, 0],origin="lower",vmin=0, vmax=1)
             plt.title("Predictions\n(Dice {:.4f}, Soft Dice {:.4f})".\
                       format(dice_coef(labels[i],predictions[i]),soft_dice_coef(labels[i],predictions[i])))
+            #plt.title("Predictions\n(Tversky {:.4f})".\
+            #           format(dice_coef(labels[i],predictions[i])))
             plt.axis("off")
         
         png_filename = os.path.join(folder, "pred_{}.png".format(number+i))
@@ -180,16 +200,19 @@ if __name__ == "__main__":
     # This is the maximum value one of the files haves. 
     # Required because model built with assumption all file same z slice.
     num_slices_per_scan = slice_filelist(data_path=data_path)
-    ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=True)
-    ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=False)
-    ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size, crop_dim=[crop_dim,crop_dim], augment=False)
-    
- 
+    ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size,\
+                                crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=True)
+    ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size,\
+                                crop_dim=[crop_dim,crop_dim], augment=False)
+    ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size,\
+                                crop_dim=[crop_dim,crop_dim], augment=False)
+     
     unet_model = unet()
     try :
         model = unet_model.load_model(model_filename)
     except :
         model = None
+    #model = None
 
     # Create output directory for images
     png_directory = "inference_examples"
@@ -201,6 +224,7 @@ if __name__ == "__main__":
 
     # The plots will be saved to the png_directory (Keep only the first batch for now)
     number = 0
-    for img,label in ds_test.ds:
+    loader = ds_test
+    for img,label in loader.ds:
         plot_results(img,label,model,png_folder,number)
         number += img.shape[0]
