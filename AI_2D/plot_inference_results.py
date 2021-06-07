@@ -180,6 +180,8 @@ if __name__ == "__main__":
     featuremaps = config.get("featuremaps",None)
     output_path = config.get("output_path",None)
     inference_filename = config.get("inference_filename",None)
+    z_slice_min = config.get("z_slice_min",None)
+    z_slice_max = config.get("z_slice_max",None)
 
     #model_filename = "/home/francoismasson/Project_AIC/Viewer/models/unet_model_for_aic_512.hdf5"
     model_filename = "/home/francoismasson/Project_AIC/output/unet_model_for_aic_test.hdf5"
@@ -201,11 +203,11 @@ if __name__ == "__main__":
     # Required because model built with assumption all file same z slice.
     num_slices_per_scan = slice_filelist(data_path=data_path)
     ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size,\
-                                crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=True)
+                                crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
     ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size,\
-                                crop_dim=[crop_dim,crop_dim], augment=False)
+                                crop_dim=[crop_dim,crop_dim], augment=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
     ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size,\
-                                crop_dim=[crop_dim,crop_dim], augment=False)
+                                crop_dim=[crop_dim,crop_dim], augment=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
      
     unet_model = unet()
     try :
@@ -224,7 +226,12 @@ if __name__ == "__main__":
 
     # The plots will be saved to the png_directory (Keep only the first batch for now)
     number = 0
-    loader = ds_test
-    for img,label in loader.ds:
-        plot_results(img,label,model,png_folder,number)
-        number += img.shape[0]
+    loader = ds_validation
+    
+    for count,(img,label) in enumerate(loader.ds):
+        if number < 100 :
+            # Will show only 100 first prediction
+            plot_results(img,label,model,png_folder,number)
+            number += img.shape[0]
+        else :
+            break

@@ -208,7 +208,7 @@ class unet(object):
 
         self.num_input_channels = num_chan_in
 
-        inputs = K.layers.Input(self.input_shape, name="MRImages")
+        inputs = K.layers.Input(self.input_shape, name="DicomImages")
 
         # Convolution parameters
         params = dict(kernel_size=(3, 3), activation="relu",
@@ -311,7 +311,7 @@ class unet(object):
                                      activation="sigmoid")(convOut)
 
         model = K.models.Model(inputs=[inputs], outputs=[
-                               prediction], name="2DUNet_Brats_Decathlon")
+                               prediction], name="2DUNet_Valve_Challenge")
 
         optimizer = self.optimizer
 

@@ -98,6 +98,8 @@ if __name__ == "__main__":
     learning_rate = config.get("learning_rate",None)
     weight_dice_loss = config.get("weight_dice_loss",None)
     print_model = config.get("print_model",None)
+    z_slice_min = config.get("z_slice_min",None)
+    z_slice_max = config.get("z_slice_max",None)
 
     epochs = config.get("epochs",None)
     
@@ -118,11 +120,11 @@ if __name__ == "__main__":
     # Required because model built with assumption all file same z slice.
     num_slices_per_scan = slice_filelist(data_path=data_path)
     ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size,\
-                                crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=True)
+                                crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
     ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size,\
-                                crop_dim=[crop_dim,crop_dim], augment=False, imbalanced=True)
+                                crop_dim=[crop_dim,crop_dim], augment=False, imbalanced=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
     ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size,\
-                                crop_dim=[crop_dim,crop_dim], augment=False)
+                                crop_dim=[crop_dim,crop_dim], augment=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
        
     print("-" * 30)
     print("Creating and compiling model ...")
@@ -161,7 +163,6 @@ if __name__ == "__main__":
               verbose=1,
               callbacks=model_callbacks)
 
-    exit()
     """
     Step 4: Evaluate the best model
     """

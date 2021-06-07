@@ -37,8 +37,6 @@ def get_filelist(data_path, seed=816, split=0.85):
 	sets.
 	"""
 
-    #image_files = dp.expand_list(experiment_data["dataset_folder"],format='/*.dcm')
-    #label_files = dp.expand_list(experiment_data["label_folder"],format='/*.npy')
     image_files = dp.expand_list(experiment_data["dataset_folder"])
     label_files = dp.expand_list(experiment_data["label_folder"])
     
@@ -118,7 +116,17 @@ class DatasetGenerator(Sequence):
     TensorFlow Dataset from Python/NumPy Iterator
     """
     
-    def __init__(self, filenames,labelnames, num_slices_per_scan, batch_size=8, crop_dim=[240,240], augment=False, seed=816, imbalanced=False):
+    def __init__(self, 
+                filenames,
+                labelnames, 
+                num_slices_per_scan, 
+                batch_size=8, 
+                crop_dim=[240,240], 
+                augment=False, 
+                seed=816, 
+                imbalanced=False,
+                z_slice_min=-1,
+                z_slice_max=-1):
         
         img = dp.load_scan(filenames[0])
         img = dp.get_pixels_hu(img)
@@ -133,6 +141,10 @@ class DatasetGenerator(Sequence):
         if crop_dim[1] == -1:
             crop_dim[1] = img.shape[2]
         self.crop_dim = crop_dim  
+
+        # If crop_dim in z
+        self.z_slice_min = z_slice_min
+        self.z_slice_max = z_slice_max
 
         self.filenames = filenames
         self.labelnames = labelnames
@@ -158,8 +170,7 @@ class DatasetGenerator(Sequence):
 
     def preprocess_label(self, label):
         """
-        Predict whole tumor. If you want to predict tumor sections, then 
-        just comment this out.
+        Label attribution. Please refer LABEL_CHANNEL for the mask attribution
         """
 
         ## Stack the loaded npy files
@@ -253,16 +264,24 @@ class DatasetGenerator(Sequence):
                 label = dp.load_mask(label_filename)
                 label = self.preprocess_label(label)
 
-                index = []
+                index_z_crop = []
+                if (self.z_slice_min !=-1) and (self.z_slice_max!=-1):
+                    self.imbalanced = False
+                    min_ = int(self.z_slice_min*label.shape[0])
+                    max_ = int(self.z_slice_max*label.shape[0])
+                    index_z_crop = np.arange(min_,max_)
+                    label = label[index_z_crop]
+
+                index_imbalanced = []
                 if self.imbalanced:
                     for z in range(label.shape[0]):
                         # Check if all 2D numpy array contains only 0
                         result = np.all((label[z] == 0))
                         if not result:
-                            index.append(z)
-                    index = np.array(index)
-                    label = label[index]
-
+                            index_imbalanced.append(z)
+                    index_imbalanced = np.array(index_imbalanced)
+                    label = label[index_imbalanced]
+                
                 while label.shape[0] < self.num_slices_per_scan :
                     stack = self.num_slices_per_scan - label.shape[0]
                     label = np.concatenate((label,label[:stack]),axis=0)
@@ -272,8 +291,11 @@ class DatasetGenerator(Sequence):
                 img = dp.load_scan(image_filename)
                 img = dp.get_pixels_hu(img)
 
+                if (self.z_slice_min !=-1) and (self.z_slice_max!=-1):
+                    img = img[index_z_crop]
+
                 if self.imbalanced:
-                    img = img[index]
+                    img = img[index_imbalanced]
 
                 while img.shape[0] < self.num_slices_per_scan :
                     stack = self.num_slices_per_scan - img.shape[0]
