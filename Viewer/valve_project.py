@@ -20,6 +20,7 @@
 
 import os
 import sys
+
 from viewer_3D import Viewer3D
 from viewer_2D import Viewer2D
 import argparse
@@ -42,7 +43,7 @@ try:
 except RuntimeError as e:
     print(e)
 
-from aic_models import model_2D 
+from aic_models import model_tf_v1
 
 def main_3D(data,folder_mask,folder_npy,multi_label,model,template):
     viewer = Viewer3D(data,mode=4,label=folder_mask,npy=folder_npy,multi_label=multi_label,model=model,template=template)
@@ -69,7 +70,9 @@ if __name__ == '__main__':
     arg.model_name = config.get("model_name",None)
     arg.template = config.get("template",None)
 
-    unet_model = model_2D.unet()
+    # Old version
+    unet_model = model_tf_v1.unet()
+    #unet_model = model_2D.unet()
     if arg.model_name is not None :
         model = unet_model.load_model(arg.model_name,False)
         print("-" * 30)

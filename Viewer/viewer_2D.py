@@ -78,7 +78,9 @@ class Viewer2D(object):
         
         if self.agatston :
             fig, ax = plt.subplots(1, 2, figsize=(15, 10))
-            fig.canvas.set_window_title('Agatston Score')
+            # set window title
+            if fig.canvas.manager is not None:
+                fig.canvas.manager.set_window_title("Agatston Score")
             ax0, ax1 = ax[0], ax[1]
             ax0.get_xaxis().set_ticks([])
             ax0.get_yaxis().set_ticks([])
