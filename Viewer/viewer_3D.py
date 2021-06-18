@@ -413,6 +413,9 @@ class Viewer3D(object):
     def buttonfuncAgatston(self):
         if self.fitting_view_mode == True:
             predictions_filter = []
+            # Update center and axis if object was moved
+            self.C_fit = np.asarray(self.cylinder.GetCenter())
+            self.w_fit = np.asarray(self.cylinder.normalAt(48))
             for i,z in enumerate(np.unique(self.predictions_agatston_points[:,2])):
                 r_fit = []
                 index = np.where((self.predictions_final_points[:,2]>(z-self.spacing[2]/2)) & (self.predictions_final_points[:,2]<(z+self.spacing[2]/2)))
