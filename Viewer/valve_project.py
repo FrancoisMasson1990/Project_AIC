@@ -43,7 +43,7 @@ try:
 except RuntimeError as e:
     print(e)
 
-from aic_models import model_tf_v1
+from aic_models import model_2D_old
 
 def main_3D(data,folder_mask,folder_npy,multi_label,model,template):
     viewer = Viewer3D(data,mode=4,label=folder_mask,npy=folder_npy,multi_label=multi_label,model=model,template=template)
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     arg.template = config.get("template",None)
 
     # Old version
-    unet_model = model_tf_v1.unet()
+    unet_model = model_2D_old.unet()
     #unet_model = model_2D.unet()
     if arg.model_name is not None :
         model = unet_model.load_model(arg.model_name,False)
