@@ -334,6 +334,9 @@ class Viewer3D(object):
                 idx = os.path.join(self.data_path[self.frame])
                 img = dp.load_scan(idx)
                 img = dp.get_pixels_hu(img)
+                # TODO:
+                # preprocess_input need to be validate or change.
+                # old version, input images were normalized. New model still the case
                 img = dp.preprocess_inputs(img)
                 pred_list = []
                 # https://www.raddq.com/dicom-processing-segmentation-visualization-in-python/

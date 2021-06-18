@@ -115,7 +115,7 @@ def preprocess_inputs(img,resize=-1):
 	if (resize != -1):
 		img = crop_center(img, resize, resize, -1)
 
-	#img = normalize_img(img)
+	img = normalize_img(img)
 
 	return img
 
