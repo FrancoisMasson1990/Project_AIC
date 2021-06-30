@@ -98,6 +98,7 @@ if __name__ == "__main__":
 
     imgs,labels,_,_,_,_ = get_filelist(data_path=data_path,split=1.0)
 
+    ratio_label = {}
     ratio_min = []
     ratio_max = []
     for label_filename in tqdm(labels):
@@ -114,6 +115,7 @@ if __name__ == "__main__":
             if not result:
                 index.append(z)
         index = np.array(index)
+        ratio_label[label_filename] = index
         ratio_min.append(index[0]/label.shape[0])
         ratio_max.append(index[-1]/label.shape[0])
 

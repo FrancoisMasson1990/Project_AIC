@@ -1,4 +1,3 @@
-#data_path: "/home/francoismasson/Project_AIC/data_folder_one/" #the path to the data
 data_path: "/home/francoismasson/Project_AIC/data_folder/" #the path to the data
 data_filename: "/home/francoismasson/Project_AIC/hdf5_files/project_aic.h5" #the HDF5 data filename
 output_path: "/home/francoismasson/Project_AIC/output" #the folder to save the model and checkpoints

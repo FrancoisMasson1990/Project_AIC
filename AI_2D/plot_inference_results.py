@@ -203,7 +203,7 @@ if __name__ == "__main__":
     # Required because model built with assumption all file same z slice.
     num_slices_per_scan = slice_filelist(data_path=data_path)
     ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size,\
-                                crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
+                                crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=True, z_slice_min=-1, z_slice_max=-1)
     ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size,\
                                 crop_dim=[crop_dim,crop_dim], augment=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
     ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size,\
@@ -226,10 +226,10 @@ if __name__ == "__main__":
 
     # The plots will be saved to the png_directory (Keep only the first batch for now)
     number = 0
-    loader = ds_validation
+    loader = ds_test
     
     for count,(img,label) in enumerate(loader.ds):
-        if number < 100 :
+        if number < 400 :
             # Will show only 100 first prediction
             plot_results(img,label,model,png_folder,number)
             number += img.shape[0]

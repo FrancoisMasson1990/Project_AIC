@@ -162,8 +162,10 @@ class DatasetGenerator(Sequence):
         Preprocessing for the image
         z-score normalize
         """
-        # Investigate how VTK select filter
-        # Processing of data... Over Z ? 
+
+        # Based on vtk algorithm : 
+        # scrange -> img.GetScalarRange() [min,max values]
+        # threshold = (2 * scrange[0] + scrange[1]) / 3.0
         img[img < 0] = 0
         img[img > 500] = 500
         return (img - img.mean()) / img.std()
@@ -176,6 +178,7 @@ class DatasetGenerator(Sequence):
         ## Stack the loaded npy files
         label = [np.load(label[i]) for i in range(len(label))]
         label = np.stack(label, axis=0)
+        # Took the decision to set to 0 other labels and to 1 magna valve
         label[label == 1] = 0.0
         label[label == 2] = 1.0
 
@@ -260,10 +263,10 @@ class DatasetGenerator(Sequence):
                 
                 image_filename = self.filenames[idx]
                 label_filename = self.labelnames[idx]
-
+                
                 label = dp.load_mask(label_filename)
                 label = self.preprocess_label(label)
-
+                
                 index_z_crop = []
                 if (self.z_slice_min !=-1) and (self.z_slice_max!=-1):
                     self.imbalanced = False
@@ -280,6 +283,8 @@ class DatasetGenerator(Sequence):
                         if not result:
                             index_imbalanced.append(z)
                     index_imbalanced = np.array(index_imbalanced)
+                    extra_index = 5
+                    index_imbalanced = np.arange(index_imbalanced[0]-extra_index,index_imbalanced[-1]+extra_index)
                     label = label[index_imbalanced]
                 
                 while label.shape[0] < self.num_slices_per_scan :
