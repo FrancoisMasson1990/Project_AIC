@@ -1,10 +1,8 @@
-from math import e
 from tensorflow.keras.utils import Sequence
 import numpy as np
 import os
 import json
 import matplotlib.pyplot as plt
-from pathlib import Path
 from aic_models import data_preprocess as dp
 
 LABEL_CHANNELS = {"labels":{
@@ -13,7 +11,7 @@ LABEL_CHANNELS = {"labels":{
 	 			  "Magna_valve":2,
 				 }}
     
-def get_filelist(data_path, seed=816, split=0.85):
+def get_filelist(data_path, seed=816, split=0.7):
     """
     Shuffling of the dataset required for the model training/evaluation
     """
@@ -166,6 +164,7 @@ class DatasetGenerator(Sequence):
         # Based on vtk algorithm : 
         # scrange -> img.GetScalarRange() [min,max values]
         # threshold = (2 * scrange[0] + scrange[1]) / 3.0
+        # 500 is a good threshold based on observation for Magna valve
         img[img < 0] = 0
         img[img > 500] = 500
         return (img - img.mean()) / img.std()

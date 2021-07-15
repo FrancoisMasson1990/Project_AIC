@@ -37,8 +37,7 @@ import psutil
 import yaml
 import matplotlib.pyplot as plt
 from pathlib import Path
-
-from aic_models.model import unet
+from aic_models.model_2D import unet
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 # If hyperthreading is enabled, then use

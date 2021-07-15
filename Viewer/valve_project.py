@@ -43,14 +43,25 @@ try:
 except RuntimeError as e:
     print(e)
 
-from aic_models import model_2D_old
+# Deprecated model generated with tf1 version 
+# from aic_models import model_2D_old
+from aic_models import model_2D
 
-def main_3D(data,folder_mask,folder_npy,multi_label,model,template):
-    viewer = Viewer3D(data,mode=4,label=folder_mask,npy=folder_npy,multi_label=multi_label,model=model,template=template)
+def main_3D(data,folder_mask,folder_npy,multi_label,model,template,model_version):
+    viewer = Viewer3D(data,
+                      mode=4,
+                      label=folder_mask,
+                      npy=folder_npy,
+                      multi_label=multi_label,
+                      model=model,
+                      template=template,
+                      model_version=model_version)
     viewer.show()
 
 def main_2D(data,folder_mask,model):
-    Viewer2D(data,folder_mask,model)
+    Viewer2D(data,
+            folder_mask,
+            model)
 
 if __name__ == '__main__':
 
@@ -68,13 +79,17 @@ if __name__ == '__main__':
     arg.npy_folder = config.get("npy_folder",None)
     arg.multi_label = config.get("multi_label",None)
     arg.model_name = config.get("model_name",None)
+    arg.model_version = config.get("model_version",None)
     arg.template = config.get("template",None)
 
     # Old version
-    unet_model = model_2D_old.unet()
-    #unet_model = model_2D.unet()
+    #unet_model = model_2D_old.unet()
+    unet_model = model_2D.unet()
     if arg.model_name is not None :
-        model = unet_model.load_model(arg.model_name,False)
+        if arg.model_version == 0: 
+            model = unet_model.load_model(arg.model_name,False)
+        elif arg.model_version == 1:
+            model = unet_model.load_model(arg.model_name)
         print("-" * 30)
         print("Model load successfully")
         print("-" * 30)
@@ -88,6 +103,14 @@ if __name__ == '__main__':
             data.append(os.path.join(root,sub))
 
     if arg.labels_2D :
-        main_2D(data,arg.folder_mask,model)
+        main_2D(data,
+                arg.folder_mask,
+                model)
     else :
-        main_3D(data,arg.folder_mask,arg.npy_folder,arg.multi_label,model,arg.template)
+        main_3D(data,
+                arg.folder_mask,
+                arg.npy_folder,
+                arg.multi_label,
+                model,
+                arg.template,
+                arg.model_version)

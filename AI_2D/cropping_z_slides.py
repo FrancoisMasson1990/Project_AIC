@@ -24,17 +24,14 @@ from model.py, trains the model on the data, and then saves the
 best model.
 """
 
-import multiprocessing
 import psutil
-import datetime
 import os
 import tensorflow as tf
 import sys 
 import yaml
 from tqdm import tqdm
 import numpy as np
-from aic_models.model import unet
-from aic_models.dataloader import DatasetGenerator,get_filelist,slice_filelist
+from aic_models.dataloader import get_filelist
 import psutil
 from aic_models import data_preprocess as dp
 

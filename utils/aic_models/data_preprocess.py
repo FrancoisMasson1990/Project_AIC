@@ -77,6 +77,20 @@ def normalize_img(img):
 
 	return img
 
+def preprocess_img(img):
+	"""
+	Preprocessing for the image for new version of model. Should replace normalize_img()
+	z-score normalize
+	"""
+
+	# Based on vtk algorithm : 
+	# scrange -> img.GetScalarRange() [min,max values]
+	# threshold = (2 * scrange[0] + scrange[1]) / 3.0
+	# 500 is a good threshold based on observation for Magna valve
+	img[img < 0] = 0
+	img[img > 500] = 500
+	return (img - img.mean()) / img.std()
+
 def crop_center(img, cropx, cropy, cropz):
 	"""
 	Take a center crop of the images.

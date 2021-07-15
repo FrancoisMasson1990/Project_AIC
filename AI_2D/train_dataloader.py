@@ -31,7 +31,7 @@ import os
 import tensorflow as tf
 import sys 
 import yaml
-from aic_models.model import unet
+from aic_models.model_2D import unet
 from aic_models.dataloader import DatasetGenerator,get_filelist,slice_filelist
 import psutil
 

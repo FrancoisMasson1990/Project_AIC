@@ -20,7 +20,16 @@ from viewer_2D import Viewer2D
 
 class Viewer3D(object):
 
-    def __init__(self,data_path:str,frame=0,mode=1,label='/label_mask/',npy=None,multi_label=False,model=None,template:bool=False):
+    def __init__(self,
+                data_path:str,
+                frame=0,
+                mode=1,
+                label='/label_mask/',
+                npy=None,
+                multi_label=False,
+                model=None,
+                template:bool=False,
+                model_version=1):
         
         self.frame = 0
         self.init = True
@@ -64,6 +73,7 @@ class Viewer3D(object):
         self.multi_label = multi_label
         self.template = template
         self.max = None
+        self.model_version = model_version
 
         '''One render window, multiple viewports'''
         self.rw = vtk.vtkRenderWindow()
@@ -133,13 +143,13 @@ class Viewer3D(object):
                 self.ren.AddActor2D(self.but.actor)
                 self.buttons.append(self.but)
 
-                if len(self.axes_list)==0:
-                   self.axes = Axes(self.iren)
-                   self.axes_list.append(self.axes.axact)
-                if len(self.grid_list)==0:
-                    self.grid = Grid(self.actor)
-                    self.grid_list.append(self.grid.grid)
-                    self.ren.AddActor(self.grid.grid)
+                # if len(self.axes_list)==0:
+                #    self.axes = Axes(self.iren)
+                #    self.axes_list.append(self.axes.axact)
+                # if len(self.grid_list)==0:
+                #     self.grid = Grid(self.actor)
+                #     self.grid_list.append(self.grid.grid)
+                #     self.ren.AddActor(self.grid.grid)
 
             elif self.mode[i] == 'iso' :
                 ## button used for the slicer 2d
@@ -302,8 +312,12 @@ class Viewer3D(object):
         self.ground_truth.switch()
         if not self.gt_view_mode:
             numpy_3d = glob.glob(os.path.join(self.npy_folder,self.title) + '/*.npy')
+            data = np.load(numpy_3d[0])
+            matrix = np.load('matrix_array.npy')
+            data = (matrix[:3,:3]@(data[:,:3].T)).T
             if len(numpy_3d)>0:
-                actor_ = self.label_3d(numpy_3d[0],c=[1,0,0])
+                actor_ = self.label_3d(data,c=[1,0,0])
+                #actor_ = self.label_3d(numpy_3d[0],c=[1,0,0])
                 self.actor_gt_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -312,6 +326,15 @@ class Viewer3D(object):
             self.ren.ResetCamera()
             self.camera_position()
             self.gt_view_mode = not self.gt_view_mode
+
+            if len(self.axes_list)==0:
+                   self.axes = Axes(self.iren)
+                   self.axes_list.append(self.axes.axact)
+            if len(self.grid_list)==0:
+                self.grid = Grid(actor_)
+                self.grid_list.append(self.grid.grid)
+                self.ren.AddActor(self.grid.grid)
+
         else : 
             for render in self.render_list:
                 if render == self.render_score:
@@ -334,10 +357,10 @@ class Viewer3D(object):
                 idx = os.path.join(self.data_path[self.frame])
                 img = dp.load_scan(idx)
                 img = dp.get_pixels_hu(img)
-                # TODO:
-                # preprocess_input need to be validate or change.
-                # old version, input images were normalized. New model still the case
-                img = dp.preprocess_inputs(img)
+                if self.model_version == 0:  # old version, input images were normalized for each slice
+                    img = dp.preprocess_inputs(img)
+                elif self.model_version == 1: # new version, input images were normalized according to z
+                    img = dp.preprocess_img(img)
                 pred_list = []
                 # https://www.raddq.com/dicom-processing-segmentation-visualization-in-python/
                 for i in tqdm(range(img.shape[0])):
@@ -363,6 +386,11 @@ class Viewer3D(object):
                 # Get the all points in isosurface Mesh/Volume
                 self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)               
                 self.predictions_final_points = dp.to_points(self.predictions_final)
+                
+                #with open('predictions.npy', 'wb') as f:
+                #    np.save(f, self.predictions_agatston_points)
+                
+                #actor_ = self.label_3d(self.predictions_agatston_points,c=[0,1,0])
                 actor_ = self.label_3d(self.predictions_final_points,c=[0,1,0])
 
                 self.actor_infer_list.append(actor_)
@@ -373,6 +401,7 @@ class Viewer3D(object):
                 self.ren.ResetCamera()
                 self.camera_position()
                 self.infer_view_mode = not self.infer_view_mode
+
             else :
                 for render in self.render_list:
                     if render == self.render_score:
@@ -395,7 +424,20 @@ class Viewer3D(object):
             print("performing fitting...")
             self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final_points,guess_angles=None)
             print("fitting done !")  
-            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")       
+            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")
+            
+            # theta = np.arccos(self.w_fit[2])
+            # phi = np.arctan2(self.w_fit[1], self.w_fit[0])
+            # t = vtk.vtkTransform()
+            # t.PostMultiply()
+            # t.RotateX(90)  # put it along Z
+            # t.RotateY(np.rad2deg(theta))
+            # t.RotateZ(np.rad2deg(phi))
+            # matrix_array = np.array([[t.GetInverse().GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])
+            # with open('matrix_array.npy', 'wb') as f:
+            #     np.save(f, matrix_array)
+
+            #print(self.cylinder.GetMatrix())       
             self.actor_fitting_list.append(self.cylinder)
             for render in self.render_list:
                 if render == self.render_score:
