@@ -29,7 +29,8 @@ class Viewer3D(object):
                 multi_label=False,
                 model=None,
                 template:bool=False,
-                model_version=1):
+                model_version=1,
+                **kwargs):
         
         self.frame = 0
         self.init = True
@@ -74,6 +75,11 @@ class Viewer3D(object):
         self.template = template
         self.max = None
         self.model_version = model_version
+
+        # Extra parameters passed
+        self.crop_dim = kwargs.get("crop_dim",-1)
+        self.z_slice_min = kwargs.get("z_slice_min",None)
+        self.z_slice_max = kwargs.get("z_slice_max",None)
 
         '''One render window, multiple viewports'''
         self.rw = vtk.vtkRenderWindow()
@@ -143,13 +149,13 @@ class Viewer3D(object):
                 self.ren.AddActor2D(self.but.actor)
                 self.buttons.append(self.but)
 
-                # if len(self.axes_list)==0:
-                #    self.axes = Axes(self.iren)
-                #    self.axes_list.append(self.axes.axact)
-                # if len(self.grid_list)==0:
-                #     self.grid = Grid(self.actor)
-                #     self.grid_list.append(self.grid.grid)
-                #     self.ren.AddActor(self.grid.grid)
+                if len(self.axes_list)==0:
+                   self.axes = Axes(self.iren)
+                   self.axes_list.append(self.axes.axact)
+                if len(self.grid_list)==0:
+                    self.grid = Grid(self.actor)
+                    self.grid_list.append(self.grid.grid)
+                    self.ren.AddActor(self.grid.grid)
 
             elif self.mode[i] == 'iso' :
                 ## button used for the slicer 2d
@@ -215,7 +221,6 @@ class Viewer3D(object):
             txt=txt[0]
             f = open(txt, "r")
             lines = f.readlines()
-            #title = lines[0]
             valve = lines[2]
             valve = valve[:-1] ## Remove wrong asci character
             self.rw.SetWindowName(valve)
@@ -312,12 +317,12 @@ class Viewer3D(object):
         self.ground_truth.switch()
         if not self.gt_view_mode:
             numpy_3d = glob.glob(os.path.join(self.npy_folder,self.title) + '/*.npy')
-            data = np.load(numpy_3d[0])
-            matrix = np.load('matrix_array.npy')
-            data = (matrix[:3,:3]@(data[:,:3].T)).T
+            #data = np.load(numpy_3d[0])
+            #matrix = np.load('matrix_array.npy')
+            #data = (matrix[:3,:3]@(data[:,:3].T)).T
             if len(numpy_3d)>0:
-                actor_ = self.label_3d(data,c=[1,0,0])
-                #actor_ = self.label_3d(numpy_3d[0],c=[1,0,0])
+                #actor_ = self.label_3d(data,c=[1,0,0])
+                actor_ = self.label_3d(numpy_3d[0],c=[1,0,0])
                 self.actor_gt_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -360,38 +365,71 @@ class Viewer3D(object):
                 if self.model_version == 0:  # old version, input images were normalized for each slice
                     img = dp.preprocess_inputs(img)
                 elif self.model_version == 1: # new version, input images were normalized according to z
+                    #padding
+                    padding = np.zeros(img.shape) - 2 #Need for the mesh reconstruct
+                    if self.crop_dim != -1:
+                        img = dp.crop_dim(img,crop_dim=self.crop_dim)
+                    if (self.z_slice_min is not None) and (self.z_slice_max is not None):
+                        min_ = int(self.z_slice_min*img.shape[0])
+                        max_ = int(self.z_slice_max*img.shape[0])
+                        index_z_crop = np.arange(min_,max_)
+                        img = img[index_z_crop]
                     img = dp.preprocess_img(img)
+                    img = np.expand_dims(img,-1)
+
                 pred_list = []
                 # https://www.raddq.com/dicom-processing-segmentation-visualization-in-python/
                 for i in tqdm(range(img.shape[0])):
                     pred = np.expand_dims(img[i,:,:,:], 0)
                     prediction = self.model.predict(pred)
-                    prediction = np.argmax(prediction.squeeze(),axis=-1)
-                    prediction = np.rot90(prediction,axes=(1,0)) 
-                    prediction = np.expand_dims(prediction, 0)
-                    prediction[prediction == 0] = -1 # Validate
+                    if self.model_version == 0:
+                        prediction = np.argmax(prediction.squeeze(),axis=-1)
+                        prediction = np.rot90(prediction,axes=(1,0)) 
+                        prediction = np.expand_dims(prediction, 0)
+                        prediction[prediction == 0] = -1 
+                    elif self.model_version == 1:
+                        prediction = prediction[0, :, :, 0]
+                        prediction = np.rot90(prediction,axes=(1,0)) 
+                        prediction = np.expand_dims(prediction, 0)
+                        prediction[prediction != 1.0] = -2
+                    
                     pred_list.append(prediction)
                 
-                predictions = np.vstack(pred_list) 
+                predictions = np.vstack(pred_list)
+                if self.model_version == 1: # Padding reconstruction
+                    if self.crop_dim != -1:
+                        xc = (self.dimensions[0] - self.crop_dim) // 2
+                        yc = (self.dimensions[1] - self.crop_dim) // 2
+                    else :
+                        xc = 0
+                        yc = 0
+                    if (self.z_slice_min is not None) and (self.z_slice_max is not None):
+                        padding[index_z_crop,xc:xc+img.shape[1], yc:yc+img.shape[2]] = predictions
+                    else :
+                        padding[:,xc:xc+img.shape[1], yc:yc+img.shape[2]] = predictions
+                    predictions = padding
+
                 predictions,_ = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2],[1,1,1])
                 vertices,_ = dp.make_mesh(predictions,-1)
-
+                
                 # Clustering
-                vertices = dp.clustering(vertices,self.center,self.all_numpy_nodes,ratio=0.4,threshold=3800,max_=self.max)
+                vertices = dp.clustering(vertices,
+                                         self.center,
+                                         self.all_numpy_nodes,
+                                         ratio=0.4,
+                                         threshold=3800,
+                                         max_=self.max)
                 # Volume Cropping
-                self.predictions_final = self.img.clone()
-                self.predictions_final = dp.boxe_3d(self.predictions_final,vertices,max_=self.max)
-                self.predictions_agatston = self.volume.clone()
-                self.predictions_agatston = dp.boxe_3d(self.predictions_agatston,vertices,max_=self.max)
-                # Get the all points in isosurface Mesh/Volume
-                self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)               
-                self.predictions_final_points = dp.to_points(self.predictions_final)
-                
-                #with open('predictions.npy', 'wb') as f:
-                #    np.save(f, self.predictions_agatston_points)
-                
-                #actor_ = self.label_3d(self.predictions_agatston_points,c=[0,1,0])
-                actor_ = self.label_3d(self.predictions_final_points,c=[0,1,0])
+                # self.predictions_final = self.img.clone()
+                # self.predictions_final = dp.boxe_3d(self.predictions_final,vertices,max_=self.max)
+                # self.predictions_agatston = self.volume.clone()
+                # self.predictions_agatston = dp.boxe_3d(self.predictions_agatston,vertices,max_=self.max)
+                # # Get the all points in isosurface Mesh/Volume
+                # self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)               
+                # self.predictions_final_points = dp.to_points(self.predictions_final)  
+                              
+                actor_ = self.label_3d(vertices,c=[0,1,0])
+                # actor_ = self.label_3d(self.predictions_final_points,c=[0,1,0])
 
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:

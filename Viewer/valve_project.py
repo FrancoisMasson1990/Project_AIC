@@ -43,7 +43,7 @@ try:
 except RuntimeError as e:
     print(e)
 
-def main_3D(data,folder_mask,folder_npy,multi_label,model,template,model_version):
+def main_3D(data,folder_mask,folder_npy,multi_label,model,template,model_version,**kwargs):
     viewer = Viewer3D(data,
                       mode=4,
                       label=folder_mask,
@@ -51,7 +51,8 @@ def main_3D(data,folder_mask,folder_npy,multi_label,model,template,model_version
                       multi_label=multi_label,
                       model=model,
                       template=template,
-                      model_version=model_version)
+                      model_version=model_version,
+                      **kwargs)
     viewer.show()
 
 def main_2D(data,folder_mask,model):
@@ -77,6 +78,11 @@ if __name__ == '__main__':
     arg.model_name = config.get("model_name",None)
     arg.model_version = config.get("model_version",None)
     arg.template = config.get("template",None)
+    arg.crop_dim = config.get("crop_dim",-1)
+    arg.z_slice_min = config.get("z_slice_min",None)
+    arg.z_slice_max = config.get("z_slice_max",None)
+
+    kwargs = {"crop_dim":arg.crop_dim,"z_slice_min":arg.z_slice_min,"z_slice_max":arg.z_slice_max}
     
     if arg.model_name is not None :
         if arg.model_version == 0: # model_2D_old is a deprecated model generated with tf1 version 
@@ -110,4 +116,5 @@ if __name__ == '__main__':
                 arg.multi_label,
                 model,
                 arg.template,
-                arg.model_version)
+                arg.model_version,
+                **kwargs)

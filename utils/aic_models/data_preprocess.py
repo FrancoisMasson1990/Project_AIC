@@ -336,9 +336,9 @@ def imbalanced_data_augmentation(imgs,msks,total=20,seed=42):
 	return imgs_augmented,msks_augmented
 
 def make_mesh(image, threshold=-300, step_size=1):
-    p = image.transpose(1,2,0)
-    verts, faces, norm, val = measure.marching_cubes(p, threshold, step_size=step_size, allow_degenerate=True) 
-    return verts, faces
+	p = image.transpose(1,2,0)
+	verts, faces, norm, val = measure.marching_cubes(p, threshold, step_size=step_size, allow_degenerate=True)
+	return verts, faces
 
 def resample(image, pixelspacing, slicethickness, new_spacing=[1,1,1]):
     # Determine current pixel spacing
