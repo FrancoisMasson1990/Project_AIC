@@ -17,7 +17,7 @@ def get_filelist(data_path, seed=816, split=0.7):
     """
     experiment_data = json_export(data_path)
 
-    # Print information about the Decathlon experiment data
+    # Print information about the Magna valve experiment data
     print("*" * 30)
     print("=" * 30)
     print("Dataset name:        ", experiment_data["name"])
@@ -58,7 +58,7 @@ def get_filelist(data_path, seed=816, split=0.7):
     #trainList = [0]
     #validateList = [1]
     #testList = [2]
-    #testList = validateList = trainList
+    #trainList = validateList = testList
     
     trainFiles = []
     trainLabels = []
@@ -105,7 +105,7 @@ def json_export(data_path):
             experiment_data = json.load(fp)
     except IOError as e:
         raise Exception("File {} doesn't exist. It should be part of the "
-              "Decathlon directory".format(json_filename))
+              "Magna valve directory".format(json_filename))
     
     return experiment_data
 
@@ -154,34 +154,6 @@ class DatasetGenerator(Sequence):
         self.num_files = len(self.filenames)
         
         self.ds = self.get_dataset()
-
-    def preprocess_img(self, img):
-        """
-        Preprocessing for the image
-        z-score normalize
-        """
-
-        # Based on vtk algorithm : 
-        # scrange -> img.GetScalarRange() [min,max values]
-        # threshold = (2 * scrange[0] + scrange[1]) / 3.0
-        # 500 is a good threshold based on observation for Magna valve
-        img[img < 0] = 0
-        img[img > 500] = 500
-        return (img - img.mean()) / img.std()
-
-    def preprocess_label(self, label):
-        """
-        Label attribution. Please refer LABEL_CHANNEL for the mask attribution
-        """
-
-        ## Stack the loaded npy files
-        label = [np.load(label[i]) for i in range(len(label))]
-        label = np.stack(label, axis=0)
-        # Took the decision to set to 0 other labels and to 1 magna valve
-        label[label == 1] = 0.0
-        label[label == 2] = 1.0
-
-        return label
     
     def augment_data(self, img, msk):
         """
@@ -264,8 +236,8 @@ class DatasetGenerator(Sequence):
                 label_filename = self.labelnames[idx]
                 
                 label = dp.load_mask(label_filename)
-                label = self.preprocess_label(label)
-                
+                label = dp.preprocess_label(label)
+
                 index_z_crop = []
                 if (self.z_slice_min !=-1) and (self.z_slice_max!=-1):
                     self.imbalanced = False
@@ -305,7 +277,7 @@ class DatasetGenerator(Sequence):
                     stack = self.num_slices_per_scan - img.shape[0]
                     img = np.concatenate((img,img[:stack]),axis=0)
 
-                img = self.preprocess_img(img)
+                img = dp.preprocess_img(img)
                 img = np.moveaxis(img, 0, -1)
 
                 # Crop input and label

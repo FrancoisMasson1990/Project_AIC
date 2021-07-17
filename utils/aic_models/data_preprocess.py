@@ -77,20 +77,6 @@ def normalize_img(img):
 
 	return img
 
-def preprocess_img(img):
-	"""
-	Preprocessing for the image for new version of model. Should replace normalize_img()
-	z-score normalize
-	"""
-
-	# Based on vtk algorithm : 
-	# scrange -> img.GetScalarRange() [min,max values]
-	# threshold = (2 * scrange[0] + scrange[1]) / 3.0
-	# 500 is a good threshold based on observation for Magna valve
-	img[img < 0] = 0
-	img[img > 500] = 500
-	return (img - img.mean()) / img.std()
-
 def crop_center(img, cropx, cropy, cropz):
 	"""
 	Take a center crop of the images.
@@ -133,7 +119,7 @@ def preprocess_inputs(img,resize=-1):
 
 	return img
 
-def preprocess_labels(msk,intel_model=False,resize=-1):
+def preprocess_label_v1(msk,intel_model=False,resize=-1):
 	"""
 	Process the ground truth labels
 	"""
@@ -165,6 +151,61 @@ def preprocess_labels(msk,intel_model=False,resize=-1):
 			index.append(l)
 
 	return msk,np.array(index)
+
+def preprocess_label(label_filename):
+    """
+    Label attribution. Please refer LABEL_CHANNEL for the mask attribution
+    """
+
+    label = load_mask(label_filename)
+
+    ## Stack the loaded npy files
+    label = [np.load(label[i]) for i in range(len(label))]
+    label = np.stack(label, axis=0)
+    # Took the decision to set to 0 other labels and to 1 magna valve
+    label[label == 1] = 0.0
+    label[label == 2] = 1.0
+
+    return label
+
+def preprocess_img(img):
+	"""
+	Preprocessing for the image
+	z-score normalize
+	"""
+
+	# Based on vtk algorithm : 
+	# scrange -> img.GetScalarRange() [min,max values]
+	# threshold = (2 * scrange[0] + scrange[1]) / 3.0
+	# 500 or 1000 is a good threshold based on observation for Magna valve
+	img[img < 0] = 0
+	img[img > 1000] = 1000
+	return (img - img.mean()) / img.std()
+
+def crop_dim(img,crop_dim):
+	"""
+	Crop around the center of the images based on size provided 
+	If we are using a 2D model, then we'll just stack the
+	z dimension.
+	"""
+
+	if img.ndim == 3:
+		z, x, y = img.shape
+	elif img.ndim ==4 :
+		z, x, y, c = img.shape
+
+	# Make sure starting index is >= 0
+	startx = max(x // 2 - (crop_dim // 2), 0)
+	starty = max(y // 2 - (crop_dim // 2), 0)
+
+	# Make sure ending index is <= size
+	endx = min(startx + crop_dim, x)
+	endy = min(starty + crop_dim, y)
+
+	if img.ndim == 3:
+	 	return img[:, startx:endx, starty:endy]
+	elif img.ndim ==4 :
+		return img[:, startx:endx, starty:endy,:]
 
 def expand_list(data_path, format=None):
 

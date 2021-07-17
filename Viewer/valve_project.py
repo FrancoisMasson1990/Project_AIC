@@ -43,10 +43,6 @@ try:
 except RuntimeError as e:
     print(e)
 
-# Deprecated model generated with tf1 version 
-# from aic_models import model_2D_old
-from aic_models import model_2D
-
 def main_3D(data,folder_mask,folder_npy,multi_label,model,template,model_version):
     viewer = Viewer3D(data,
                       mode=4,
@@ -81,14 +77,15 @@ if __name__ == '__main__':
     arg.model_name = config.get("model_name",None)
     arg.model_version = config.get("model_version",None)
     arg.template = config.get("template",None)
-
-    # Old version
-    #unet_model = model_2D_old.unet()
-    unet_model = model_2D.unet()
+    
     if arg.model_name is not None :
-        if arg.model_version == 0: 
+        if arg.model_version == 0: # model_2D_old is a deprecated model generated with tf1 version 
+            from aic_models import model_2D_old
+            unet_model = model_2D_old.unet()
             model = unet_model.load_model(arg.model_name,False)
         elif arg.model_version == 1:
+            from aic_models import model_2D
+            unet_model = model_2D.unet()
             model = unet_model.load_model(arg.model_name)
         print("-" * 30)
         print("Model load successfully")
