@@ -1,12 +1,13 @@
 data_path: "/home/francoismasson/Project_AIC/data_folder/" #the path to the data
+#data_path: "/home/francoismasson/Project_AIC/data_folder_one/" #the path to the data
 data_filename: "/home/francoismasson/Project_AIC/hdf5_files/project_aic.h5" #the HDF5 data filename
 output_path: "/home/francoismasson/Project_AIC/output" #the folder to save the model and checkpoints
 inference_filename: "unet_model_for_aic_test.hdf5"
 use_upsampling: False #use upsampling instead of transposed convolution
 num_inter_threads: 1 #the number of intraop threads
-batch_size: 4 #the batch size for training
+batch_size: 8 #the batch size for training
 seed: 42 #random number generation
-crop_dim: -1 #Size to crop images (square, in pixels). If -1, then no cropping
+crop_dim: 320 #-1 #Size to crop images (square, in pixels). If -1, then no cropping
 z_slice_min: 0.15 #ratio (%) of layers from bottom that can be removed based on the location of the valve on the dataset 
 z_slice_max: 0.73 #ratio (%) of layers from top that can be removed based on the location of the valve on the dataset 
 blocktime: 1000 #blocktime
