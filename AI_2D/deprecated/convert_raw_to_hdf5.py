@@ -391,7 +391,7 @@ if __name__ == "__main__":
 		print("File {} doesn't exist. It should be part of the "
 			  "Dataset directory".format(json_filename))
 
-	# Print information about the Decathlon experiment data
+	# Print information about the Magna Valve experiment data
 	print("*" * 30)
 	print("=" * 30)
 	print("Dataset name:        ", experiment_data["name"])
