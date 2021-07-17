@@ -76,10 +76,11 @@ class unet(object):
         self.inference_filename = inference_filename
 
         self.metrics = [self.dice_coef, self.soft_dice_coef]
-        #self.metrics = [self.tversky]
-
         #self.loss = self.dice_coef_loss
         self.loss = self.combined_dice_ce_loss
+
+        #Tversky method
+        #self.metrics = [self.tversky]
         #self.loss = self.focal_tversky_loss
 
         self.optimizer = K.optimizers.Adam(lr=self.learningrate)
@@ -172,7 +173,7 @@ class unet(object):
         return (true_pos + smooth) / (true_pos + alpha * false_neg +
                                   (1 - alpha) * false_pos + smooth)
 
-    def focal_tversky_loss(self, target, prediction, gamma=1.5):
+    def focal_tversky_loss(self, target, prediction, gamma=1.25):
         tv = self.tversky(target, prediction)
         return K.backend.pow((1 - tv), gamma)
 
