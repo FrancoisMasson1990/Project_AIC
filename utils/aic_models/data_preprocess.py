@@ -355,31 +355,44 @@ def resample(image, pixelspacing, slicethickness, new_spacing=[1,1,1]):
 
     return image, new_spacing
 
-def clustering(data,center_volume,gt_data,ratio,threshold=3800,eps=2.5,min_samples=2,max_=None):
+def clustering(data,model_version,center_volume,gt_data,ratio,\
+			   threshold=3800,eps=2.5,min_samples=2,max_=None,spacings=None,dimensions=None):
 
+	index = []
 	if max_ is None:
-		# Crop border of images
-		x_min = float(center_volume[0]-0.8*center_volume[0])
-		x_max = float(center_volume[0]+0.8*center_volume[0])
-		y_min = float(center_volume[1]-ratio*center_volume[1])
-		y_max = float(center_volume[1]+ratio*center_volume[1])
-		z_min = float(center_volume[2]-ratio*center_volume[2])
-		z_max = float(center_volume[2]+ratio*center_volume[2])
+		if model_version == 0:
+			# Crop border of images
+			x_min = float(center_volume[0]-0.8*center_volume[0])
+			x_max = float(center_volume[0]+0.8*center_volume[0])
+			y_min = float(center_volume[1]-ratio*center_volume[1])
+			y_max = float(center_volume[1]+ratio*center_volume[1])
+			z_min = float(center_volume[2]-ratio*center_volume[2])
+			z_max = float(center_volume[2]+ratio*center_volume[2])
 
-		index = np.where((data[:,0]>x_min) & (data[:,0]<x_max) & (data[:,1]>y_min) & (data[:,1]<y_max) & (data[:,2]>z_min) & (data[:,2]<z_max))
-		if data[index].shape[0] < 1500 :
-			# Bad prediction : Border detection most of the time
-			data = gt_data
-			z_min = float(center_volume[2]-0.3*center_volume[2])
-			z_max = float(center_volume[2]+0.3*center_volume[2])
-			y_min = float(center_volume[1]-0.3*center_volume[1])
-			y_max = float(center_volume[1]+0.3*center_volume[1])
 			index = np.where((data[:,0]>x_min) & (data[:,0]<x_max) & (data[:,1]>y_min) & (data[:,1]<y_max) & (data[:,2]>z_min) & (data[:,2]<z_max))
-
+			if data[index].shape[0] < 1500 :
+				# Bad prediction : Border detection most of the time
+				data = gt_data
+				z_min = float(center_volume[2]-0.3*center_volume[2])
+				z_max = float(center_volume[2]+0.3*center_volume[2])
+				y_min = float(center_volume[1]-0.3*center_volume[1])
+				y_max = float(center_volume[1]+0.3*center_volume[1])
+				index = np.where((data[:,0]>x_min) & (data[:,0]<x_max) & (data[:,1]>y_min) & (data[:,1]<y_max) & (data[:,2]>z_min) & (data[:,2]<z_max))
+		
+		elif model_version == 1 :
+			# Crop border of images
+			x_min = float(spacings[0])
+			x_max = float(0.95*spacings[0]*dimensions[0])
+			y_min = float(spacings[1])
+			y_max = float(0.95*spacings[1]*dimensions[1])
+			z_min = float(spacings[2])
+			z_max = float(0.95*spacings[2]*dimensions[2])
+			index = np.where((data[:,0]>x_min) & (data[:,0]<x_max) & (data[:,1]>y_min) & (data[:,1]<y_max) & (data[:,2]>z_min) & (data[:,2]<z_max))
 	else :
 		index = np.where((data[:,0]>max_[0]-25) & (data[:,0]<max_[0]+25) & (data[:,1]>max_[1]-25) & (data[:,1]<max_[1]+25) & (data[:,2]>max_[2]-25) & (data[:,2]<max_[2]+25))
-
-	if data[index].shape[0] !=0 :
+	
+	if (index) and (data[index].shape[0] !=0) :
+		print("here")
 		data = data[index]
 
 	model = DBSCAN(eps=2.5, min_samples=2)
