@@ -223,6 +223,8 @@ class Viewer3D(object):
             lines = f.readlines()
             valve = lines[2]
             valve = valve[:-1] ## Remove wrong asci character
+            # Add progress bar
+            valve += " file : {} on {}".format(frame,len(self.data_path))
             self.rw.SetWindowName(valve)
         else :
             self.rw.SetWindowName('Valve Unknown')
@@ -287,7 +289,6 @@ class Viewer3D(object):
                     self.widget_mov = mov.boxWidget
                     self.widget_mov.On()
                 self.mover_tool = not self.mover_tool
-
             else : 
                 for mov in self.mover_obj:
                     self.widget_mov = mov.boxWidget
@@ -339,7 +340,6 @@ class Viewer3D(object):
                 self.grid = Grid(actor_)
                 self.grid_list.append(self.grid.grid)
                 self.ren.AddActor(self.grid.grid)
-
         else : 
             for render in self.render_list:
                 if render == self.render_score:
@@ -351,9 +351,6 @@ class Viewer3D(object):
 
     def buttonfuncInference(self):
         self.infer.switch()
-        # Need to work on that section
-        # Rebuild volume 
-        # Use DBSCAN 
         # Find volume which envelop predictions
         # Then grap volume of Dicom
         if self.model is not None:
@@ -414,11 +411,15 @@ class Viewer3D(object):
                 
                 # Clustering
                 vertices = dp.clustering(vertices,
+                                         self.model_version,
                                          self.center,
                                          self.all_numpy_nodes,
                                          ratio=0.4,
                                          threshold=3800,
-                                         max_=self.max)
+                                         max_=self.max,
+                                         dimensions = self.dimensions,
+                                         spacings = self.spacing)
+
                 # Volume Cropping
                 # self.predictions_final = self.img.clone()
                 # self.predictions_final = dp.boxe_3d(self.predictions_final,vertices,max_=self.max)
@@ -580,6 +581,7 @@ class Viewer3D(object):
         self.spacing = self.img.imagedata().GetSpacing()
         self.area = self.spacing[0]*self.spacing[1]
         self.dimensions = self.img.imagedata().GetDimensions()
+        
         self.img = self.img.isosurface()
         
         # Get the all points in isosurface
