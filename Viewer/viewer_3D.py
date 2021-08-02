@@ -225,7 +225,7 @@ class Viewer3D(object):
             valve = lines[2]
             valve = valve[:-1] ## Remove wrong asci character
             # Add progress bar
-            valve += " file : {} on {}".format(frame,len(self.data_path))
+            valve += " file : {} on {}".format(frame+1,len(self.data_path))
             self.rw.SetWindowName(valve)
         else :
             self.rw.SetWindowName('Valve Unknown')
@@ -507,6 +507,8 @@ class Viewer3D(object):
                 if len(r_fit) > 0 :
                     r_fit = np.array(r_fit)
                     r_fit = np.min(r_fit)
+                    if r_fit < 6 : # Workaround to avoid "inside peak"
+                        r_fit = 6
                     # Estimate the distance of each point for the agatston
                     d = []
                     for point in predictions_agatston[:,:3]: #Exclude intensity points
@@ -576,9 +578,11 @@ class Viewer3D(object):
         self.area = self.spacing[0]*self.spacing[1]
         self.dimensions = self.img.imagedata().GetDimensions()
         
-        # Minimum value that we are certain is not calcium : 600
-        self.img_z_threshold = self.img.isosurface(600)
-        self.img = self.img.isosurface() 
+        # High value for the cylinder fitting : 800
+        self.img_z_threshold = self.img.isosurface(800)
+        # Minimum value that we are certain is not calcium : 450
+        self.img = self.img.isosurface()
+        #self.img = self.img.isosurface(450)
                 
         # Get the all points in isosurface
         self.points = self.img.GetMapper().GetInput()
