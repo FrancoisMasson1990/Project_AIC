@@ -13,6 +13,7 @@ from widget import *
 from tqdm import tqdm 
 from scipy import ndimage as ndi
 from aic_models import data_preprocess as dp
+from scipy.spatial import ConvexHull as cvxh
 from skimage.transform import resize
 from tqdm import tqdm
 from cylinder_fitting import fit
@@ -318,9 +319,6 @@ class Viewer3D(object):
         self.ground_truth.switch()
         if not self.gt_view_mode:
             numpy_3d = glob.glob(os.path.join(self.npy_folder,self.title) + '/*.npy')
-            #data = np.load(numpy_3d[0])
-            #matrix = np.load('matrix_array.npy')
-            #data = (matrix[:3,:3]@(data[:,:3].T)).T
             if len(numpy_3d)>0:
                 #actor_ = self.label_3d(data,c=[1,0,0])
                 actor_ = self.label_3d(numpy_3d[0],c=[1,0,0])
@@ -333,18 +331,14 @@ class Viewer3D(object):
             self.camera_position()
             self.gt_view_mode = not self.gt_view_mode
 
-            if len(self.axes_list)==0:
-                   self.axes = Axes(self.iren)
-                   self.axes_list.append(self.axes.axact)
-            if len(self.grid_list)==0:
-                self.grid = Grid(actor_)
-                self.grid_list.append(self.grid.grid)
-                self.ren.AddActor(self.grid.grid)
         else : 
+            #self.grid_list = []
             for render in self.render_list:
                 if render == self.render_score:
+                    #render.RemoveActor(self.grid.grid)
                     for actor_ in self.actor_gt_list:
                         render.RemoveActor(actor_)
+                        
             self.actor_gt_list = []
             self.rw.Render()
             self.gt_view_mode = not self.gt_view_mode
@@ -410,27 +404,39 @@ class Viewer3D(object):
                 vertices,_ = dp.make_mesh(predictions,-1)
                 
                 # Clustering
-                vertices = dp.clustering(vertices,
-                                         self.model_version,
-                                         self.center,
-                                         self.all_numpy_nodes,
-                                         ratio=0.4,
-                                         threshold=3800,
-                                         max_=self.max,
-                                         dimensions = self.dimensions,
-                                         spacings = self.spacing)
+                self.vertices_predictions = dp.clustering(vertices,
+                                                        self.model_version,
+                                                        self.center,
+                                                        self.all_numpy_nodes,
+                                                        ratio=0.4,
+                                                        threshold=3800,
+                                                        max_=self.max,
+                                                        dimensions = self.dimensions,
+                                                        spacings = self.spacing)
 
                 # Volume Cropping
-                # self.predictions_final = self.img.clone()
-                # self.predictions_final = dp.boxe_3d(self.predictions_final,vertices,max_=self.max)
-                # self.predictions_agatston = self.volume.clone()
-                # self.predictions_agatston = dp.boxe_3d(self.predictions_agatston,vertices,max_=self.max)
-                # # Get the all points in isosurface Mesh/Volume
-                # self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)               
-                # self.predictions_final_points = dp.to_points(self.predictions_final)  
-                              
-                actor_ = self.label_3d(vertices,c=[0,1,0])
-                # actor_ = self.label_3d(self.predictions_final_points,c=[0,1,0])
+                # First prediction : UX visual
+                self.predictions_final = self.img.clone()
+                self.predictions_final = dp.boxe_3d(self.predictions_final,self.vertices_predictions,max_=self.max)
+                # Second prediction : Cylinder fitting on only high value intensity
+                self.predictions_final_threshold = self.img_z_threshold.clone()
+                self.predictions_final_threshold = dp.boxe_3d(self.predictions_final_threshold,self.vertices_predictions,max_=self.max)
+                # Third : Volume prediction
+                self.predictions_agatston = self.volume.clone()
+                self.predictions_agatston = dp.boxe_3d(self.predictions_agatston,self.vertices_predictions,max_=self.max)
+                # Get the all points in isosurface Mesh/Volume
+                self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)               
+                self.predictions_final_points = dp.to_points(self.predictions_final)
+                self.predictions_final_points_threshold = dp.to_points(self.predictions_final_threshold)
+                
+                # Convex-Hull estimation
+                hull = cvxh(self.predictions_final_points_threshold[:,:3])
+                mask = dp.isInHull(self.predictions_final_points[:,:3],hull)
+                self.predictions_final_points = self.predictions_final_points[mask]
+                mask = dp.isInHull(self.predictions_agatston_points[:,:3],hull)
+                self.predictions_agatston_points = self.predictions_agatston_points[mask]
+
+                actor_ = self.label_3d(self.predictions_final_points,c=[0,1,0])
 
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
@@ -458,25 +464,13 @@ class Viewer3D(object):
         fit_err = Fitting error (G function)
         """
         self.fitting.switch()
-        if (self.fitting.status() == "Fitting (Off)") and (self.predictions_final is not None):
+        if (self.fitting.status() == "Fitting (Off)") and (self.predictions_final_points_threshold is not None):
             # Cylinder Fit
             print("performing fitting...")
-            self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final_points,guess_angles=None)
+            self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final_points_threshold,guess_angles=None)
             print("fitting done !")  
             self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")
-            
-            # theta = np.arccos(self.w_fit[2])
-            # phi = np.arctan2(self.w_fit[1], self.w_fit[0])
-            # t = vtk.vtkTransform()
-            # t.PostMultiply()
-            # t.RotateX(90)  # put it along Z
-            # t.RotateY(np.rad2deg(theta))
-            # t.RotateZ(np.rad2deg(phi))
-            # matrix_array = np.array([[t.GetInverse().GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])
-            # with open('matrix_array.npy', 'wb') as f:
-            #     np.save(f, matrix_array)
-
-            #print(self.cylinder.GetMatrix())       
+                 
             self.actor_fitting_list.append(self.cylinder)
             for render in self.render_list:
                 if render == self.render_score:
@@ -582,8 +576,10 @@ class Viewer3D(object):
         self.area = self.spacing[0]*self.spacing[1]
         self.dimensions = self.img.imagedata().GetDimensions()
         
-        self.img = self.img.isosurface()
-        
+        # Minimum value that we are certain is not calcium : 600
+        self.img_z_threshold = self.img.isosurface(600)
+        self.img = self.img.isosurface() 
+                
         # Get the all points in isosurface
         self.points = self.img.GetMapper().GetInput()
         self.all_array = self.points.GetPoints()

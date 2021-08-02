@@ -392,7 +392,6 @@ def clustering(data,model_version,center_volume,gt_data,ratio,\
 		index = np.where((data[:,0]>max_[0]-25) & (data[:,0]<max_[0]+25) & (data[:,1]>max_[1]-25) & (data[:,1]<max_[1]+25) & (data[:,2]>max_[2]-25) & (data[:,2]<max_[2]+25))
 	
 	if (index) and (data[index].shape[0] !=0) :
-		print("here")
 		data = data[index]
 
 	model = DBSCAN(eps=2.5, min_samples=2)
@@ -472,3 +471,39 @@ def to_points(data,threshold=None):
 		points = vtk_to_numpy(data.GetMapper().GetInput().GetPoints().GetData())
 		
 	return points
+
+def z_projection(points,w_fit):
+	"""
+		Projection of the points along z_axis
+	"""
+
+	theta = np.arccos(w_fit[2])
+	phi = np.arctan2(w_fit[1], w_fit[0])
+	t = vtk.vtkTransform()
+	t.PostMultiply()
+	t.RotateX(90)  # put it along Z
+	t.RotateY(np.rad2deg(theta))
+	t.RotateZ(np.rad2deg(phi))
+	matrix_array = np.array([[t.GetInverse().GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])
+	rot_x = np.array([[1, 0, 0, 0],
+                      [0, 0,-1, 0],
+                      [0, 1, 0, 0],
+                      [0, 0, 0, 1]])
+
+	matrix = rot_x@matrix_array
+	points = (matrix[:3,:3]@(points[:,:3].T)).T
+
+	with open('projection_array.npy', 'wb') as f:
+		np.save(f, points)
+
+def isInHull(P,hull):
+	'''
+	Determine if the list of points P lies inside the hull
+	:return: list
+	List of boolean where true means that the point is inside the convex hull
+	'''
+	A = hull.equations[:,0:-1]
+	b = np.transpose(np.array([hull.equations[:,-1]]))
+	isInHullBool = np.all((A @ np.transpose(P)) <= np.tile(-b,(1,len(P))),axis=0)
+
+	return isInHullBool  

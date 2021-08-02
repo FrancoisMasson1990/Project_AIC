@@ -133,7 +133,8 @@ class Image_2D(Viewer2D):
         self.prediction = None
         self.mask_agatston = mask_agatston
         self.agatston_bool = agatston
-        self.threshold = 130
+        self.threshold_min = 130
+        self.threshold_max = 450
         self.area = area
 
         # Dicom image
@@ -214,7 +215,8 @@ class Image_2D(Viewer2D):
     def agatston_score_slice(self):
         self.prediction = self.image[self.index].copy()
         self.prediction[self.mask_agatston[self.index] == 0] = 0
-        self.prediction[self.prediction < self.threshold] = 0
+        self.prediction[self.prediction < self.threshold_min] = 0
+        self.prediction[self.prediction > self.threshold_max] = 0
         self.prediction[self.prediction > 0] = 1
         self.prediction = np.ma.masked_where(self.prediction == 0, self.prediction)
     
@@ -223,7 +225,8 @@ class Image_2D(Viewer2D):
         for i in range(len(self.image)):
             prediction = self.image[i].copy()
             prediction[self.mask_agatston[i] == 0] = 0
-            prediction[prediction < self.threshold] = 0
+            prediction[prediction < self.threshold_min] = 0
+            prediction[prediction > self.threshold_max] = 0
             prediction[prediction > 0] = 1
             lw, num = measurements.label(prediction)
             area_ = measurements.sum(prediction, lw, index=np.arange(lw.max() + 1))
