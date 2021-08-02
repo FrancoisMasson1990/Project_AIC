@@ -47,8 +47,8 @@ The Viewer section uses The Visualization Toolkit (VTK). It is an open source so
 
 ## AI_2D
 
-Implementation of U-Net Architecture using Tensorflow 2.X and Dataloader
+Implementation of U-Net Architecture by using 2D slices and using Tensorflow 2.X and Dataloader 
 
 ## AI_3D
 
-Implementation of U-Net Architecture using Tensorflow 2.X and Dataloader
+Implementation of U-Net Architecture by using 3D volumes and using Tensorflow 2.X and Dataloader
