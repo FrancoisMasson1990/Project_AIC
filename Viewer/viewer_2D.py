@@ -196,9 +196,9 @@ class Image_2D(Viewer2D):
             self._prediction_view = self.axis2.imshow(self.prediction, cmap='jet')
             self.score = self.agatston_score()
             self.axis2.set_xlabel("Agatston score : {:.3f}".format(self.score))
+            self.save_prediction()
 
         self.slicer.on_changed(self.update)
-        self.save_prediction()
 
     def save_prediction(self):
         # Save prediction in dictionnary
