@@ -392,7 +392,7 @@ class Grid(object):
         ############################################### axes titles
         titles = []
         if xtitle:
-            xt = shapes.Text(xtitle, pos=(0,0,0), s=xTitleSize,
+            xt = shapes.Text3D(xtitle, pos=(0,0,0), s=xTitleSize,
                             c=xTitleColor, justify=xTitleJustify, depth=titleDepth)
             if reorientShortTitle and len(ytitle) < 3:  # title is short
                 wpos = [xTitlePosition, -xTitleOffset +0.02, 0]
@@ -404,7 +404,7 @@ class Grid(object):
             titles.append(xt.lighting(specular=0, diffuse=0, ambient=1))
 
         if ytitle:
-            yt = shapes.Text(ytitle, pos=(0, 0, 0), s=yTitleSize,
+            yt = shapes.Text3D(ytitle, pos=(0, 0, 0), s=yTitleSize,
                              c=yTitleColor, justify=yTitleJustify, depth=titleDepth)
             if reorientShortTitle and len(ytitle) < 3:  # title is short
                 wpos = [-yTitleOffset +0.03-0.01*len(ytitle), yTitlePosition, 0]
@@ -417,7 +417,7 @@ class Grid(object):
             titles.append(yt.lighting(specular=0, diffuse=0, ambient=1))
 
         if ztitle:
-            zt = shapes.Text(ztitle, pos=(0, 0, 0), s=zTitleSize,
+            zt = shapes.Text3D(ztitle, pos=(0, 0, 0), s=zTitleSize,
                              c=zTitleColor, justify=zTitleJustify, depth=titleDepth)
             if reorientShortTitle and len(ztitle) < 3:  # title is short
                 wpos = [(-zTitleOffset+0.02-0.003*len(ztitle))/1.42,
@@ -517,7 +517,7 @@ class Grid(object):
                     val = v[0]*sizes[0]+min_bns[0]
                     if abs(val)>1 and sizes[0]<1: xLabelPrecision = int(xLabelPrecision-np.log10(sizes[0]))
                     tval = precision(val, xLabelPrecision, vrange=sizes[0])
-                    xlab = shapes.Text(tval, pos=v, s=xLabelSize, justify="center-top", depth=0)
+                    xlab = shapes.Text3D(tval, pos=v, s=xLabelSize, justify="center-top", depth=0)
                     if xKeepAspectRatio: xlab.SetScale(x_aspect_ratio_scale)
                     labels.append(xlab.c(xTickColor).lighting(specular=0, ambient=1))
         if yLabelSize:
@@ -528,7 +528,7 @@ class Grid(object):
                     val = v[1]*sizes[1]+min_bns[2]
                     if abs(val)>1 and sizes[1]<1: yLabelPrecision = int(yLabelPrecision-np.log10(sizes[1]))
                     tval = precision(val, yLabelPrecision, vrange=sizes[1])
-                    ylab = shapes.Text(tval, pos=(0,0,0), s=yLabelSize, justify="center-bottom", depth=0)
+                    ylab = shapes.Text3D(tval, pos=(0,0,0), s=yLabelSize, justify="center-bottom", depth=0)
                     if yKeepAspectRatio: ylab.SetScale(y_aspect_ratio_scale)
                     ylab.RotateZ(yTitleRotation)
                     ylab.pos(v)
@@ -541,7 +541,7 @@ class Grid(object):
                     val = v[2]*sizes[2]+min_bns[4]
                     tval = precision(val, zLabelPrecision, vrange=sizes[2])
                     if abs(val)>1 and sizes[2]<1: zLabelPrecision = int(zLabelPrecision-np.log10(sizes[2]))
-                    zlab = shapes.Text(tval, pos=(0,0,0), s=zLabelSize, justify="center-bottom", depth=0)
+                    zlab = shapes.Text3D(tval, pos=(0,0,0), s=zLabelSize, justify="center-bottom", depth=0)
                     if zKeepAspectRatio: zlab.SetScale(z_aspect_ratio_scale)
                     zlab.RotateY(-90)
                     zlab.RotateX(zTitleRotation)
