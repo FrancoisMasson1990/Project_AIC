@@ -472,11 +472,40 @@ def to_points(data,threshold=None):
 		
 	return points
 
-def z_projection(points,w_fit):
+def z_projection(points,w_fit,name='projection_array.npy'):
 	"""
-		Projection of the points along z_axis
+		Projection of the points along z_axis using vector of direction of the cylinder axis
 	"""
+	
+	matrix_array = matrix_transformation(w_fit)
+	rot_x = np.array([[1, 0, 0, 0],
+                      [0, 0,-1, 0],
+                      [0, 1, 0, 0],
+                      [0, 0, 0, 1]])
 
+	intensity = None
+	if points.shape[1] == 4 :
+		intensity = points[:,3]
+
+	matrix = rot_x@matrix_array
+	points = (matrix[:3,:3]@(points[:,:3].T)).T
+	
+	if intensity is not None :
+		xyz = points
+		points = np.zeros((xyz.shape[0],4))
+		points[:,:3] = xyz
+		points[:,3] = intensity
+
+	if not name.endswith('.npy'):
+		name += '.npy'
+
+	with open(name, 'wb') as f:
+		np.save(f, points)
+
+def matrix_transformation(w_fit):
+	"""
+		Calculate matrix of transformation from direction of the cylinder axis
+	"""
 	theta = np.arccos(w_fit[2])
 	phi = np.arctan2(w_fit[1], w_fit[0])
 	t = vtk.vtkTransform()
@@ -485,16 +514,8 @@ def z_projection(points,w_fit):
 	t.RotateY(np.rad2deg(theta))
 	t.RotateZ(np.rad2deg(phi))
 	matrix_array = np.array([[t.GetInverse().GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])
-	rot_x = np.array([[1, 0, 0, 0],
-                      [0, 0,-1, 0],
-                      [0, 1, 0, 0],
-                      [0, 0, 0, 1]])
 
-	matrix = rot_x@matrix_array
-	points = (matrix[:3,:3]@(points[:,:3].T)).T
-
-	with open('projection_array.npy', 'wb') as f:
-		np.save(f, points)
+	return matrix_array
 
 def isInHull(P,hull):
 	'''
@@ -507,3 +528,15 @@ def isInHull(P,hull):
 	isInHullBool = np.all((A @ np.transpose(P)) <= np.tile(-b,(1,len(P))),axis=0)
 
 	return isInHullBool  
+
+def closest_element(value):
+	"""
+	How to find the NumPy array element closest to a given value in Python
+	"""
+	array = np.asarray([19,21,23,25,27]) #Magna size
+
+	absolute_val_array = np.abs(array - value)
+	smallest_difference_index = absolute_val_array.argmin()
+	closest_element = array[smallest_difference_index]
+
+	return closest_element
