@@ -495,8 +495,7 @@ class Viewer3D(object):
         if self.fitting_view_mode == True:
             valve_template_index = dp.closest_element(2*self.r_fit)
             valve_template = np.load(self.template_directory + "Magna{}_projected.npy".format(valve_template_index))
-            transformation = dp.icp(self.predictions_agatston_points,valve_template,self.threshold,self.w_fit,self.cylinder)
-            valve_template = (transformation[:3,:3]@(valve_template[:,:3].T)).T
+            valve_projected = dp.icp(self.predictions_agatston_points,valve_template,self.threshold,self.w_fit,self.cylinder)
             
             predictions_filter = []
             # Update center and axis if object was moved
@@ -504,8 +503,8 @@ class Viewer3D(object):
             self.w_fit = np.asarray(self.cylinder.normalAt(48))
             for i,z in enumerate(np.unique(self.predictions_agatston_points[:,2])):
                 r_fit = []
-                index = np.where((valve_template[:,2]>(z-self.spacing[2]/2)) & (valve_template[:,2]<(z+self.spacing[2]/2)))
-                predictions_final_tmp = valve_template.copy()
+                index = np.where((valve_projected[:,2]>(z-self.spacing[2]/2)) & (valve_projected[:,2]<(z+self.spacing[2]/2)))
+                predictions_final_tmp = valve_projected.copy()
                 predictions_final_tmp = predictions_final_tmp[index]
                 predictions_agatston = self.predictions_agatston_points.copy()
                 predictions_agatston = predictions_agatston[predictions_agatston[:,2]==z]
@@ -647,15 +646,15 @@ class Viewer3D(object):
     def label_3d(self,data,c=[1,0,0]):
         if isinstance(data,str):
             with open(data, 'rb') as f:
-                self.img = np.load(f)  
+                img = np.load(f)  
         if isinstance(data,np.ndarray):
-            self.img = data
+            img = data
         self.points = vtk.vtkPoints()
         # Create the topology of the point (a vertex)
         self.vertices = vtk.vtkCellArray()
         # Add points
-        for i in range(0, len(self.img)):
-            p = self.img[i].tolist()
+        for i in range(0, len(img)):
+            p = img[i].tolist()
             if len(p) > 3 :
                 p = p[:3]
             point_id = self.points.InsertNextPoint(p)

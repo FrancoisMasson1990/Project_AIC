@@ -548,10 +548,10 @@ def icp(predictions,template,threshold,w_fit,cylinder,verbose=False,show=False):
 	Apply Iterative Closest Point to match point cloud valve with template
 	"""
 	source = template.copy()
-	source = source[source[:,3] > threshold]
+	source_threshold = source[source[:,3] > threshold]
 	# Pass source to Open3D.o3d.geometry.PointCloud and visualize
-	pcd_source = o3d.geometry.PointCloud()
-	pcd_source.points = o3d.utility.Vector3dVector(source[:,:3])
+	pcd_source_threshold = o3d.geometry.PointCloud()
+	pcd_source_threshold.points = o3d.utility.Vector3dVector(source_threshold[:,:3])
 
 	target_raw = predictions.copy()
 	target = target_raw[target_raw[:,3] > threshold]
@@ -563,17 +563,17 @@ def icp(predictions,template,threshold,w_fit,cylinder,verbose=False,show=False):
 	translation = np.array([[cylinder.getTransform().GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])[:,3]
 	transformation[:,3] = translation
 	rot_x = np.array([[1, 0, 0, 0],
-					  [0, 0,-1, 0],
-					  [0, 1, 0, 0],
-					  [0, 0, 0, 1]])
+	 				  [0, 0,-1, 0],
+	 				  [0, 1, 0, 0],
+	 				  [0, 0, 0, 1]])
 
 	transformation = transformation@rot_x
 	threshold = 10.0
 	print("Apply point-to-point ICP")
-	reg_p2p = o3d.pipelines.registration.registration_icp(pcd_source, pcd_target, 
-														  threshold, transformation,
-														  o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-														  o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration = 2000))
+	reg_p2p = o3d.pipelines.registration.registration_icp(pcd_source_threshold, pcd_target, 
+	 													  threshold, transformation,
+	 													  o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+	 													  o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration = 2000))
 
 	if verbose:
 		print(reg_p2p)
@@ -583,9 +583,12 @@ def icp(predictions,template,threshold,w_fit,cylinder,verbose=False,show=False):
 		print(np.asarray(reg_p2p.correspondence_set))
 	
 	if show:
-		pcd_source.paint_uniform_color([1, 0, 0])
+		pcd_source_threshold.paint_uniform_color([1, 0, 0])
 		pcd_target.paint_uniform_color([0, 0, 1])
-		pcd_source.transform(reg_p2p.transformation)
-		o3d.visualization.draw_geometries([pcd_source,pcd_target])
+		pcd_source_threshold.transform(reg_p2p.transformation)
+		o3d.visualization.draw_geometries([pcd_source_threshold,pcd_target])
 
-	return reg_p2p.transformation
+	pcd_source = o3d.geometry.PointCloud()
+	pcd_source.points = o3d.utility.Vector3dVector(source[:,:3])
+
+	return np.asarray(pcd_source.transform(reg_p2p.transformation).points)
