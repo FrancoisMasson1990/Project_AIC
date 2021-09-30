@@ -492,7 +492,6 @@ class Viewer3D(object):
             self.fitting_view_mode = False
 
     def buttonfuncAgatston(self):
-        
         if self.fitting_view_mode == True:
             valve_template_index = dp.closest_element(2*self.r_fit)
             valve_template = np.load(self.template_directory + "Magna{}_projected.npy".format(valve_template_index))
