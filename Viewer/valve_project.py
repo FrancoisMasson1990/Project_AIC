@@ -81,8 +81,9 @@ if __name__ == '__main__':
     arg.crop_dim = config.get("crop_dim",-1)
     arg.z_slice_min = config.get("z_slice_min",None)
     arg.z_slice_max = config.get("z_slice_max",None)
+    arg.threshold = config.get("threshold",None)
 
-    kwargs = {"crop_dim":arg.crop_dim,"z_slice_min":arg.z_slice_min,"z_slice_max":arg.z_slice_max}
+    kwargs = {"crop_dim":arg.crop_dim,"z_slice_min":arg.z_slice_min,"z_slice_max":arg.z_slice_max,"threshold":arg.threshold}
     
     if arg.model_name is not None :
         if arg.model_version == 0: # model_2D_old is a deprecated model generated with tf1 version 

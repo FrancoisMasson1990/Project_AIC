@@ -49,6 +49,7 @@ from skimage import measure
 import scipy.ndimage
 from sklearn.cluster import DBSCAN
 from collections import Counter
+import open3d as o3d
 
 ## Main class to visualize data dicom
 import vtk
@@ -394,17 +395,14 @@ def clustering(data,model_version,center_volume,gt_data,ratio,\
 	if (index) and (data[index].shape[0] !=0) :
 		data = data[index]
 
-	model = DBSCAN(eps=2.5, min_samples=2)
+	model = DBSCAN(eps=eps, min_samples=min_samples)
 	model.fit_predict(data)
 	print("number of cluster found: {}".format(len(set(model.labels_))))
 	index = Counter(model.labels_).most_common()
 
 	j = 0
-	if filter :
-		pass
-	else :
-		while index[j][1] > threshold : # Arbitrary values
-			j += 1
+	while index[j][1] > threshold : # Arbitrary values
+		j += 1
 
 	i = np.isin(model.labels_,np.array([index[j][0]]))
 
@@ -457,7 +455,7 @@ def point_line_distance(p, l_p, l_v):
     u = p - l_p
     return np.linalg.norm(u - np.dot(u, l_v) * l_v)
 
-def to_points(data,threshold=None):
+def to_points(data,threshold=None,template=False):
 	'''Extract point from Volume/Mesh polydata.
     '''
 	if isinstance(data,volume.Volume):
@@ -465,8 +463,9 @@ def to_points(data,threshold=None):
 		scalar = np.expand_dims(vtk_to_numpy(data.imagedata().GetPointData().GetScalars()),axis=1) #Pixel value intensity
 		points = np.concatenate((points,scalar), axis=1)
 		points = points[points[:,3] > 130] # Minimal value of interest for Agatston score
-		if threshold is not None:
-			points = points[points[:,3] < threshold]
+		if template:
+			if threshold is not None:
+				points = points[points[:,3] < threshold]
 	if isinstance(data,mesh.Mesh):
 		points = vtk_to_numpy(data.GetMapper().GetInput().GetPoints().GetData())
 		
@@ -529,14 +528,64 @@ def isInHull(P,hull):
 
 	return isInHullBool  
 
-def closest_element(value):
+def closest_element(value,upper=True):
 	"""
-	How to find the NumPy array element closest to a given value in Python
+	How to find the NumPy array element closest uppto a given value in Python
+	if upper : select upper bound
 	"""
-	array = np.asarray([19,21,23,25,27]) #Magna size
-
+	array = np.asarray([19,21,23,25,27,29]) #Magna size
+	if upper :
+		eps = 0.001
+		value = np.ceil(value) + eps
 	absolute_val_array = np.abs(array - value)
 	smallest_difference_index = absolute_val_array.argmin()
 	closest_element = array[smallest_difference_index]
 
 	return closest_element
+
+def icp(predictions,template,threshold,w_fit,cylinder,verbose=False,show=False):
+	"""
+	Apply Iterative Closest Point to match point cloud valve with template
+	"""
+	source = template.copy()
+	source = source[source[:,3] > threshold]
+	# Pass source to Open3D.o3d.geometry.PointCloud and visualize
+	pcd_source = o3d.geometry.PointCloud()
+	pcd_source.points = o3d.utility.Vector3dVector(source[:,:3])
+
+	target_raw = predictions.copy()
+	target = target_raw[target_raw[:,3] > threshold]
+	# Pass source to Open3D.o3d.geometry.PointCloud and visualize
+	pcd_target = o3d.geometry.PointCloud()
+	pcd_target.points = o3d.utility.Vector3dVector(target[:,:3])
+
+	transformation = matrix_transformation(w_fit)
+	translation = np.array([[cylinder.getTransform().GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])[:,3]
+	transformation[:,3] = translation
+	rot_x = np.array([[1, 0, 0, 0],
+					  [0, 0,-1, 0],
+					  [0, 1, 0, 0],
+					  [0, 0, 0, 1]])
+
+	transformation = transformation@rot_x
+	threshold = 10.0
+	print("Apply point-to-point ICP")
+	reg_p2p = o3d.pipelines.registration.registration_icp(pcd_source, pcd_target, 
+														  threshold, transformation,
+														  o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+														  o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration = 2000))
+
+	if verbose:
+		print(reg_p2p)
+		print("Transformation is:")
+		print(reg_p2p.transformation)
+		print("")
+		print(np.asarray(reg_p2p.correspondence_set))
+	
+	if show:
+		pcd_source.paint_uniform_color([1, 0, 0])
+		pcd_target.paint_uniform_color([0, 0, 1])
+		pcd_source.transform(reg_p2p.transformation)
+		o3d.visualization.draw_geometries([pcd_source,pcd_target])
+
+	return reg_p2p.transformation

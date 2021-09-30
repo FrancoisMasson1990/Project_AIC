@@ -34,7 +34,7 @@ class Viewer3D(object):
                 template_directory = "./templates/",
                 **kwargs):
         
-        self.frame = 0
+        self.frame = frame
         self.init = True
         self.icol = 0
         self.data_path = data_path
@@ -78,11 +78,12 @@ class Viewer3D(object):
         self.max = None
         self.model_version = model_version
         self.template_directory = template_directory
-
+        
         # Extra parameters passed
         self.crop_dim = kwargs.get("crop_dim",-1)
         self.z_slice_min = kwargs.get("z_slice_min",None)
         self.z_slice_max = kwargs.get("z_slice_max",None)
+        self.threshold = kwargs.get("threshold",None)
 
         '''One render window, multiple viewports'''
         self.rw = vtk.vtkRenderWindow()
@@ -345,8 +346,6 @@ class Viewer3D(object):
 
     def buttonfuncInference(self):
         self.infer.switch()
-        # Find volume which envelop predictions
-        # Then grap volume of Dicom
         if self.model is not None:
             if not self.infer_view_mode:
                 #Prediction
@@ -367,6 +366,9 @@ class Viewer3D(object):
                         img = img[index_z_crop]
                     img = dp.preprocess_img(img)
                     img = np.expand_dims(img,-1)
+                else :
+                    print("Unknown/Unsupported version")
+                    exit()
 
                 pred_list = []
                 # https://www.raddq.com/dicom-processing-segmentation-visualization-in-python/
@@ -383,6 +385,9 @@ class Viewer3D(object):
                         prediction = np.rot90(prediction,axes=(1,0)) 
                         prediction = np.expand_dims(prediction, 0)
                         prediction[prediction != 1.0] = -2
+                    else :
+                        print("Unknown/Unsupported version")
+                        exit()
                     
                     pred_list.append(prediction)
                 
@@ -425,17 +430,14 @@ class Viewer3D(object):
                 self.predictions_agatston = self.volume.clone()
                 self.predictions_agatston = dp.boxe_3d(self.predictions_agatston,self.vertices_predictions,max_=self.max)
                 # Get the all points in isosurface Mesh/Volume
-                self.predictions_agatston_points = dp.to_points(self.predictions_agatston,threshold=self.threshold)            
+                self.predictions_agatston_points = dp.to_points(self.predictions_agatston,template=self.template)            
                 self.predictions_final_points = dp.to_points(self.predictions_final)
                 self.predictions_final_points_threshold = dp.to_points(self.predictions_final_threshold)
                 
-                # Could deprecated if ICP works
                 # Convex-Hull estimation
-                #hull = cvxh(self.predictions_final_points_threshold[:,:3])
-                #mask = dp.isInHull(self.predictions_final_points[:,:3],hull)
-                #self.predictions_final_points = self.predictions_final_points[mask]
-                #mask = dp.isInHull(self.predictions_agatston_points[:,:3],hull)
-                #self.predictions_agatston_points = self.predictions_agatston_points[mask]
+                hull = cvxh(self.predictions_final_points_threshold[:,:3])
+                mask = dp.isInHull(self.predictions_agatston_points[:,:3],hull)
+                self.predictions_agatston_points = self.predictions_agatston_points[mask]
 
                 actor_ = self.label_3d(self.predictions_final_points,c=[0,1,0])
 
@@ -465,14 +467,12 @@ class Viewer3D(object):
         fit_err = Fitting error (G function)
         """
         self.fitting.switch()
-        # if (self.fitting.status() == "Fitting (Off)") and (self.predictions_final_points_threshold is not None):
-        if (self.fitting.status() == "Fitting (Off)"):
+        if (self.fitting.status() == "Fitting (Off)") and (self.predictions_final_points_threshold is not None):
             # Cylinder Fit
             print("performing fitting...")
             self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final_points_threshold,guess_angles=None)
             print("fitting done !")  
-            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")
-                                                        
+            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")                   
             self.actor_fitting_list.append(self.cylinder)
             for render in self.render_list:
                 if render == self.render_score:
@@ -492,80 +492,45 @@ class Viewer3D(object):
             self.fitting_view_mode = False
 
     def buttonfuncAgatston(self):
-        valve_template_index = dp.closest_element(2*self.r_fit)
-        valve_template = np.load(self.template_directory + "Magna{}_projected.npy".format(valve_template_index))
-
-        # ICP
-        translation = np.array([[self.cylinder.getTransform().GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])[:,3]
-        print(translation)
-        data = valve_template
-        data[:,0] += translation[0]
-        data[:,1] += translation[1]
-        data[:,2] += translation[2] 
-        np.save("test.npy",data)
-
-        #import open3d as o3d
-        #import copy
-
-        #transformation = dp.matrix_transformation(self.w_fit)
-        #translation = np.array([[self.cylinder.getTransform().GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])[:,3]
-        #transformation[:,3] = translation
-
-        #print(transformation)
-
-        # Pass xyz to Open3D.o3d.geometry.PointCloud and visualize
-        #source = o3d.geometry.PointCloud()
-        #source.points = o3d.utility.Vector3dVector(valve_template[:,:3])
-        #source.transform(transformation)
-
-        #target = o3d.geometry.PointCloud()
-        #target.points = o3d.utility.Vector3dVector(self.predictions_agatston_points[:,:3])
-
-        #threshold = 5.0
-        #print("Apply point-to-point ICP")
-        #reg_p2p = o3d.pipelines.registration.registration_icp(source, target, 
-        #                                                      threshold, transformation,
-        #                                                      o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-        #                                                      o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration = 2000))
-        #print(reg_p2p)
-        #print("Transformation is:")
-        #print(reg_p2p.transformation)
-
-        # if self.fitting_view_mode == True:
-        #     predictions_filter = []
-        #     # Update center and axis if object was moved
-        #     self.C_fit = np.asarray(self.cylinder.GetCenter())
-        #     self.w_fit = np.asarray(self.cylinder.normalAt(48))
-        #     for i,z in enumerate(np.unique(self.predictions_agatston_points[:,2])):
-        #         r_fit = []
-        #         index = np.where((self.predictions_final_points[:,2]>(z-self.spacing[2]/2)) & (self.predictions_final_points[:,2]<(z+self.spacing[2]/2)))
-        #         predictions_final_tmp = self.predictions_final_points.copy()
-        #         predictions_final_tmp = predictions_final_tmp[index]
-        #         predictions_agatston = self.predictions_agatston_points.copy()
-        #         predictions_agatston = predictions_agatston[predictions_agatston[:,2]==z]
-        #         # Estimate the min value by slices for the iso surface
-        #         for point in predictions_final_tmp[:,:3]: #Exclude intensity points
-        #             r_fit.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
-        #         if len(r_fit) > 0 :
-        #             r_fit = np.array(r_fit)
-        #             r_fit = np.min(r_fit)
-        #             if r_fit < 6 : # Workaround to avoid "inside peak"
-        #                 r_fit = 6
-        #             # Estimate the distance of each point for the agatston
-        #             d = []
-        #             for point in predictions_agatston[:,:3]: #Exclude intensity points
-        #                 d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
-        #             d = np.array(d)
-        #             predictions_agatston = predictions_agatston[np.where(d<=r_fit)]
-        #         else : 
-        #             predictions_agatston = np.empty((0,4))
-        #         predictions_filter.append(predictions_agatston)
-        #     predictions_filter = np.concatenate(predictions_filter)
-        #     mask_agatston = self.get_mask_2D(predictions_filter)
-        #     # Show the score in 2D mode
-        #     Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
-        # else : 
-        #     Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask.copy(),agatston=False,area=self.area)
+        
+        if self.fitting_view_mode == True:
+            valve_template_index = dp.closest_element(2*self.r_fit)
+            valve_template = np.load(self.template_directory + "Magna{}_projected.npy".format(valve_template_index))
+            transformation = dp.icp(self.predictions_agatston_points,valve_template,self.threshold,self.w_fit,self.cylinder)
+            valve_template = (transformation[:3,:3]@(valve_template[:,:3].T)).T
+            
+            predictions_filter = []
+            # Update center and axis if object was moved
+            self.C_fit = np.asarray(self.cylinder.GetCenter())
+            self.w_fit = np.asarray(self.cylinder.normalAt(48))
+            for i,z in enumerate(np.unique(self.predictions_agatston_points[:,2])):
+                r_fit = []
+                index = np.where((valve_template[:,2]>(z-self.spacing[2]/2)) & (valve_template[:,2]<(z+self.spacing[2]/2)))
+                predictions_final_tmp = valve_template.copy()
+                predictions_final_tmp = predictions_final_tmp[index]
+                predictions_agatston = self.predictions_agatston_points.copy()
+                predictions_agatston = predictions_agatston[predictions_agatston[:,2]==z]
+                # Estimate the min value by slices for the iso surface
+                for point in predictions_final_tmp[:,:3]: #Exclude intensity points
+                    r_fit.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
+                if len(r_fit) > 0 :
+                    r_fit = np.array(r_fit)
+                    r_fit = np.min(r_fit)
+                    # Estimate the distance of each point for the agatston
+                    d = []
+                    for point in predictions_agatston[:,:3]: #Exclude intensity points
+                        d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
+                    d = np.array(d)
+                    predictions_agatston = predictions_agatston[np.where(d<=r_fit)]
+                else : 
+                    predictions_agatston = np.empty((0,4))
+                predictions_filter.append(predictions_agatston)
+            predictions_filter = np.concatenate(predictions_filter)
+            mask_agatston = self.get_mask_2D(predictions_filter)
+            # Show the score in 2D mode
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
+        else : 
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask.copy(),agatston=False,area=self.area)
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
@@ -589,9 +554,10 @@ class Viewer3D(object):
             self.volume.jittering(True)
         else : 
             self.volume._update(self.img)
-
-        scrange = self.img.GetScalarRange()
-        self.threshold = (2 * scrange[0] + scrange[1]) / 3.0
+        
+        if self.threshold is None:
+            scrange = self.img.GetScalarRange()
+            self.threshold = (2 * scrange[0] + scrange[1]) / 3.0
 
         if self.template:
             points = vtk_to_numpy(self.volume.toPoints().GetMapper().GetInput().GetPoints().GetData())
@@ -602,7 +568,6 @@ class Viewer3D(object):
         return self.volume
     
     def iso_surface(self,data):
-        
         # Check that mask and image have the same size
         self.slices = dp.load_scan(self.data_path[self.frame])
         self.shape = dp.get_pixels_hu(self.slices)
@@ -620,11 +585,9 @@ class Viewer3D(object):
         self.area = self.spacing[0]*self.spacing[1]
         self.dimensions = self.img.imagedata().GetDimensions()
         
-        # High value for the cylinder fitting : 800
-        self.img_z_threshold = self.img.isosurface(800)
-        # Minimum value that we are certain is not calcium : 450
+        # High value for the cylinder fitting
+        self.img_z_threshold = self.img.isosurface(self.threshold)
         self.img = self.img.isosurface()
-        #self.img = self.img.isosurface(450)
                 
         # Get the all points in isosurface
         self.points = self.img.GetMapper().GetInput()
