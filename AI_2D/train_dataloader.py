@@ -32,7 +32,7 @@ import tensorflow as tf
 import sys 
 import yaml
 from aic_models.model_2D import unet
-from aic_models.dataloader import DatasetGenerator,get_filelist,slice_filelist
+from aic_models.dataloader import DatasetGenerator,get_file_list,slice_file_list
 import psutil
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
@@ -114,12 +114,12 @@ if __name__ == "__main__":
     print("Loading the data from the Valve project directory to a TensorFlow data loader ...")
     print("-" * 30)
 
-    trainFiles,trainLabels,validateFiles,validateLabels,testFiles,testLabels = get_filelist(data_path=data_path)
+    trainFiles,trainLabels,validateFiles,validateLabels,testFiles,testLabels = get_file_list(data_path=data_path)
     
     # This is the maximum value one of the files haves. 
     # Required because model built with assumption all file same z slice.
     # Imbalanced True --> reduce number of only 0 layers
-    num_slices_per_scan = slice_filelist(data_path=data_path)
+    num_slices_per_scan = slice_file_list(data_path=data_path)
     ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size,\
                                 crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=True, z_slice_min=-1, z_slice_max=-1)
     ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size,\

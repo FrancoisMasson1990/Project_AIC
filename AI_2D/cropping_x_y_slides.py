@@ -31,7 +31,7 @@ import sys
 import yaml
 from tqdm import tqdm
 import numpy as np
-from aic_models.dataloader import get_filelist
+from aic_models.dataloader import get_file_list
 import psutil
 from aic_models import data_preprocess as dp
 
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     print("Loading the data from the Valve project directory to a TensorFlow data loader ...")
     print("-" * 30)
 
-    imgs,labels,_,_,_,_ = get_filelist(data_path=data_path,split=1.0)
+    imgs,labels,_,_,_,_ = get_file_list(data_path=data_path,split=1.0)
 
     min_x = []
     max_x = []

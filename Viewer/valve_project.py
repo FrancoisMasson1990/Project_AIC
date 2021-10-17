@@ -55,10 +55,8 @@ def main_3D(data,folder_mask,folder_npy,multi_label,model,template,model_version
                       **kwargs)
     viewer.show()
 
-def main_2D(data,folder_mask,model):
-    Viewer2D(data,
-            folder_mask,
-            model)
+def main_2D(data,folder_mask):
+    Viewer2D(data,folder_mask)
 
 if __name__ == '__main__':
 
@@ -82,8 +80,10 @@ if __name__ == '__main__':
     arg.z_slice_min = config.get("z_slice_min",None)
     arg.z_slice_max = config.get("z_slice_max",None)
     arg.threshold = config.get("threshold",None)
+    arg.spacing = config.get("spacing",None)
 
-    kwargs = {"crop_dim":arg.crop_dim,"z_slice_min":arg.z_slice_min,"z_slice_max":arg.z_slice_max,"threshold":arg.threshold}
+    kwargs = {"crop_dim":arg.crop_dim,"z_slice_min":arg.z_slice_min,"z_slice_max":arg.z_slice_max,\
+              "threshold":arg.threshold,"spacing":arg.spacing}
     
     if arg.model_name is not None :
         if arg.model_version == 0: # model_2D_old is a deprecated model generated with tf1 version 
@@ -108,8 +108,7 @@ if __name__ == '__main__':
 
     if arg.labels_2D :
         main_2D(data,
-                arg.folder_mask,
-                model)
+                arg.folder_mask)
     else :
         main_3D(data,
                 arg.folder_mask,

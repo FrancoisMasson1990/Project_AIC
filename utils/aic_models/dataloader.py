@@ -11,7 +11,7 @@ LABEL_CHANNELS = {"labels":{
 	 			  "Magna_valve":2,
 				 }}
     
-def get_filelist(data_path, seed=816, split=0.7):
+def get_file_list(data_path, seed=816, split=0.7):
     """
     Shuffling of the dataset required for the model training/evaluation
     """
@@ -84,7 +84,7 @@ def get_filelist(data_path, seed=816, split=0.7):
 
     return trainFiles,trainLabels,validateFiles,validateLabels,testFiles,testLabels
 
-def slice_filelist(data_path):
+def slice_file_list(data_path):
     """
     Get the max number of slice in the dataset. Required for the Dataloader Generator
     """

@@ -36,9 +36,7 @@ LABEL_CHANNELS: "labels": {
 
 import os
 import numpy as np
-from tqdm import tqdm  # pip install tqdm
-import h5py   # pip install h5py
-import json
+from tqdm import tqdm
 from os.path import expanduser
 import glob
 import pydicom
@@ -50,6 +48,7 @@ import scipy.ndimage
 from sklearn.cluster import DBSCAN
 from collections import Counter
 import open3d as o3d
+from scipy import optimize
 
 ## Main class to visualize data dicom
 import vtk
@@ -471,11 +470,10 @@ def to_points(data,threshold=None,template=False):
 		
 	return points
 
-def z_projection(points,w_fit,name='projection_array.npy'):
+def z_projection(points,w_fit,save=False,name='projection_array.npy'):
 	"""
 		Projection of the points along z_axis using vector of direction of the cylinder axis
 	"""
-	
 	matrix_array = matrix_transformation(w_fit)
 	rot_x = np.array([[1, 0, 0, 0],
                       [0, 0,-1, 0],
@@ -488,18 +486,20 @@ def z_projection(points,w_fit,name='projection_array.npy'):
 
 	matrix = rot_x@matrix_array
 	points = (matrix[:3,:3]@(points[:,:3].T)).T
-	
+
 	if intensity is not None :
 		xyz = points
 		points = np.zeros((xyz.shape[0],4))
 		points[:,:3] = xyz
 		points[:,3] = intensity
 
-	if not name.endswith('.npy'):
-		name += '.npy'
-
-	with open(name, 'wb') as f:
-		np.save(f, points)
+	if save:
+		if not name.endswith('.npy'):
+			name += '.npy'
+		with open(name, 'wb') as f:
+			np.save(f, points)
+	
+	return points
 
 def matrix_transformation(w_fit):
 	"""
@@ -592,3 +592,39 @@ def icp(predictions,template,threshold,w_fit,cylinder,verbose=False,show=False):
 	pcd_source.points = o3d.utility.Vector3dVector(source[:,:3])
 
 	return np.asarray(pcd_source.transform(reg_p2p.transformation).points)
+
+def calc_R(x,y, xc, yc):
+	""" 
+	Calculate the distance of each 2D points 
+	from the center (xc, yc) 
+	"""
+	return np.sqrt((x-xc)**2 + (y-yc)**2)
+
+def f(c, x, y):
+	""" 
+	Calculate the algebraic distance between the data 
+	points and the mean circle centered at c=(xc, yc) 
+	"""
+	Ri = calc_R(x, y, *c)
+	return Ri - Ri.mean()
+
+def leastsq_circle(x,y):
+	"""
+	Coordinates of the barycenter
+	"""
+	x_m = np.mean(x)
+	y_m = np.mean(y)
+	center_estimate = x_m, y_m
+	center, ier = optimize.leastsq(f, center_estimate, args=(x,y))
+	xc, yc = center
+	Ri       = calc_R(x, y, *center)
+	R        = Ri.mean()
+	residu   = np.sum((Ri - R)**2)
+	return xc, yc, R, residu
+
+def euclidean(point1,point2):
+	"""
+	Calculating Euclidean distance using linalg.norm()
+	"""
+	dist = np.linalg.norm(point1 - point2)
+	return dist

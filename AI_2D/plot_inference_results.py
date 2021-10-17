@@ -32,7 +32,7 @@ import tensorflow as tf
 from tensorflow import keras as K
 import sys 
 import yaml
-from aic_models.dataloader import DatasetGenerator,get_filelist,slice_filelist
+from aic_models.dataloader import DatasetGenerator,get_file_list,slice_file_list
 import psutil
 import yaml
 import matplotlib.pyplot as plt
@@ -244,7 +244,7 @@ if __name__ == "__main__":
     print("Loading the data from the Valve project directory to a TensorFlow data loader ...")
     print("-" * 30)
 
-    trainFiles,trainLabels,validateFiles,validateLabels,testFiles,testLabels = get_filelist(data_path=data_path)
+    trainFiles,trainLabels,validateFiles,validateLabels,testFiles,testLabels = get_file_list(data_path=data_path)
      
     unet_model = unet()
     #model_filename = None

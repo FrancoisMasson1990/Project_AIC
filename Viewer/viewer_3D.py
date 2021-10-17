@@ -84,6 +84,7 @@ class Viewer3D(object):
         self.z_slice_min = kwargs.get("z_slice_min",None)
         self.z_slice_max = kwargs.get("z_slice_max",None)
         self.threshold = kwargs.get("threshold",None)
+        self.ratio_spacing = kwargs.get("spacing",None)
 
         '''One render window, multiple viewports'''
         self.rw = vtk.vtkRenderWindow()
@@ -97,6 +98,7 @@ class Viewer3D(object):
         self.gt_view_mode = False
         self.infer_view_mode = False
         self.fitting_view_mode = False
+        self.slicer_2d_view_mode = False
 
         ## Callback to update content
         self.iren.RemoveObservers('KeyPressEvent')
@@ -264,6 +266,18 @@ class Viewer3D(object):
             style = vtk.vtkInteractorStyleImage()
             style.SetInteractionModeToImage3D()
             self.view_mode = not self.view_mode
+            printc("Slicer Mode:", invert=1, c="m")
+            printc(
+                """Press  SHIFT+Left mouse    to rotate the camera for oblique slicing
+                SHIFT+Middle mouse  to slice perpendicularly through the image
+                Left mouse and Drag to modify luminosity and contrast
+                X                   to Reset to sagittal view
+                Y                   to Reset to coronal view
+                Z                   to Reset to axial view
+                R                   to Reset the Window/Levels
+                Q                   to Quit.""",
+                c="m",
+            )
         else :
             style = vtk.vtkInteractorStyleTrackballCamera()
             self.view_mode = not self.view_mode
@@ -423,16 +437,13 @@ class Viewer3D(object):
                 # First prediction : UX visual
                 self.predictions_final = self.img.clone()
                 self.predictions_final = dp.boxe_3d(self.predictions_final,self.vertices_predictions,max_=self.max)
-                # Second prediction : Cylinder fitting on only high value intensity
-                self.predictions_final_threshold = self.img_z_threshold.clone()
-                self.predictions_final_threshold = dp.boxe_3d(self.predictions_final_threshold,self.vertices_predictions,max_=self.max)
-                # Third : Volume prediction
+                # Second prediction : Volume
                 self.predictions_agatston = self.volume.clone()
                 self.predictions_agatston = dp.boxe_3d(self.predictions_agatston,self.vertices_predictions,max_=self.max)
                 # Get the all points in isosurface Mesh/Volume
                 self.predictions_agatston_points = dp.to_points(self.predictions_agatston,template=self.template)            
                 self.predictions_final_points = dp.to_points(self.predictions_final)
-                self.predictions_final_points_threshold = dp.to_points(self.predictions_final_threshold)
+                self.predictions_final_points_threshold = self.predictions_agatston_points[self.predictions_agatston_points[:,3]>self.threshold]
                 
                 # Convex-Hull estimation
                 hull = cvxh(self.predictions_final_points_threshold[:,:3])
@@ -470,9 +481,9 @@ class Viewer3D(object):
         if (self.fitting.status() == "Fitting (Off)") and (self.predictions_final_points_threshold is not None):
             # Cylinder Fit
             print("performing fitting...")
-            self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final_points_threshold,guess_angles=None)
+            self.w_fit, self.C_fit, self.r_fit, self.fit_err = fit(self.predictions_final_points_threshold[:,:3],guess_angles=None)
             print("fitting done !")  
-            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")                   
+            self.cylinder = Cylinder(pos=tuple(self.C_fit),r=self.r_fit,height=20,axis=tuple(self.w_fit),alpha=0.5,c="white")            
             self.actor_fitting_list.append(self.cylinder)
             for render in self.render_list:
                 if render == self.render_score:
@@ -492,43 +503,70 @@ class Viewer3D(object):
             self.fitting_view_mode = False
 
     def buttonfuncAgatston(self):
+        """
+        Estimation of Agatston score by projecting prediction along z axis.
+        For each layer, least_square cylinder fitting and rrremove point
+        outside the fitted cylinder
+        """
         if self.fitting_view_mode == True:
-            valve_template_index = dp.closest_element(2*self.r_fit)
-            valve_template = np.load(self.template_directory + "Magna{}_projected.npy".format(valve_template_index))
-            valve_projected = dp.icp(self.predictions_agatston_points,valve_template,self.threshold,self.w_fit,self.cylinder)
-            
-            predictions_filter = []
             # Update center and axis if object was moved
             self.C_fit = np.asarray(self.cylinder.GetCenter())
             self.w_fit = np.asarray(self.cylinder.normalAt(48))
-            for i,z in enumerate(np.unique(self.predictions_agatston_points[:,2])):
-                r_fit = []
-                index = np.where((valve_projected[:,2]>(z-self.spacing[2]/2)) & (valve_projected[:,2]<(z+self.spacing[2]/2)))
-                predictions_final_tmp = valve_projected.copy()
-                predictions_final_tmp = predictions_final_tmp[index]
-                predictions_agatston = self.predictions_agatston_points.copy()
+
+            # Projection along z axis and centered in (0,0,0)
+            points = dp.z_projection(self.predictions_agatston_points,self.w_fit)
+            x_mean = (np.min(points[:,0]) + np.max(points[:,0]))/2
+            y_mean = (np.min(points[:,1]) + np.max(points[:,1]))/2
+            z_mean = (np.min(points[:,2]) + np.max(points[:,2]))/2
+
+            if points.shape[1] == 4:
+                points -= np.array([x_mean,y_mean,z_mean,0]) #4 dimension due to intensity value
+            else :
+                points -= np.array([x_mean,y_mean,z_mean])
+            # Rounding of layer due to floating error
+            points[:,2] = np.round(points[:,2])
+
+            predictions_agatston_points = points[points[:,3]<self.threshold]
+            predictions_final_points_threshold = points[points[:,3]>=self.threshold]
+
+            # Loop to remove outside points
+            inner_points = []
+            for i,z in enumerate(np.unique(predictions_agatston_points[:,2])): 
+                predictions_final_tmp = predictions_final_points_threshold.copy()
+                predictions_final_tmp = predictions_final_tmp[predictions_final_tmp[:,2]==z]
+                predictions_agatston = predictions_agatston_points.copy()
                 predictions_agatston = predictions_agatston[predictions_agatston[:,2]==z]
-                # Estimate the min value by slices for the iso surface
+                xc, yc,_,_ = dp.leastsq_circle(predictions_final_tmp[:,0], predictions_final_tmp[:,1])
+                circle_center = np.array([xc,yc,z])
+                # Estimate the min value by slices
+                r_fit = []
                 for point in predictions_final_tmp[:,:3]: #Exclude intensity points
-                    r_fit.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
+                    r_fit.append(dp.euclidean(point,circle_center))
                 if len(r_fit) > 0 :
                     r_fit = np.array(r_fit)
-                    r_fit = np.min(r_fit)
+                    # Based on experimental analysis on template valve, residual space along stent
+                    if self.ratio_spacing is not None:
+                        r_fit = np.min(r_fit) - self.ratio_spacing*self.spacing[0]
+                    else:
+                        r_fit = np.min(r_fit)
                     # Estimate the distance of each point for the agatston
                     d = []
                     for point in predictions_agatston[:,:3]: #Exclude intensity points
-                        d.append(dp.point_line_distance(point,self.C_fit,self.w_fit))
+                        d.append(dp.euclidean(point,circle_center))
                     d = np.array(d)
-                    predictions_agatston = predictions_agatston[np.where(d<=r_fit)]
+                    p = predictions_agatston[np.where(d<r_fit)]
                 else : 
-                    predictions_agatston = np.empty((0,4))
-                predictions_filter.append(predictions_agatston)
-            predictions_filter = np.concatenate(predictions_filter)
-            mask_agatston = self.get_mask_2D(predictions_filter)
+                    p = np.empty((0,4))
+                inner_points.append(p)
+            inner_points = np.concatenate(inner_points)
+            mask = np.where(np.all(np.isin(points, inner_points),axis=1))
+            mask_agatston = self.get_mask_2D(self.predictions_agatston_points[mask])
             # Show the score in 2D mode
-            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=mask_agatston,agatston=True,area=self.area)
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,mask_agatston=mask_agatston,\
+                    agatston=True,area=self.area,threshold_max=None)
         else : 
-            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,model="",mask_agatston=self.mask.copy(),agatston=False,area=self.area)
+            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,mask_agatston=self.mask.copy(),\
+                    agatston=False,area=self.area)
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
@@ -611,19 +649,6 @@ class Viewer3D(object):
         self.ia.SetMapper(self.im)
         self.ia.SetProperty(self.ip)
         self.init = False
-
-        printc("Slicer Mode:", invert=1, c="m")
-        printc(
-            """Press  SHIFT+Left mouse    to rotate the camera for oblique slicing
-            SHIFT+Middle mouse  to slice perpendicularly through the image
-            Left mouse and Drag to modify luminosity and contrast
-            X                   to Reset to sagittal view
-            Y                   to Reset to coronal view
-            Z                   to Reset to axial view
-            R                   to Reset the Window/Levels
-            Q                   to Quit.""",
-            c="m",
-        )
         
         return self.ia
 

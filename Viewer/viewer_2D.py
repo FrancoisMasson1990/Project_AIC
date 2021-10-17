@@ -7,9 +7,18 @@ from matplotlib.widgets import Button, Slider
 from natsort import natsorted
 from scipy.ndimage import measurements
 import pickle
+from aic_models import data_preprocess as dp
 
 class Viewer2D(object):
-    def __init__(self, data_path: str, folder_mask: str, model, frame=0, mask_agatston=None, agatston=False, area=None):
+    def __init__(self,
+                data_path: str,
+                folder_mask: str,
+                frame=0, 
+                threshold_min = 130,
+                threshold_max = 450,
+                mask_agatston=None, 
+                agatston=False, 
+                area=None):
 
         self.frame_init = frame
         self.data_path = data_path
@@ -17,62 +26,11 @@ class Viewer2D(object):
         self.mask_agatston = mask_agatston
         self.agatston = agatston
         self.area = area
+        self.threshold_min = threshold_min
+        self.threshold_max = threshold_max
         
         # Callback
         self.draw()
-
-    def load_scan(self, data_path, frame):
-        files = os.listdir(data_path[frame])
-        file_dcm = []
-        for f in files:
-            if f.endswith('.dcm'):
-                file_dcm.append(f)
-
-        slices = [pydicom.read_file(data_path[frame] + '/' + s)
-                  for s in file_dcm]
-        slices.sort(key=lambda x: int(x.InstanceNumber))
-        try:
-            slice_thickness = np.abs(
-                slices[0].ImagePositionPatient[2] - slices[1].ImagePositionPatient[2])
-        except:
-            slice_thickness = np.abs(
-                slices[0].SliceLocation - slices[1].SliceLocation)
-
-        for s in slices:
-            s.SliceThickness = slice_thickness
-
-        return slices
-
-    def get_mask(self, data_path, folder_mask, frame, fig_name):
-        # Label mask
-        label_mask_folder = data_path[frame].split('/')
-        fig_name.suptitle(label_mask_folder[-2], fontsize=12)
-        label_mask_folder = folder_mask + \
-            label_mask_folder[-2] + '/' + label_mask_folder[-1]
-        label = glob(label_mask_folder + '/*.npy')
-        label = natsorted(label)
-
-        if len(label) == 0:
-            return None
-        else:
-            return label
-
-    def get_pixels_hu(self, scans):
-        image = np.stack([s.pixel_array for s in scans])
-        # Convert to int16 (from sometimes int16),
-        # should be possible as values should always be low enough (<32k)
-        image = image.astype(np.int16)
-        # Set outside-of-scan pixels to 1
-        # The intercept is usually -1024, so air is approximately 0
-        image[image == -2000] = 0
-        # Convert to Hounsfield units (HU)
-        intercept = scans[0].RescaleIntercept
-        slope = scans[0].RescaleSlope
-        if slope != 1:
-            image = slope * image.astype(np.float64)
-            image = image.astype(np.int16)
-        image += np.int16(intercept)
-        return np.array(image, dtype=np.int16)
 
     def draw(self):
         
@@ -94,6 +52,8 @@ class Viewer2D(object):
                                 ax1, 
                                 axslice, 
                                 fig, 
+                                threshold_min=self.threshold_min,
+                                threshold_max=self.threshold_max,
                                 mask_agatston=self.mask_agatston, 
                                 agatston=self.agatston, 
                                 area=self.area)
@@ -122,8 +82,20 @@ class Viewer2D(object):
             bsave = Button(axsave, 'Save Image')
             bsave.on_clicked(callback.save_image)
             plt.show()
-class Image_2D(Viewer2D):
-    def __init__(self, data_path, label_folder, frame, axis1, axis2, axislicer, fig, mask_agatston=None, agatston=False, area=None):
+class Image_2D(object):
+    def __init__(self, 
+                data_path, 
+                label_folder, 
+                frame, 
+                axis1, 
+                axis2, 
+                axislicer, 
+                fig,
+                threshold_min = 130,
+                threshold_max = 450,
+                mask_agatston=None, 
+                agatston=False, 
+                area=None):
 
         self.data_path = data_path
         self.label_folder = label_folder
@@ -133,17 +105,21 @@ class Image_2D(Viewer2D):
         self.prediction = None
         self.mask_agatston = mask_agatston
         self.agatston_bool = agatston
-        self.threshold_min = 130
-        self.threshold_max = 450
+        self.threshold_min = threshold_min
+        self.threshold_max = threshold_max
         self.area = area
 
         # Dicom image
         self.slices = None
-        self.slices = self.load_scan(self.data_path, self.frame)
-        self.image = self.get_pixels_hu(self.slices)
+        self.slices = dp.load_scan(self.data_path[self.frame])
+        self.image = dp.get_pixels_hu(self.slices)
         
         if self.label_folder != "":
-            self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
+            folder = os.path.join(self.label_folder,self.data_path[self.frame].split('/')[-2],data_path[frame].split('/')[-1])
+            self.label = dp.load_mask(folder)
+            self.fig_canvas.suptitle(self.data_path[self.frame].split('/')[-2], fontsize=12)
+            if len(self.label) == 0:
+                self.label = None
             self.init_label = True
         else :
             self.label = None
@@ -215,36 +191,46 @@ class Image_2D(Viewer2D):
     def agatston_score_slice(self):
         self.prediction = self.image[self.index].copy()
         self.prediction[self.mask_agatston[self.index] == 0] = 0
-        self.prediction[self.prediction < self.threshold_min] = 0
-        self.prediction[self.prediction > self.threshold_max] = 0
+        if self.threshold_min is not None :
+            self.prediction[self.prediction < self.threshold_min] = 0
+        if self.threshold_max is not None :
+            self.prediction[self.prediction > self.threshold_max] = 0
         self.prediction[self.prediction > 0] = 1
+        area_,lw = self.area_measurements(self.prediction)
+        for j,number_of_pix in enumerate(area_):
+            if j != 0:
+                if number_of_pix*self.area <= 1: #(density higher than 1mm2)
+                    self.prediction[lw==j] = 0
         self.prediction = np.ma.masked_where(self.prediction == 0, self.prediction)
+
+    def area_measurements(self,slice):
+        slice[slice != 0] = 1
+        lw, num = measurements.label(slice)
+        area_ = measurements.sum(slice, lw, index=np.arange(lw.max() + 1))
+        return area_,lw
     
     def agatston_score(self):
         score = 0.0
         for i in range(len(self.image)):
             prediction = self.image[i].copy()
             prediction[self.mask_agatston[i] == 0] = 0
-            prediction[prediction < self.threshold_min] = 0
-            prediction[prediction > self.threshold_max] = 0
-            prediction[prediction > 0] = 1
-            lw, num = measurements.label(prediction)
-            area_ = measurements.sum(prediction, lw, index=np.arange(lw.max() + 1))
+            if self.threshold_min is not None :
+                prediction[prediction < self.threshold_min] = 0
+            if self.threshold_max is not None :
+                prediction[prediction > self.threshold_max] = 0
+            area_,lw = self.area_measurements(prediction)
             for j,number_of_pix in enumerate(area_):
                     if j != 0 :
-                        prediction_max = np.max(self.image[i][lw==j])
-                        if number_of_pix*self.area > 1 : #(density higher than 1mm2)
-                            if (prediction_max >= 130) and (prediction_max < 200):
-                                score += 1*self.area*number_of_pix
-                            elif (prediction_max >= 200) and (prediction_max < 300):
-                                score += 2*self.area*number_of_pix
-                            elif (prediction_max >= 300) and (prediction_max < 400):
-                                score += 3*self.area*number_of_pix
-                            elif (prediction_max >= 400):
-                                score += 4*self.area*number_of_pix
-                            else : 
-                                score += 0*self.area
+                        if number_of_pix*self.area <= 1: #(density higher than 1mm2)
+                            prediction[lw==j] = 0
 
+            prediction[np.logical_and(prediction >= 130, prediction < 200)] = 1
+            prediction[np.logical_and(prediction >= 200, prediction < 300)] = 2
+            prediction[np.logical_and(prediction >= 300, prediction < 400)] = 3
+            prediction[prediction>400] = 4
+
+            score += self.area*np.sum(prediction)         
+        
         return score 
 
     def next(self, event):
