@@ -531,31 +531,43 @@ class Viewer3D(object):
 
             # Loop to remove outside points
             inner_points = []
+            # Hack to avoid first and last layer where few points lead to wrong circle estimation
+            first_slices = int(np.percentile(np.arange(len(np.unique(predictions_agatston_points[:,2]))),20))
+            last_slices = int(np.percentile(np.arange(len(np.unique(predictions_agatston_points[:,2]))),80))
             for i,z in enumerate(np.unique(predictions_agatston_points[:,2])): 
                 predictions_final_tmp = predictions_final_points_threshold.copy()
                 predictions_final_tmp = predictions_final_tmp[predictions_final_tmp[:,2]==z]
                 predictions_agatston = predictions_agatston_points.copy()
                 predictions_agatston = predictions_agatston[predictions_agatston[:,2]==z]
-                xc, yc,_,_ = dp.leastsq_circle(predictions_final_tmp[:,0], predictions_final_tmp[:,1])
-                circle_center = np.array([xc,yc,z])
-                # Estimate the min value by slices
-                r_fit = []
-                for point in predictions_final_tmp[:,:3]: #Exclude intensity points
-                    r_fit.append(dp.euclidean(point,circle_center))
-                if len(r_fit) > 0 :
-                    r_fit = np.array(r_fit)
-                    # Based on experimental analysis on template valve, residual space along stent
-                    if self.ratio_spacing is not None:
-                        r_fit = np.min(r_fit) - self.ratio_spacing*self.spacing[0]
-                    else:
-                        r_fit = np.min(r_fit)
-                    # Estimate the distance of each point for the agatston
-                    d = []
-                    for point in predictions_agatston[:,:3]: #Exclude intensity points
-                        d.append(dp.euclidean(point,circle_center))
-                    d = np.array(d)
-                    p = predictions_agatston[np.where(d<r_fit)]
-                else : 
+                if predictions_final_tmp.shape[0] > 2:
+                    xc, yc,_,_ = dp.leastsq_circle(predictions_final_tmp[:,0], predictions_final_tmp[:,1])
+                    circle_center = np.array([xc,yc,z])
+                    # Estimate the min value by slices
+                    r_fit = []
+                    for point in predictions_final_tmp[:,:3]: #Exclude intensity points
+                        r_fit.append(dp.euclidean(point,circle_center))
+                    if len(r_fit) > 0 :
+                        r_fit = np.array(r_fit)
+                        # Based on experimental analysis on template valve, residual space along stent
+                        if self.ratio_spacing is not None:
+                            r_fit = np.min(r_fit) - self.ratio_spacing*self.spacing[0]
+                        else:
+                            r_fit = np.min(r_fit)
+                        # Estimate the distance of each point for the agatston
+                        d = []
+                        for point in predictions_agatston[:,:3]: #Exclude intensity points
+                            d.append(dp.euclidean(point,circle_center))
+                        d = np.array(d)
+                        if i < first_slices or i > last_slices:
+                            if predictions_final_tmp.shape[0] > 30:
+                                p = predictions_agatston[np.where(d<r_fit)]
+                            else :
+                                p = np.empty((0,4))
+                        else :
+                            p = predictions_agatston[np.where(d<r_fit)]
+                    else : 
+                        p = np.empty((0,4))
+                else :
                     p = np.empty((0,4))
                 inner_points.append(p)
             inner_points = np.concatenate(inner_points)
@@ -714,7 +726,7 @@ class Viewer3D(object):
         os.makedirs(os.path.join(directory,self.title),exist_ok = True) ## Make folder recursively
 
         with open(os.path.join(directory,self.title) + '/' + 'volume_label.npy', 'wb') as f:
-            np.save(f,numpy_nodes)
+           np.save(f,numpy_nodes)
 
         numpy_nodes[:,0] = np.around(numpy_nodes[:,0]/self.spacing[0])
         numpy_nodes[:,1] = np.around(numpy_nodes[:,1]/self.spacing[1])

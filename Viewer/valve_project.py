@@ -70,8 +70,6 @@ if __name__ == '__main__':
 
     arg.data_path = config.get("data_path",None)
     arg.labels_2D = config.get("labels_2D",None)
-    arg.folder_mask = config.get("folder_mask",None)
-    arg.npy_folder = config.get("npy_folder",None)
     arg.multi_label = config.get("multi_label",None)
     arg.model_name = config.get("model_name",None)
     arg.model_version = config.get("model_version",None)
@@ -98,21 +96,25 @@ if __name__ == '__main__':
         print("Model load successfully")
         print("-" * 30)
 
-    sub_folders = os.listdir(arg.data_path)
+    data_path = os.path.join(arg.data_path,"datasets_dcm")
+    surface_label_path = os.path.join(arg.data_path,"labels_2d_npy")
+    volume_label_path = os.path.join(arg.data_path,"labels_3d_npy")
+
+    sub_folders = os.listdir(data_path)
     data = []
     for sub_folder in sub_folders:
-        root = os.path.join(arg.data_path,sub_folder)
+        root = os.path.join(data_path,sub_folder)
         sub_ = os.listdir(root)
         for sub in sub_ :
             data.append(os.path.join(root,sub))
 
     if arg.labels_2D :
         main_2D(data,
-                arg.folder_mask)
+                surface_label_path)
     else :
         main_3D(data,
-                arg.folder_mask,
-                arg.npy_folder,
+                surface_label_path,
+                volume_label_path,
                 arg.multi_label,
                 model,
                 arg.template,

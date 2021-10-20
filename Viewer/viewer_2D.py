@@ -183,7 +183,7 @@ class Image_2D(object):
         save_predict["score"] = self.score
         save_predict["image"] = self.image
         save_predict["mask_agatston"] = self.mask_agatston
-        folder =  os.path.expanduser("~") + "/Project_AIC/data_folder/data_prediction/" + save_predict["data_path"]
+        folder =  self.data_path[self.frame].replace("datasets_dcm","predictions")
         os.makedirs(folder,exist_ok=True)
         with open(folder + "/prediction.pkl",'wb') as f:
             pickle.dump(save_predict,f)
