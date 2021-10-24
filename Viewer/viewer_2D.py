@@ -182,6 +182,7 @@ class Image_2D(object):
         save_predict["data_path"] = "/".join([self.data_path[self.frame].split("/")[-2],self.data_path[self.frame].split("/")[-1]])
         save_predict["score"] = self.score
         save_predict["image"] = self.image
+        save_predict["area"] = self.area
         save_predict["mask_agatston"] = self.mask_agatston
         folder =  self.data_path[self.frame].replace("datasets_dcm","predictions")
         os.makedirs(folder,exist_ok=True)
@@ -203,10 +204,10 @@ class Image_2D(object):
                     self.prediction[lw==j] = 0
         self.prediction = np.ma.masked_where(self.prediction == 0, self.prediction)
 
-    def area_measurements(self,slice):
-        slice[slice != 0] = 1
-        lw, num = measurements.label(slice)
-        area_ = measurements.sum(slice, lw, index=np.arange(lw.max() + 1))
+    def area_measurements(self,slice_):
+        slice_[slice_ != 0] = 1
+        lw, num = measurements.label(slice_)
+        area_ = measurements.sum(slice_, lw, index=np.arange(lw.max() + 1))
         return area_,lw
     
     def agatston_score(self):
