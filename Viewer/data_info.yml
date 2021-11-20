@@ -1,4 +1,4 @@
-data_path : "/home/francoismasson/Project_AIC/valve_baseline_folder"
+data_path : "/home/francoismasson/Project_AIC/valve_one_folder"
 template : False
 labels_2D : False
 multi_label : True

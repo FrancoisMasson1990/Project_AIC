@@ -150,6 +150,7 @@ def plot_results(imgs,labels,model,folder,name,model_version):
         imgs = np.expand_dims(imgs,-1)
 
     # label processing
+    labels = dp.load_mask(labels)
     labels = dp.preprocess_label(labels)
     if crop_dim != -1:
         labels = dp.crop_dim(labels,crop_dim=crop_dim)

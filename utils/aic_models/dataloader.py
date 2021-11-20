@@ -234,7 +234,7 @@ class DatasetGenerator(Sequence):
                 
                 image_filename = self.filenames[idx]
                 label_filename = self.labelnames[idx]
-                
+                                
                 label = dp.load_mask(label_filename)
                 label = dp.preprocess_label(label)
 

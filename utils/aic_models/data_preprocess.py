@@ -152,12 +152,10 @@ def preprocess_label_v1(msk,intel_model=False,resize=-1):
 
 	return msk,np.array(index)
 
-def preprocess_label(label_filename):
+def preprocess_label(label):
     """
     Label attribution. Please refer LABEL_CHANNEL for the mask attribution
     """
-
-    label = load_mask(label_filename)
 
     ## Stack the loaded npy files
     label = [np.load(label[i]) for i in range(len(label))]
@@ -243,7 +241,7 @@ def load_scan(path):
 	
 	return slices
 
-def load_mask(path):	
+def load_mask(path):
 	mask = glob.glob(path + '/*.npy')
 	mask = natsorted(mask)
 
