@@ -366,6 +366,7 @@ class Viewer3D(object):
                 idx = os.path.join(self.data_path[self.frame])
                 img = dp.load_scan(idx)
                 img = dp.get_pixels_hu(img)
+                crop_values = None
                 if self.model_version == 0:  # old version, input images were normalized for each slice
                     img = dp.preprocess_inputs(img)
                 elif self.model_version == 1: # new version, input images were normalized according to z
@@ -418,21 +419,24 @@ class Viewer3D(object):
                     else :
                         padding[:,xc:xc+img.shape[1], yc:yc+img.shape[2]] = predictions
                     predictions = padding
+                    crop_values = [xc*self.spacing[0],xc+img.shape[1]*self.spacing[0],
+                                   yc*self.spacing[1],yc+img.shape[2]*self.spacing[1]]
 
                 predictions,_ = dp.resample(predictions,[self.spacing[0],self.spacing[1]],self.spacing[2],[1,1,1])
                 vertices,_ = dp.make_mesh(predictions,-1)
-                
+                                
                 # Clustering
                 self.vertices_predictions = dp.clustering(vertices,
                                                           self.model_version,
                                                           self.center,
                                                           self.all_numpy_nodes,
                                                           ratio=0.4,
-                                                          threshold=3800,
+                                                          threshold=4000,
                                                           max_=self.max,
                                                           dimensions = self.dimensions,
-                                                          spacings = self.spacing)
-
+                                                          spacings = self.spacing,
+                                                          crop_values = crop_values)
+               
                 # Volume Cropping
                 # First prediction : UX visual
                 self.predictions_final = self.img.clone()

@@ -177,6 +177,9 @@ def preprocess_img(img):
 	# threshold = (2 * scrange[0] + scrange[1]) / 3.0
 	# 500 or 1000 is a good threshold based on observation for Magna valve
 	img[img < 0] = 0
+	# Read Intensity normalization in medical images from
+	# https://theaisummer.com/medical-image-processing/
+	# Scale applied plays a crucial role in training
 	img[img > 1000] = 1000
 	return (img - img.mean()) / img.std()
 
@@ -354,7 +357,8 @@ def resample(image, pixelspacing, slicethickness, new_spacing=[1,1,1]):
     return image, new_spacing
 
 def clustering(data,model_version,center_volume,gt_data,ratio,\
-			   threshold=3800,eps=2.5,min_samples=2,max_=None,spacings=None,dimensions=None):
+			   threshold=3800,eps=2.5,min_samples=2,max_=None,
+      		   spacings=None,dimensions=None,crop_values=None):
 
 	index = []
 	if max_ is None:
@@ -379,10 +383,16 @@ def clustering(data,model_version,center_volume,gt_data,ratio,\
 		
 		elif model_version == 1 :
 			# Crop border of images
-			x_min = float(spacings[0])
-			x_max = float(0.95*spacings[0]*dimensions[0])
-			y_min = float(spacings[1])
-			y_max = float(0.95*spacings[1]*dimensions[1])
+			if crop_values is not None:
+				x_min = crop_values[0]
+				x_max = crop_values[1]
+				y_min = crop_values[2]
+				y_max = crop_values[3]
+			else :
+				x_min = float(spacings[0])
+				x_max = float(0.95*spacings[0]*dimensions[0])
+				y_min = float(spacings[1])
+				y_max = float(0.95*spacings[1]*dimensions[1])
 			z_min = float(spacings[2])
 			z_max = float(0.95*spacings[2]*dimensions[2])
 			index = np.where((data[:,0]>x_min) & (data[:,0]<x_max) & (data[:,1]>y_min) & (data[:,1]<y_max) & (data[:,2]>z_min) & (data[:,2]<z_max))
@@ -394,9 +404,10 @@ def clustering(data,model_version,center_volume,gt_data,ratio,\
 
 	model = DBSCAN(eps=eps, min_samples=min_samples)
 	model.fit_predict(data)
+
 	print("number of cluster found: {}".format(len(set(model.labels_))))
 	index = Counter(model.labels_).most_common()
-
+	
 	j = 0
 	while index[j][1] > threshold : # Arbitrary values
 		j += 1
