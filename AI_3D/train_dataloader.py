@@ -31,9 +31,10 @@ import os
 import tensorflow as tf
 import sys 
 import yaml
-from aic_models.model_2D import unet
+from aic_models.model_3D import unet
 from aic_models.dataloader import DatasetGenerator,get_file_list,slice_file_list
 import psutil
+
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 # If hyperthreading is enabled, then use
@@ -134,7 +135,7 @@ if __name__ == "__main__":
     """
     Step 2: Define the model
     """
-
+    exit()
     unet_model = unet(channels_first=channels_first,
                       fms=featuremaps,
                       output_path=output_path,
