@@ -52,12 +52,20 @@ def get_sheet_cells(df,sheet):
     df["score"] = sheet.col_values(7)
     return df
 
-def update_sheet_cells(df, sheet, col="G"):
+def update_sheet_cells(df, sheet, col="G", header=4):
+    
+    start = col+str(header)
+    end = col+str(len(df))
+    cell_list = sheet.range(start+":"+end)
+    
     # Write the array to worksheet
+    l = 0
     for index,row in tqdm(df.iterrows(),total=len(df)):
-        value = row["score"]
-        if index >= 3:   
-            sheet.update(col+str(index+1), value)
+        if index >= header-1:   
+            cell_list[l].value = row["score"]
+            l += 1
+
+    sheet.update_cells(cell_list)
 
 if __name__ == '__main__':
   
@@ -65,7 +73,14 @@ if __name__ == '__main__':
     sheet = get_sheet(url)
     df = pd.DataFrame({}) 
     df = get_sheet_cells(df, sheet)
-    
+    df.score = "-"
+    folder_datasets = []
+    folder_dataset = "/home/francoismasson/Project_AIC/valve_patient_folder/datasets_dcm/"
+    for dir in natsorted(os.listdir(folder_dataset)):
+        patient = dir.split("/")[0]
+        patient = ("-").join(patient.split("-")[:2])
+        df.score = np.where(df.patient == patient,'Failed',df.score)
+
     folder_prediction = "/home/francoismasson/Project_AIC/valve_patient_folder/predictions/"
     for dir in natsorted(os.listdir(folder_prediction)):
         for sub_dir in natsorted(os.listdir(os.path.join(folder_prediction,dir))):
