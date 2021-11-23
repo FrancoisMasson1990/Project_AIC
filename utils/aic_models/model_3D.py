@@ -18,6 +18,7 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
+import os
 import tensorflow as tf
 from tensorflow import keras as K
 
@@ -56,7 +57,7 @@ class unet(object):
         self.optimizer = K.optimizers.Adam(lr=self.learning_rate)
 
         self.metrics= [self.dice_coef, self.soft_dice_coef, "accuracy",
-                 self.sensitivity, self.specificity]
+                       self.sensitivity, self.specificity]
 
         self.custom_objects = {
             "combined_dice_ce_loss": self.combined_dice_ce_loss,
@@ -65,9 +66,7 @@ class unet(object):
             "soft_dice_coef": self.soft_dice_coef,
             "sensitivity": self.sensitivity,
             "specificity": self.specificity}
-
-        self.model = self.unet_3d()
-
+        
     def dice_coef(self, target, prediction, axis=(1, 2, 3), smooth=0.01):
         """
         Sorenson Dice
@@ -125,6 +124,30 @@ class unet(object):
             (1-weight)*K.losses.binary_crossentropy(target, prediction)
 
 
+    def sensitivity(self, target, prediction, axis=(1, 2, 3), smooth=0.0001):
+        """
+        Sensitivity
+        """
+        prediction = tf.round(prediction)
+
+        intersection = tf.reduce_sum(prediction * target, axis=axis)
+        coef = (intersection + smooth) / (tf.reduce_sum(target,
+                                                        axis=axis) + smooth)
+        return tf.reduce_mean(coef)
+
+
+    def specificity(self, target, prediction, axis=(1, 2, 3), smooth=0.0001):
+        """
+        Specificity
+        """
+        prediction = tf.round(prediction)
+
+        intersection = tf.reduce_sum(prediction * target, axis=axis)
+        coef = (intersection + smooth) / (tf.reduce_sum(prediction,
+                                                        axis=axis) + smooth)
+        return tf.reduce_mean(coef)
+    
+    
     def unet_3d(self):
         """
         3D U-Net
@@ -239,26 +262,74 @@ class unet(object):
 
         return model
 
-
-    def sensitivity(self, target, prediction, axis=(1, 2, 3), smooth=0.0001):
+    def get_callbacks(self):
         """
-        Sensitivity
+        Define any callbacks for the training
         """
-        prediction = tf.round(prediction)
 
-        intersection = tf.reduce_sum(prediction * target, axis=axis)
-        coef = (intersection + smooth) / (tf.reduce_sum(target,
-                                                        axis=axis) + smooth)
-        return tf.reduce_mean(coef)
+        model_filename = os.path.join(
+            self.output_path, self.inference_filename)
+
+        print("Writing model to '{}'".format(model_filename))
+
+        # Save model whenever we get better validation loss
+        model_checkpoint = K.callbacks.ModelCheckpoint(model_filename,
+                                                       verbose=1,
+                                                       monitor="val_loss",
+                                                       save_best_only=True)
+
+        directoryName = "unet_block{}_inter{}_intra{}".format(self.blocktime,
+                                                              self.num_threads,
+                                                              self.num_inter_threads)
+
+        # Tensorboard callbacks
+        if (self.use_upsampling):
+            tensorboard_filename = os.path.join(self.output_path,
+                                                "keras_tensorboard_upsampling/{}".format(
+                                                    directoryName))
+        else:
+            tensorboard_filename = os.path.join(self.output_path,
+                                                "keras_tensorboard_transposed/{}".format(
+                                                    directoryName))
+
+        tensorboard_checkpoint = K.callbacks.TensorBoard(
+            log_dir=tensorboard_filename,
+            write_graph=True, write_images=True)
+
+        early_stopping = K.callbacks.EarlyStopping(patience=5, restore_best_weights=True)
+
+        return model_filename, [model_checkpoint, early_stopping, tensorboard_checkpoint]
 
 
-    def specificity(self, target, prediction, axis=(1, 2, 3), smooth=0.0001):
+    def evaluate_model(self, model_filename, ds_test):
         """
-        Specificity
+        Evaluate the best model on the validation dataset
         """
-        prediction = tf.round(prediction)
 
-        intersection = tf.reduce_sum(prediction * target, axis=axis)
-        coef = (intersection + smooth) / (tf.reduce_sum(prediction,
-                                                        axis=axis) + smooth)
-        return tf.reduce_mean(coef)
+        model = K.models.load_model(
+            model_filename, custom_objects=self.custom_objects)
+
+        print("Evaluating model on test dataset. Please wait...")
+        metrics = model.evaluate(
+            ds_test,
+            verbose=1)
+
+        for idx, metric in enumerate(metrics):
+            print("Test dataset {} = {:.4f}".format(
+                model.metrics_names[idx], metric))
+
+
+    def create_model(self):
+        """
+        If you have other models, you can try them here
+        """
+        return self.unet_3d()
+
+
+    def load_model(self, model_filename):
+        """
+        Load a model from Keras file
+        """
+
+        return K.models.load_model(model_filename, custom_objects=self.custom_objects)
+

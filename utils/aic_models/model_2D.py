@@ -200,10 +200,6 @@ class unet(object):
 
         # You can make the network work on variable input height and width
         # if you pass None as the height and width
-#        if self.channels_first:
-#            self.input_shape = [num_chan_in, None, None]
-#        else:
-#            self.input_shape = [None, None, num_chan_in]
 
         self.input_shape = imgs_shape
 

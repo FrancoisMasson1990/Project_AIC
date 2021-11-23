@@ -55,9 +55,9 @@ def get_file_list(data_path, seed=816, split=0.7):
     validateList = otherList[:otherIdx]
     testList = otherList[otherIdx:]
 
-    #trainList = [0]
-    #validateList = [1]
-    #testList = [2]
+    trainList = [0]
+    validateList = [1]
+    testList = [2]
     #trainList = validateList = testList
     
     trainFiles = []

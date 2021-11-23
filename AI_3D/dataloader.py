@@ -18,19 +18,14 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
-import nibabel as nib
 import json
-import ntpath
 import os
 import numpy as np
 from argparser import args
 
 TRAIN_TESTVAL_SEED = 816
 
-if args.keras_api:
-    import keras as K
-else:
-    from tensorflow import keras as K
+from tensorflow import keras as K
 
 class DataGenerator(K.utils.Sequence):
     """

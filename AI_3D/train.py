@@ -16,16 +16,13 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from dataloader import DataGenerator
-from model import unet
+#from dataloader import DataGenerator
+#from model import unet
 import datetime
 import os
 import tensorflow as tf
 from argparser import args
-if args.keras_api:
-    import keras as K
-else:
-    from tensorflow import keras as K
+from tensorflow import keras as K
 
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
@@ -53,12 +50,6 @@ os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
 # os.system("lscpu")
 start_time = datetime.datetime.now()
 print("Started script on {}".format(start_time))
-
-#os.system("uname -a")
-print("TensorFlow version: {}".format(tf.__version__))
-from tensorflow.python import pywrap_tensorflow
-print("Intel MKL-DNN is enabled = {}".format(pywrap_tensorflow.IsMklEnabled()))
-
 print("Keras API version: {}".format(K.__version__))
 
 def save_frozen_model(model_filename, input_shape):
@@ -123,7 +114,7 @@ CONFIG = tf.ConfigProto(
 SESS = tf.Session(config=CONFIG)
 
 K.backend.set_session(SESS)
-
+exit()
 unet_model = unet(use_upsampling=args.use_upsampling,
                   learning_rate=args.lr,
                   n_cl_in=args.number_input_channels,

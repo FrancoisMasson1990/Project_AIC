@@ -32,7 +32,11 @@ import tensorflow as tf
 import sys 
 import yaml
 from aic_models.model_3D import unet
-from aic_models.dataloader import DatasetGenerator,get_file_list,slice_file_list
+# From the 2D
+#from aic_models.dataloader import DatasetGenerator,
+from aic_models.dataloader import get_file_list,slice_file_list
+#from the 3D
+from dataloader import DataGenerator
 import psutil
 
 
@@ -116,17 +120,28 @@ if __name__ == "__main__":
     print("-" * 30)
 
     trainFiles,trainLabels,validateFiles,validateLabels,testFiles,testLabels = get_file_list(data_path=data_path)
+    # ds_train = DataGenerator("train",     # ["train", "validate", "test"]
+    #                          data_path,    # File path for data
+    #                          train_test_split=0.85,  # Train test split
+    #                          validate_test_split=0.5,  # Validation/test split
+    #                          batch_size=8,  # batch size
+    #                          dim=(128, 128, 128),  # Dimension of images/masks
+    #                          n_in_channels=1,  # Number of channels in image
+    #                          n_out_channels=1,  # Number of channels in mask
+    #                          shuffle=True,  # Shuffle list after each epoch
+    #                          augment=False,   # Augment images
+    #                          seed=816)
     
     # This is the maximum value one of the files haves. 
     # Required because model built with assumption all file same z slice.
     # Imbalanced True --> reduce number of only 0 layers
-    num_slices_per_scan = slice_file_list(data_path=data_path)
-    ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size,\
-                                crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=True, z_slice_min=-1, z_slice_max=-1)
-    ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size,\
-                                crop_dim=[crop_dim,crop_dim], augment=False, imbalanced=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
-    ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size,\
-                                crop_dim=[crop_dim,crop_dim], augment=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
+    # num_slices_per_scan = slice_file_list(data_path=data_path)
+    # ds_train = DatasetGenerator(trainFiles,trainLabels,num_slices_per_scan,batch_size=batch_size,\
+    #                             crop_dim=[crop_dim,crop_dim], augment=True,imbalanced=True, z_slice_min=-1, z_slice_max=-1)
+    # ds_validation = DatasetGenerator(validateFiles,validateLabels,num_slices_per_scan,batch_size=batch_size,\
+    #                             crop_dim=[crop_dim,crop_dim], augment=False, imbalanced=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
+    # ds_test = DatasetGenerator(testFiles,testLabels,num_slices_per_scan,batch_size=batch_size,\
+    #                             crop_dim=[crop_dim,crop_dim], augment=False, z_slice_min=z_slice_min, z_slice_max=z_slice_max)
        
     print("-" * 30)
     print("Creating and compiling model ...")
@@ -135,23 +150,21 @@ if __name__ == "__main__":
     """
     Step 2: Define the model
     """
-    exit()
-    unet_model = unet(channels_first=channels_first,
-                      fms=featuremaps,
-                      output_path=output_path,
-                      inference_filename=inference_filename,
-                      learning_rate=learning_rate,
-                      weight_dice_loss=weight_dice_loss,
-                      use_upsampling=use_upsampling,
-                      use_dropout=use_dropout,
-                      print_model=print_model,
-                      blocktime=blocktime,
-                      num_threads=num_threads,
-                      num_inter_threads=num_inter_threads)
+    
+    unet_model = unet(use_upsampling=False, 
+                      learning_rate=0.001,
+                      n_cl_in=1, 
+                      n_cl_out=1, 
+                      feature_maps = 16,
+                      dropout=0.2, print_summary=True,
+                      channels_last = True)
+    
 
-    model = unet_model.create_model(ds_train.get_input_shape(), ds_train.get_output_shape())
+    model = unet_model.create_model()
     model_filename, model_callbacks = unet_model.get_callbacks()
 
+    exit()
+    
     """
     Step 3: Train the model on the data
     """
