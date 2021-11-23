@@ -175,7 +175,7 @@ class unet(object):
             input_shape = [self.n_cl_in, None, None, None]
 
         inputs = K.layers.Input(shape=input_shape,
-                                name="MRImages")
+                                name="DicomImages")
 
         params = dict(kernel_size=(3, 3, 3), activation=None,
                       padding="same", data_format=self.data_format,
@@ -255,7 +255,7 @@ class unet(object):
                                      data_format=self.data_format,
                                      activation="sigmoid")(convOut)
 
-        model = K.models.Model(inputs=[inputs], outputs=[prediction])
+        model = K.models.Model(inputs=[inputs], outputs=[prediction],name="3DUNet_Valve_Challenge")
 
         if self.print_summary:
             model.summary()
