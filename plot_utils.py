@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 
-def plot_plotly(m, fcst, uncertainty=True, plot_cap=True, trend=False, changepoints=False,
+def plot_forecast(m, fcst, uncertainty=True, plot_cap=True, trend=False, changepoints=False,
                 changepoints_threshold=0.01, xlabel='ds', ylabel='y', figsize=(900, 600)):
     """Plot the Prophet forecast with Plotly offline.
 
