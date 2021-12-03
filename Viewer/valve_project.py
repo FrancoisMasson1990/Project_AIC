@@ -95,10 +95,17 @@ if __name__ == '__main__':
         print("-" * 30)
         print("Model load successfully")
         print("-" * 30)
-
-    data_path = os.path.join(arg.data_path,"datasets_dcm")
-    surface_label_path = os.path.join(arg.data_path,"labels_2d_npy")
-    volume_label_path = os.path.join(arg.data_path,"labels_3d_npy")
+    else:
+        model = None
+    
+    if os.name == "posix": #Linux os
+        data_path = os.path.join(arg.data_path,"datasets_dcm")
+        surface_label_path = os.path.join(arg.data_path,"labels_2d_npy")
+        volume_label_path = os.path.join(arg.data_path,"labels_3d_npy")
+    elif os.name == "nt": # Windows os
+        data_path = os.path.join(arg.data_path,"AIC")
+        surface_label_path = os.path.join(arg.data_path,"labels_2d_npy")
+        volume_label_path = os.path.join(arg.data_path,"labels_3d_npy")
 
     sub_folders = os.listdir(data_path)
     data = []
