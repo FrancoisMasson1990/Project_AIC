@@ -612,7 +612,7 @@ class Viewer3D(object):
             self.threshold = (2 * scrange[0] + scrange[1]) / 3.0
 
         if self.template:
-            points = vtk_to_numpy(self.volume.toPoints().GetMapper().GetInput().GetPoints().GetData())
+            points = vtk_to_numpy(self.volume.topoints().GetMapper().GetInput().GetPoints().GetData())
             intensity = vtk_to_numpy(self.volume.imagedata().GetPointData().GetScalars()) #Pixel value intensity
             index = np.argmax(intensity)
             self.max = points[index]
