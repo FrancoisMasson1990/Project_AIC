@@ -103,7 +103,7 @@ class unet(object):
         else :
             self.loss = self.dice_coef_loss
         
-        self.optimizer = K.optimizers.Adam(lr=self.learningrate)
+        self.optimizer = K.optimizers.Adam(learning_rate=self.learningrate)
         
         self.custom_objects = {
             "combined_dice_ce_loss": self.combined_dice_ce_loss,
