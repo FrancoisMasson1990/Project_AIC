@@ -1,10 +1,7 @@
 import os
 import numpy as np
-import pydicom
 import matplotlib.pyplot as plt
-from glob import glob
 from matplotlib.widgets import Button, Slider
-from natsort import natsorted
 from scipy.ndimage import measurements
 import pickle
 from aic_models import data_preprocess as dp
