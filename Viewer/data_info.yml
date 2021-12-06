@@ -1,4 +1,4 @@
-data_path : "R:/Imagerie-Data_Labo/Gr_ClavelMA_img"
+data_path : "R:/Imagerie-Data_Labo/Gr_ClavelMA_img/AIC"
 #data_path : "/home/francoismasson/Project_AIC/valve_patient_folder"
 template : False
 labels_2D : False
