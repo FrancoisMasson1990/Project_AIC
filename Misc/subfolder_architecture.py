@@ -64,7 +64,8 @@ if __name__ == '__main__':
     #             shutil.move(f, target_dir)
     
     # Following section remove -CT1 in folder and files if present
-    data_path = "/home/francoismasson/Project_AIC/valve_patient_folder"
+    #data_path = "/home/francoismasson/Project_AIC/valve_patient_folder"
+    data_path = "R:/Imagerie-Data_Labo/Gr_ClavelMA_img/AIC"
     surface_label_path = os.path.join(data_path,"labels_2d_npy")
     volume_label_path = os.path.join(data_path,"labels_3d_npy")
     predictions_path = os.path.join(data_path,"predictions")
@@ -94,5 +95,6 @@ if __name__ == '__main__':
                 #close input and output files
                 fin.close()
                 fout.close()
-                os.rename(tmp,file_name[0])
+                shutil.move(tmp,file_name[0])
+
                 
