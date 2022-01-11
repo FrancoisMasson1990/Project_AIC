@@ -236,15 +236,16 @@ class Image_2D(object):
             self.frame = len(self.data_path)-1
         else:
             self.frame += 1
-        self.slices = self.load_scan(self.data_path, self.frame)
-        self.image = self.get_pixels_hu(self.slices)
-        
+        self.slices = dp.load_scan(self.data_path[self.frame])
+        self.image = dp.get_pixels_hu(self.slices)
+
         if self.label is not None:
-            self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
+            self.label = dp.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
 
         self.slicer.valmax = len(self.image)-1
         self.slicer.valinit = len(self.image)//2
         self.slicer.reset()
+        self.fig_canvas.suptitle(self.data_path[self.frame].split('/')[-2], fontsize=12)
 
     def prev(self, event):
         if self.frame == 0:
@@ -252,15 +253,16 @@ class Image_2D(object):
         else:
             self.frame -= 1
 
-        self.slices = self.load_scan(self.data_path, self.frame)
-        self.image = self.get_pixels_hu(self.slices)
+        self.slices = dp.load_scan(self.data_path[self.frame])
+        self.image = dp.get_pixels_hu(self.slices)
 
         if self.label is not None:
-            self.label = self.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
+            self.label = dp.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
         
         self.slicer.valmax = len(self.image)-1
         self.slicer.valinit = len(self.image)//2
         self.slicer.reset()
+        self.fig_canvas.suptitle(self.data_path[self.frame].split('/')[-2], fontsize=12)
 
     def update(self, val):
         self.index = int(self.slicer.val)
