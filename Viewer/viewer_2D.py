@@ -242,9 +242,8 @@ class Image_2D(object):
         if self.label is not None:
             self.label = dp.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
 
-        self.slicer.valmax = len(self.image)-1
-        self.slicer.valinit = len(self.image)//2
-        self.slicer.reset()
+        self.axislicer.clear()
+        self.slicer = Slider(self.axislicer, 'Image', 0, len(self.image)-1, valinit=len(self.image)//2, valstep=1)
         self.fig_canvas.suptitle(self.data_path[self.frame].split('/')[-2], fontsize=12)
 
     def prev(self, event):
@@ -259,9 +258,8 @@ class Image_2D(object):
         if self.label is not None:
             self.label = dp.get_mask(self.data_path, self.label_folder, self.frame, self.fig_canvas)
         
-        self.slicer.valmax = len(self.image)-1
-        self.slicer.valinit = len(self.image)//2
-        self.slicer.reset()
+        self.axislicer.clear()
+        self.slicer = Slider(self.axislicer, 'Image', 0, len(self.image)-1, valinit=len(self.image)//2, valstep=1)
         self.fig_canvas.suptitle(self.data_path[self.frame].split('/')[-2], fontsize=12)
 
     def update(self, val):
