@@ -1,5 +1,14 @@
 # Get list of all collections available on Opensea
+# As per my observation it only retrieves the collections 
+# which stats like Volume or 24 H Change are all 0. 
+# And the OpenSea rankings requests to the GraphQL server of the OpenSea, 
+# which is not available for public.
+
+# https://www.reddit.com/r/opensea/comments/prv9n6/opensea_api_collection/
+
 import requests
+import re
+import json
 import pandas as pd 
 import datetime
 
@@ -29,6 +38,7 @@ while True:
     
     #Getting nft infos
     collections = response.json()['collections']
+
     i = 0
     for collection in collections:
         nfts_collections["name"].append(collection["name"])
