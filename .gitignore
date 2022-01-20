@@ -28,3 +28,4 @@ twitter_key.json
 checkpoint
 *.ckpt*
 *.pkl
+chromedriver
