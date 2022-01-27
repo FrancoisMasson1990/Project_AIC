@@ -14,6 +14,9 @@ import requests
 import cloudscraper
 from bs4 import BeautifulSoup
 import json
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+import undetected_chromedriver as uc
 headers = {"Accept": "application/json"}
 
 
@@ -50,3 +53,16 @@ def scrap_url(url, key="script"):
     soup = BeautifulSoup(r.text, 'html.parser')
     json_data = json.loads(soup.find(key, type='application/json').text)
     return json_data
+
+
+def selenium_driver():
+    path = "../chromedriver/chromedriver"
+    browserpath = "/opt/google/chrome/google-chrome"
+
+    options = webdriver.ChromeOptions()
+    options.binary_location = browserpath
+    options.add_argument('--headless')
+
+    service = Service(path)
+    driver = uc.Chrome(service=service, options=options)
+    return driver

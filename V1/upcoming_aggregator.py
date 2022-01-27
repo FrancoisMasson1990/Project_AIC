@@ -15,15 +15,19 @@ from upcoming collections on a daily basis
 import pandas as pd
 import numpy as np
 import utils as ut
-import tqdm
+from tqdm import tqdm
 import time
+import datetime
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_upcomings():
-    df_coinmarket = get_coinmarket_data()
+    #df_coinmarket = get_coinmarket_data()
     df_upcoming = get_upcomingnft_data()
     # Must combine info and remove duplicate if present
-
+    df = pd.DataFrame()
     return df
 
 
@@ -71,4 +75,68 @@ def get_coinmarket_data():
 
 
 def get_upcomingnft_data():
-    pass
+    df = pd.DataFrame()
+    url = "https://upcomingnft.net/upcoming-events/"
+    driver = ut.selenium_driver()
+    driver.get(url=url)
+    rows_list = []
+
+    for i in tqdm(range(1, 2)):
+        row = {"name": None,
+               "twitter": None,
+               "discord": None,
+               "website": None,
+               "timestamp": None,
+               "platform": None,
+               "volume": None,
+               "mintPrice": None}
+        x_path = f'//*[@id="movietable"]/tbody/tr[{i}]'
+        elems = \
+            WebDriverWait(driver, 10).until(
+                EC.visibility_of_all_elements_located((By.XPATH, x_path)))
+        time.sleep(1)
+        for elem in elems:
+            hrefs = elem.find_elements(By.XPATH, './/*[@href]')
+            for href in hrefs:
+                if "twitter" in href.get_attribute("href"):
+                    row["twitter"] = href.get_attribute("href")
+                elif "discord" in href.get_attribute("href"):
+                    row["discord"] = href.get_attribute("href")
+                elif "upcomingnft.net" in href.get_attribute("href"):
+                    name = href.get_attribute("href").split("/")
+                    j = -1
+                    while not name[j]:
+                        j -= 1
+                    name = href.get_attribute("href").split("/")[j].split("-")
+                    name = " ".join([n.capitalize() for n in name])
+                    row["name"] = name
+                elif "javascript" not in href.get_attribute("href"):
+                    row["website"] = href.get_attribute("href")
+            dates = elem.find_elements(By.XPATH, './/*[@class="sorting_1"]')
+            for date in dates:
+                date = "".join(date.text.split(" "))
+                element = datetime.datetime.strptime(date, "%d%b%Y")
+                timestamp = datetime.datetime.timestamp(element)
+                row["timestamp"] = timestamp
+            alts = elem.find_elements(By.XPATH, './/*[@alt]')
+            for alt in alts:
+                if alt.get_attribute("alt") == "ETH":
+                    row["platform"] = "Ethereum"
+
+            volume_path = f'//*[@id="movietable"]/tbody/tr[{i}]/td[7]'
+            volume = elem.find_elements(By.XPATH, volume_path)
+            if volume:
+                row["volume"] = volume[0].text
+            price_path = f'//*[@id="movietable"]/tbody/tr[{i}]/td[6]'
+            price = elem.find_elements(By.XPATH, price_path)
+            if price:
+                row["mintPrice"] = price[0].text
+            rows_list.append(row)
+        # x_path = '//*[@id="movietable_next"]'
+        # element = driver.find_element(By.XPATH, x_path)
+        # if element:
+        #     element.click()
+    df = pd.DataFrame(rows_list)
+    print(df)
+    driver.close()
+    exit()
