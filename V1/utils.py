@@ -16,6 +16,7 @@ from bs4 import BeautifulSoup
 import json
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
 import undetected_chromedriver as uc
 headers = {"Accept": "application/json"}
 
@@ -66,3 +67,11 @@ def selenium_driver():
     service = Service(path)
     driver = uc.Chrome(service=service, options=options)
     return driver
+
+
+def get_text(elem, x_path):
+    value = elem.find_elements(By.XPATH, x_path)
+    if value:
+        return value[0].text
+    else:
+        return None

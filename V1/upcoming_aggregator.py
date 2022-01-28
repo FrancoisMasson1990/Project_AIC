@@ -24,8 +24,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_upcomings():
-    #df_coinmarket = get_coinmarket_data()
-    df_upcoming = get_upcomingnft_data()
+    # df_coinmarket = get_coinmarket_data()
+    # df_upcoming = get_upcomingnft_data()
+    df_nftgo = get_nftgo_data()
     # Must combine info and remove duplicate if present
     df = pd.DataFrame()
     return df
@@ -124,13 +125,9 @@ def get_upcomingnft_data():
                     row["platform"] = "Ethereum"
 
             volume_path = f'//*[@id="movietable"]/tbody/tr[{i}]/td[7]'
-            volume = elem.find_elements(By.XPATH, volume_path)
-            if volume:
-                row["volume"] = volume[0].text
+            row["volume"] = ut.get_text(elem, volume_path)
             price_path = f'//*[@id="movietable"]/tbody/tr[{i}]/td[6]'
-            price = elem.find_elements(By.XPATH, price_path)
-            if price:
-                row["mintPrice"] = price[0].text
+            row["mintPrice"] = ut.get_text(elem, price_path)
             rows_list.append(row)
         # x_path = '//*[@id="movietable_next"]'
         # element = driver.find_element(By.XPATH, x_path)
@@ -140,3 +137,69 @@ def get_upcomingnft_data():
     print(df)
     driver.close()
     exit()
+
+
+def get_nftgo_data():
+    df = pd.DataFrame()
+    url = "https://nftgo.io/nft-drops/"
+    driver = ut.selenium_driver()
+    driver.get(url=url)
+    rows_list = []
+
+    i = 1
+    while True:
+        row = {"name": None,
+               "twitter": None,
+               "discord": None,
+               "website": None,
+               "timestamp": None,
+               "platform": None,
+               "volume": None,
+               "mintPrice": None}
+
+        x_path = f'//*[@id="layout"]/div[2]/div[3]/div[{i}]'
+        try:
+            elems = \
+                WebDriverWait(driver, 10).until(
+                    EC.visibility_of_all_elements_located((By.XPATH, x_path)))
+            time.sleep(1)
+        except Exception as e:
+            elems = []
+        if not elems:
+            break
+        for elem in elems:
+            hrefs = elem.find_elements(By.XPATH, './/*[@href]')
+            for href in hrefs:
+                print(href.get_attribute("href"))
+                if "twitter" in href.get_attribute("href"):
+                    row["twitter"] = href.get_attribute("href")
+                elif "discord" in href.get_attribute("href"):
+                    row["discord"] = href.get_attribute("href")
+                else:
+                    row["website"] = href.get_attribute("href")
+
+            name_path = \
+                f'//*[@id="layout"]/div[2]/div[3]/div[{i}]/div[1]/div[2]/div[1]'
+            row["name"] = ut.get_text(elem, name_path)
+            price_path = \
+                f'//*[@id="layout"]/div[2]/div[3]/div[{i}]/div[4]/div[1]/div[2]'
+            mint_price = ut.get_text(elem, price_path)
+            if mint_price:
+                row["mintPrice"] = mint_price.split(" ")[0]
+                if mint_price.split(" ")[-1] == "ETH":
+                    row["platform"] = "Ethereum"
+                elif mint_price.split(" ")[-1] == "SQL":
+                    row["platform"] = "Solana"
+            volume_path = \
+                f'//*[@id="layout"]/div[2]/div[3]/div[{i}]/div[4]/div[2]/div[2]'
+            row["volume"] = ut.get_text(elem, volume_path)
+            # timestamp format conversion
+            date_path = \
+                f'//*[@id="layout"]/div[2]/div[3]/div[{i}]/div[4]/div[3]/div[2]'
+            row["date"] = ut.get_text(elem, date_path)
+            rows_list.append(row)
+        break
+        i += 1
+    df = pd.DataFrame(rows_list)
+    print(df)
+    driver.close()
