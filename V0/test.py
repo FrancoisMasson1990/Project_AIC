@@ -20,13 +20,26 @@ options.add_argument('window-size=1200x900')
 service = Service(path)
 # driver = webdriver.Chrome(service=service, options=options)
 url = "https://opensea.io/rankings"
+url = "https://upcomingnft.net/upcoming-events/"
 
-driver = uc.Chrome(service=service,options=options)
+driver = uc.Chrome(service=service, options=options)
 driver.get(url)
 
-x_path = '//*[@id="main"]/div/div[3]/button[2]'
-elems = WebDriverWait(driver, 10).until(EC.visibility_of_all_elements_located((By.XPATH, x_path)))[0]
-elems.click()
+# x_path = f'//*[@id="movietable"]/tbody/tr[11]'
+x_path = f'//*[@class="odd"]'
+try:
+    elems = \
+        WebDriverWait(driver, 10).until(
+            EC.visibility_of_all_elements_located((By.XPATH, x_path)))
+except Exception as e:
+    print(e)
+# x_path = f'//*[@class="odd"]'
+# elems = driver.find_elements(By.XPATH, x_path)
+# for elem in elems:
+#     a = elem.find_element(By.XPATH, './/*[@class="sorting_1"]')
+#     print(a.get_attribute("innerHTML"))
+#print(len(elems))
+
 driver.close()
 
 exit()
