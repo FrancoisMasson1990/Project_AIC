@@ -14,7 +14,6 @@ from upcoming collections on a daily basis
 
 import pandas as pd
 import numpy as np
-from uritemplate import expand
 import utils as ut
 from tqdm import tqdm
 import time
@@ -26,14 +25,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_upcomings():
-    # df_coinmarket = get_coinmarket_data()
-    df_upcoming = get_upcomingnft_data()
-    exit()
+    df_coinmarket = pd.DataFrame()
+    df_coinmarket = get_coinmarket_data()
+    df_upcoming = pd.DataFrame()
+    # df_upcoming = get_upcomingnft_data()
+    df_nftgo = pd.DataFrame()
     # df_nftgo = get_nftgo_data()
-    # Must combine info and remove duplicate if present
-    # df_list = [df_coinmarket, df_nftgo]
-    # df_list = [df_nftgo]
-    df_list = [df_coinmarket]
+    df_list = [df_coinmarket, df_upcoming, df_nftgo]
     dfs = pd.concat(df_list)
     dfs.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
     dfs.reset_index(drop=True, inplace=True)
@@ -122,6 +120,10 @@ def get_upcomingnft_data():
 
         paths = ["'odd'", "'even'"]
         for path in paths:
+            if path == "'odd'":
+                i = 1
+            elif path == "'even'":
+                i = 2
             x_path = f'//*[@class={path}]'
             elems = driver.find_elements(By.XPATH, x_path)
             time.sleep(1)
@@ -164,19 +166,15 @@ def get_upcomingnft_data():
                     if alt.get_attribute("alt") == "ETH":
                         row["platform"] = "Ethereum"
 
-                # Fix that !
-
-                #volume_path = f'//*[@id="movietable"]/tbody/tr[{i}]/td[7]'
-                #row["volume"] = ut.get_text(elem, volume_path)
-                #price_path = f'//*[@id="movietable"]/tbody/tr[{i}]/td[6]'
-                #row["mintPrice"] = ut.get_text(elem, price_path)
-
+                volume_path = f'//*[@id="movietable"]/tbody/tr[{i}]/td[7]'
+                row["volume"] = ut.get_text(elem, volume_path)
+                price_path = f'//*[@id="movietable"]/tbody/tr[{i}]/td[6]'
+                row["mintPrice"] = ut.get_text(elem, price_path)
                 rows_list.append(row)
+                i += 2
 
     df = pd.DataFrame(rows_list)
-    print(df)
     driver.close()
-    exit()
     return df
 
 

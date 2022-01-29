@@ -48,12 +48,16 @@ def json_extract(obj, key):
     return values
 
 
-def scrap_url(url, key="script"):
+def scrap_url(url, key="script", property=None):
     scraper = cloudscraper.create_scraper()
     r = scraper.get(url, headers=headers)
     soup = BeautifulSoup(r.text, 'html.parser')
-    json_data = json.loads(soup.find(key, type='application/json').text)
-    return json_data
+    if property:
+        values = soup.find(key, property=property)
+        values = values.get("content", None)
+    else:
+        values = json.loads(soup.find(key, type='application/json').text)
+    return values
 
 
 def selenium_driver():
@@ -75,3 +79,21 @@ def get_text(elem, x_path):
         return value[0].text
     else:
         return None
+
+
+def get_social_column():
+    columns = ["google_trend",
+               "twitter_followers"
+               "twitter_post",
+               "twitter_retweet",
+               "twitter_like",
+               "discord_members"]
+    return columns
+
+
+def add_social_column(df, database, columns):
+    for col in columns:
+        if col not in df.columns:
+            df[col] = 0
+        df.to_parquet(database)
+    return df
