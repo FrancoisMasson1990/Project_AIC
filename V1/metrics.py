@@ -17,6 +17,7 @@ https://www.geeksforgeeks.org/python-api-followers-in-tweepy/
 import tweepy as tw
 import json
 import utils as ut
+import time
 twitter_keys = "/home/francoismasson/denoise_nft/twitter_key.json"
 
 
@@ -48,16 +49,19 @@ def get_twitter_metrics(df, url, index):
 
 
 def get_discord_metrics(df, url, index):
-    member = ut.scrap_url(url, key="meta", property="og:description")
     count = None
-    if member:
-        # using List comprehension + isdigit() +split()
-        # getting numbers from string
-        count = member.replace(",", "")
-        count = [int(i) for i in count.split() if i.isdigit()]
-        if count:
-            count = max(count)
-        else:
-            count = None
-    print(count)
+    try:
+        member = ut.scrap_url(url, key="meta", property="og:description")
+        time.sleep(1)
+        if member:
+            # using List comprehension + isdigit() +split()
+            # getting numbers from string
+            count = member.replace(",", "")
+            count = [int(i) for i in count.split() if i.isdigit()]
+            if count:
+                count = max(count)
+            else:
+                count = None
+    except Exception as e:
+        print(e)
     df.loc[index, "discord_members"] = count
