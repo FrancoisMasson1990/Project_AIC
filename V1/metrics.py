@@ -18,6 +18,7 @@ import tweepy as tw
 import json
 import utils as ut
 import time
+from pytrends.request import TrendReq
 twitter_keys = "/home/francoismasson/denoise_nft/twitter_key.json"
 
 
@@ -65,3 +66,19 @@ def get_discord_metrics(df, url, index):
     except Exception as e:
         print(e)
     df.loc[index, "discord_members"] = count
+
+
+def get_google_trends(df, name, date, index):
+    # https://hackernoon.com/how-to-use-google-trends-api-with-python
+    trends = TrendReq(hl='en-US', tz=360)
+    # list of keywords to get data
+    kw_list = name.lower()
+    kw_list = "machine"
+    # Google delay of 3 days with granularity of 1 month
+    trends.build_payload([kw_list], cat=0, timeframe='today 1-m')
+    data = trends.interest_over_time()
+    score = 0
+    if len(data) > 0:
+        score = data[kw_list].mean()
+    time.sleep(1)
+    df.loc[index, "google_trend"] = score

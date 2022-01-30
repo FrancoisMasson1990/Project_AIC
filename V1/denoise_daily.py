@@ -18,16 +18,25 @@ import utils as ut
 import datetime
 import metrics as mt
 from tqdm import tqdm
+import os
 
 if __name__ == "__main__":
-    date = datetime.date.today()
-    database = "collections.parquet"
-    # df = agg.get_collections(database, date)
-    df = pd.read_parquet(database)
-    columns = ut.get_social_column()
-    df = ut.add_social_column(df, database, columns)
+    today = datetime.date.today()
+    yesterday = today - datetime.timedelta(days=1)
 
-    for i, row in tqdm(df.iterrows(), total=len(df)):
-        # mt.get_twitter_metrics(df, row["twitter"], i)
-        mt.get_discord_metrics(df, row["discord"], i)
-    print(df["discord_members"])
+    database_new = f'collections_{today.strftime("%y%m%d")}.parquet'
+    database_old = f'collections_{yesterday.strftime("%y%m%d")}.parquet'
+
+    if not os.path.exists(database_new):
+        df = agg.get_collections(new=database_new,
+                                 old=database_old,
+                                 date=today)
+    else:
+        df = pd.read_parquet(database_new)
+        columns = ut.get_social_column()
+        df = ut.add_social_column(df, database_new, columns)
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            # mt.get_twitter_metrics(df, row["twitter"], i)
+            # mt.get_discord_metrics(df, row["discord"], i)
+            mt.get_google_trends(df, row["name"], row["date"], i)
+        #print(df["discord_members"])
