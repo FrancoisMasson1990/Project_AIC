@@ -19,6 +19,7 @@ import json
 import utils as ut
 import time
 from pytrends.request import TrendReq
+from dateutil import parser
 twitter_keys = "/home/francoismasson/denoise_nft/twitter_key.json"
 
 
@@ -33,20 +34,37 @@ def tweepy_api(keys):
     return tw.API(auth, wait_on_rate_limit=True)
 
 
-def get_twitter_metrics(df, url, index):
+def get_twitter_metrics(df, url, date, index):
     keys = tweppy_token()
     api = tweepy_api(keys)
-
     screen_name = url.split("/")[-1]
-    # fetching the user
     try:
         user = api.get_user(screen_name=screen_name)
         # fetching the followers_count
         followers_count = user.followers_count
         df.loc[index, "twitter_followers"] = followers_count
+        tweets = \
+            api.user_timeline(screen_name=screen_name,
+                              # 200 is the maximum allowed count
+                              count=200)
+        post = 0
+        retweet = 0
+        like = 0
+        date = parser.parse(date).date()
+        for tweet in tweets:
+            if tweet.created_at.date() >= date:
+                post += 1
+                retweet += tweet.retweet_count
+                like += tweet.favorite_count
+        if post > 0:
+            retweet /= post
+            like /= post
+        df.loc[index, "twitter_post"] = post
+        df.loc[index, "twitter_retweet"] = retweet
+        df.loc[index, "twitter_like"] = like
     except Exception as e:
-        print(e)
         print(screen_name)
+        print(e)
 
 
 def get_discord_metrics(df, url, index):

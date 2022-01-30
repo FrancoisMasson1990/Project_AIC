@@ -36,7 +36,7 @@ if __name__ == "__main__":
         columns = ut.get_social_column()
         df = ut.add_social_column(df, database_new, columns)
         for i, row in tqdm(df.iterrows(), total=len(df)):
-            # mt.get_twitter_metrics(df, row["twitter"], i)
-            # mt.get_discord_metrics(df, row["discord"], i)
+            mt.get_twitter_metrics(df, row["twitter"], row["date"], i)
+            mt.get_discord_metrics(df, row["discord"], i)
             mt.get_google_trends(df, row["name"], row["date"], i)
-        #print(df["discord_members"])
+        df.to_parquet(database_new)
