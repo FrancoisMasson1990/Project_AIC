@@ -25,12 +25,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_upcomings():
-    df_coinmarket = pd.DataFrame()
-    df_coinmarket = get_coinmarket_data()
-    df_upcoming = pd.DataFrame()
-    # df_upcoming = get_upcomingnft_data()
+    #df_coinmarket = pd.DataFrame()
+    #df_coinmarket = get_coinmarket_data()
+    #df_upcoming = pd.DataFrame()
+    #df_upcoming = get_upcomingnft_data()
     df_nftgo = pd.DataFrame()
-    # df_nftgo = get_nftgo_data()
+    df_nftgo = get_nftgo_data()
+    exit()
     df_list = [df_coinmarket, df_upcoming, df_nftgo]
     dfs = pd.concat(df_list)
     dfs.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
@@ -186,44 +187,35 @@ def get_nftgo_data():
     driver.get(url=url)
     rows_list = []
 
-    i = 1
-    while True:
-        row = {"name": None,
-               "twitter": None,
-               "discord": None,
-               "website": None,
-               "timestamp": None,
-               "platform": None,
-               "volume": None,
-               "mintPrice": None}
-
-        x_path = f'//*[@id="layout"]/div[2]/div[3]/div[{i}]'
-        try:
-            elems = \
-                WebDriverWait(driver, 10).until(
-                    EC.visibility_of_all_elements_located((By.XPATH, x_path)))
-            time.sleep(1)
-        except Exception as e:
-            elems = []
-        if not elems:
-            break
-        for elem in elems:
-            hrefs = elem.find_elements(By.XPATH, './/*[@href]')
-            for href in hrefs:
-                if "twitter" in href.get_attribute("href"):
-                    row["twitter"] = href.get_attribute("href")
-                elif "discord" in href.get_attribute("href"):
-                    row["discord"] = href.get_attribute("href")
-                else:
-                    row["website"] = href.get_attribute("href")
-
-            name_path = \
-                f'//*[@id="layout"]/div[2]/div[3]/div[{i}]/div[1]/div[2]/div[1]'
-            row["name"] = ut.get_text(elem, name_path)
-            price_path = \
-                f'//*[@id="layout"]/div[2]/div[3]/div[{i}]/div[4]/div[1]/div[2]'
-            mint_price = ut.get_text(elem, price_path)
-            if mint_price:
+    x_path = '//*[contains(@class, "nft-drop-card_card")]'
+    try:
+        elems = \
+            WebDriverWait(driver, 10).until(
+                EC.visibility_of_all_elements_located((By.XPATH, x_path)))
+        if elems:
+            for elem in tqdm(elems):
+                row = {"name": None,
+                       "twitter": None,
+                       "discord": None,
+                       "website": None,
+                       "timestamp": None,
+                       "platform": None,
+                       "volume": None,
+                       "mintPrice": None}
+                hrefs = elem.find_elements(By.XPATH, './/*[@href]')
+                for href in hrefs:
+                    if "twitter" in href.get_attribute("href"):
+                        row["twitter"] = href.get_attribute("href")
+                    elif "discord" in href.get_attribute("href"):
+                        row["discord"] = href.get_attribute("href")
+                    else:
+                        row["website"] = href.get_attribute("href")
+                name_path = './/*[contains(@class, "nft-drop-card_name")]'
+                row["name"] = ut.get_text(elem, name_path)
+                stats_path = './/*[contains(@class, "nft-drop-card_stats")]'
+                stats = ut.get_text(elem, stats_path)
+                stats = stats.split("\n")
+                mint_price = stats[1]
                 row["mintPrice"] = mint_price.split(" ")[0]
                 if mint_price.split(" ")[-1] == "ETH":
                     row["platform"] = "Ethereum"
@@ -232,18 +224,50 @@ def get_nftgo_data():
                     row["platform"] = "Solana"
                 elif mint_price.split(" ")[-1] == "MATIC":
                     row["platform"] = "Matic"
-            volume_path = \
-                f'//*[@id="layout"]/div[2]/div[3]/div[{i}]/div[4]/div[2]/div[2]'
-            row["volume"] = ut.get_text(elem, volume_path)
-            date_path = \
-                f'//*[@id="layout"]/div[2]/div[3]/div[{i}]/div[4]/div[3]/div[2]'
-            date = ut.get_text(elem, date_path)
-            if date:
-                date = parse(date)
-                timestamp = datetime.datetime.timestamp(date)
-                row["timestamp"] = timestamp
-            rows_list.append(row)
-        i += 1
+                if stats[3]:
+                    row["volume"] = float(stats[3].replace(",", ""))
+                if stats[5]:
+                    date = parse(stats[5])
+                    timestamp = datetime.datetime.timestamp(date)
+                    row["timestamp"] = timestamp
+                rows_list.append(row)
+    except Exception as e:
+        print(e)
+
     driver.close()
     df = pd.DataFrame(rows_list)
+    df.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
     return df
+
+
+def get_nftscoring_collection():
+    print("Scrap nftscoring.com...")
+    # variables
+    url = "https://nftscoring.com/allCollections"
+    driver = ut.selenium_driver()
+    driver.get(url=url)
+
+    x_path = f'//*[@id="table"]/div[2]/div[2]'
+    x_path = '//*[contains(@class, "table-row")]'
+    #x_path = f'//*[@class={path}]'
+    try:
+        elems = \
+            WebDriverWait(driver, 10).until(
+                EC.visibility_of_all_elements_located((By.XPATH, x_path)))
+    except Exception as e:
+        print(e)
+        elems = []
+    for elem in elems:
+        test = './/*[@href]'
+        hrefs = elem.find_elements(By.XPATH, test)
+        #print(hrefs)
+        for h in hrefs:
+            print(h.get_attribute("href"))
+            #print(hrefs)
+        #//*[@id="table"]/div[2]/div[2]/div[1]
+    
+    #if not elems:
+    #    break
+    #print(elems)
+    driver.close()
