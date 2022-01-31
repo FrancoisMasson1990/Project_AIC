@@ -246,11 +246,11 @@ def get_nftscoring_collection():
     # variables
     url = "https://nftscoring.com/allCollections"
     driver = ut.selenium_driver()
+    # driver.set_window_size(1000, 150000)
     driver.get(url=url)
+    rows_list = []
 
-    x_path = f'//*[@id="table"]/div[2]/div[2]'
     x_path = '//*[contains(@class, "table-row")]'
-    #x_path = f'//*[@class={path}]'
     try:
         elems = \
             WebDriverWait(driver, 10).until(
@@ -258,16 +258,43 @@ def get_nftscoring_collection():
     except Exception as e:
         print(e)
         elems = []
-    for elem in elems:
-        test = './/*[@href]'
-        hrefs = elem.find_elements(By.XPATH, test)
-        #print(hrefs)
-        for h in hrefs:
-            print(h.get_attribute("href"))
-            #print(hrefs)
-        #//*[@id="table"]/div[2]/div[2]/div[1]
-    
-    #if not elems:
-    #    break
-    #print(elems)
+
+    for elem in tqdm(elems):
+        row = {"name": None,
+               "twitter": None,
+               "discord": None,
+               "website": None}
+        href_path = './/*[@href]'
+        hrefs = elem.find_elements(By.XPATH, href_path)
+        for href in hrefs:
+            print(href.get_attribute("href"))
+            if "twitter" in href.get_attribute("href"):
+                row["twitter"] = href.get_attribute("href")
+            elif "discord" in href.get_attribute("href"):
+                row["discord"] = href.get_attribute("href")
+            elif "detail" in href.get_attribute("href"):
+                temp_page = ut.selenium_driver()
+                temp_page.get(url=href.get_attribute("href"))
+                x_path = '//*[@id="app"]/section/main/section[1]/section'
+                x_path = '//*[contains(@class, "self-start")]'
+                extra = \
+                    WebDriverWait(temp_page, 10).until(
+                        EC.visibility_of_all_elements_located(
+                            (By.XPATH, x_path)))
+                for e in extra:
+                    hrefs_extra = e.find_elements(By.XPATH, href_path)
+                    print(hrefs_extra)
+                    for href_extra in hrefs_extra:
+                        print(href_extra.get_attribute("href"))
+                    temp_page.close()
+            break
+            # row["website"] = href.get_attribute("href")
+        rows_list.append(row)
+        break
     driver.close()
+    df = pd.DataFrame(rows_list)
+    df.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    print(df)
+    exit()
+    return df
