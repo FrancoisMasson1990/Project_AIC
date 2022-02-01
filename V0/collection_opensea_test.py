@@ -21,10 +21,9 @@ result = Collection(collection_slug=slug)
 #         collections.append([collection["name"],collection["slug"]])
 
 
-url = "https://api.opensea.io/api/v1/collection/capsulehouse"
+url = "https://api.opensea.io/api/v1/collection/azuki"
 
 response = requests.request("GET", url)
-
 response = response.json()
 
 collection_info = response["collection"]

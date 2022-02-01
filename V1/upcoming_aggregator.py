@@ -17,6 +17,7 @@ import numpy as np
 import utils as ut
 from tqdm import tqdm
 import time
+import re
 import datetime
 from dateutil.parser import parse
 from selenium.webdriver.common.by import By
@@ -25,14 +26,26 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_upcomings():
-    #df_coinmarket = pd.DataFrame()
+    df_coinmarket = pd.DataFrame()
     #df_coinmarket = get_coinmarket_data()
-    #df_upcoming = pd.DataFrame()
-    #df_upcoming = get_upcomingnft_data()
+    df_upcoming = pd.DataFrame()
+    df_upcoming = get_upcomingnft_data()
     df_nftgo = pd.DataFrame()
-    df_nftgo = get_nftgo_data()
-    exit()
+    #df_nftgo = get_nftgo_data()
     df_list = [df_coinmarket, df_upcoming, df_nftgo]
+    dfs = pd.concat(df_list)
+    dfs.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
+    dfs.reset_index(drop=True, inplace=True)
+    print(dfs)
+    exit()
+    return dfs
+
+
+def get_tops():
+    df_nftscoring = pd.DataFrame()
+    df_nftscoring = get_nftscoring_data()
+    df_opensea = pd.DataFrame()
+    df_list = [df_nftscoring, df_opensea]
     dfs = pd.concat(df_list)
     dfs.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
     dfs.reset_index(drop=True, inplace=True)
@@ -90,23 +103,30 @@ def get_upcomingnft_data():
     driver = ut.selenium_driver()
     driver.get(url=url)
     rows_list = []
+    names = []
 
-    page_info = '//*[@id="movietable_wrapper"]/div[3]/div[1]'
+    page_info = '//*[@id="movietable_info"]'
     page_info = driver.find_element(By.XPATH, page_info)
     page_info = page_info.get_attribute("innerHTML")
-    page_info = page_info.split(">Showing ")[-1].split(" entries<")[0]
-    page_info = page_info.split("to ")[-1].split(" ")
-    print(page_info)
-    rows_by_page = int(page_info[0])
-    rows_tot = int(page_info[-1])
+    num = re.findall(r'\d+', page_info)
+    while not num:
+        print("Error scraping... Retry")
+        time.sleep(1)
+        page_info = driver.find_element(By.XPATH, page_info)
+        page_info = page_info.get_attribute("innerHTML")
+        num = re.findall(r'\d+', page_info)
+    rows_by_page = int(num[1])
+    rows_tot = int(num[-1])
     pages = rows_tot // rows_by_page
 
     div = rows_tot % rows_by_page
+    print(pages)
     if div > 0:
         pages += 1
     for page in tqdm(range(1, pages+1)):
         print(f"page {page}")
         if (page > 1) and (page < pages - 1):
+            print("Next page...")
             next_path = '//*[@id="movietable_next"]'
             next_element = \
                 driver.find_element(By.XPATH, next_path)
@@ -125,7 +145,8 @@ def get_upcomingnft_data():
                 i = 1
             elif path == "'even'":
                 i = 2
-            x_path = f'//*[@class={path}]'
+            x_path = f'.//*[contains(@class, {path})]'
+            x_path = x_path.replace("'", '"')
             elems = driver.find_elements(By.XPATH, x_path)
             time.sleep(1)
             for elem in elems:
@@ -155,6 +176,7 @@ def get_upcomingnft_data():
                         row["name"] = name
                     elif "javascript" not in href.get_attribute("href"):
                         row["website"] = href.get_attribute("href")
+
                 dates = \
                     elem.find_elements(By.XPATH, './/*[@class="sorting_1"]')
                 for date in dates:
@@ -168,11 +190,22 @@ def get_upcomingnft_data():
                         row["platform"] = "Ethereum"
 
                 volume_path = f'//*[@id="movietable"]/tbody/tr[{i}]/td[7]'
-                row["volume"] = ut.get_text(elem, volume_path)
+                volumes = \
+                    elem.find_elements(By.XPATH, volume_path)
+                for volume in volumes:
+                    volume = volume.get_attribute("innerHTML").split("> ")[-1]
+                    row["volume"] = volume
                 price_path = f'//*[@id="movietable"]/tbody/tr[{i}]/td[6]'
-                row["mintPrice"] = ut.get_text(elem, price_path)
-                rows_list.append(row)
-                i += 2
+                mints = \
+                    elem.find_elements(By.XPATH, price_path)
+                for mint in mints:
+                    mint = mint.get_attribute("innerHTML").split("> ")[-1]
+                    row["mintPrice"] = mint
+
+                if row["name"] not in names:
+                    rows_list.append(row)
+                    names.append(name)
+                    i += 2
 
     df = pd.DataFrame(rows_list)
     driver.close()
@@ -241,12 +274,14 @@ def get_nftgo_data():
     return df
 
 
-def get_nftscoring_collection():
+def get_nftscoring_data():
     print("Scrap nftscoring.com...")
     # variables
     url = "https://nftscoring.com/allCollections"
     driver = ut.selenium_driver()
-    # driver.set_window_size(1000, 150000)
+    # Hardcoded values but allows to scrap all collections content
+    # These values should change over time
+    driver.set_window_size(1000, 150000)
     driver.get(url=url)
     rows_list = []
 
@@ -267,7 +302,6 @@ def get_nftscoring_collection():
         href_path = './/*[@href]'
         hrefs = elem.find_elements(By.XPATH, href_path)
         for href in hrefs:
-            print(href.get_attribute("href"))
             if "twitter" in href.get_attribute("href"):
                 row["twitter"] = href.get_attribute("href")
             elif "discord" in href.get_attribute("href"):
@@ -283,18 +317,19 @@ def get_nftscoring_collection():
                             (By.XPATH, x_path)))
                 for e in extra:
                     hrefs_extra = e.find_elements(By.XPATH, href_path)
-                    print(hrefs_extra)
                     for href_extra in hrefs_extra:
-                        print(href_extra.get_attribute("href"))
-                    temp_page.close()
-            break
-            # row["website"] = href.get_attribute("href")
+                        if "opensea.io" in href_extra.get_attribute("href"):
+                            name = href_extra.get_attribute("href")
+                            row["name"] = name.split("/")[-1]
+                        elif ("twitter" not in href_extra.get_attribute(
+                            "href")) \
+                                and ("discord" not in href_extra.get_attribute(
+                                    "href")):
+                            row["website"] = href_extra.get_attribute("href")
+                temp_page.close()
         rows_list.append(row)
-        break
     driver.close()
     df = pd.DataFrame(rows_list)
     df.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
     df.reset_index(drop=True, inplace=True)
-    print(df)
-    exit()
     return df

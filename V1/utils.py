@@ -75,7 +75,10 @@ def selenium_driver():
 
 def get_text(elem, x_path):
     value = elem.find_elements(By.XPATH, x_path)
+    print(value[0].get_attribute("innerHTML"))
+    exit()
     if value:
+        print(value[0].get_attribute("innerHTML"))
         return value[0].text
     else:
         return None
@@ -91,9 +94,9 @@ def get_social_column():
     return columns
 
 
-def add_social_column(df, database, columns):
+def add_social_column(df, name, columns):
     for col in columns:
         if col not in df.columns:
             df[col] = 0
-        df.to_parquet(database)
+        df.to_pickle(name)
     return df
