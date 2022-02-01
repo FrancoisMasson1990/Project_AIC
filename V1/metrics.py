@@ -20,6 +20,7 @@ import utils as ut
 import time
 from pytrends.request import TrendReq
 from dateutil import parser
+from opensea import CollectionStats, Collection
 twitter_keys = "/home/francoismasson/denoise_nft/twitter_key.json"
 
 
@@ -100,3 +101,14 @@ def get_google_trends(df, name, date, index):
         score = data[kw_list].mean()
     time.sleep(1)
     df.loc[index, "google_trend"] = score
+
+
+def get_opensea_metrics(df, name, index, key="stats"):
+    stats = CollectionStats(collection_slug=name).fetch()
+    if key in list(stats.keys()):
+        df.loc[index, list(stats[key].keys())] = list(stats[key].values())
+
+
+def get_opensea_infos(name):
+    infos = Collection(collection_slug=name).fetch()
+    return infos

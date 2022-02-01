@@ -32,7 +32,6 @@ if __name__ == "__main__":
     # Scrap opensea to get name, twitter and discord links
     # Optimize code by checking if not already present (twitter/discord filter)
     # for new and top collections
-    # Combine upcoming and top collection single database in an efficient way
     # Get stats and update values of top collection in merged database
     # Find a way to track minted collection
 

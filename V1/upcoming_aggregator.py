@@ -27,25 +27,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 def get_upcomings():
     df_coinmarket = pd.DataFrame()
-    #df_coinmarket = get_coinmarket_data()
+    df_coinmarket = get_coinmarket_data()
     df_upcoming = pd.DataFrame()
     df_upcoming = get_upcomingnft_data()
     df_nftgo = pd.DataFrame()
-    #df_nftgo = get_nftgo_data()
+    df_nftgo = get_nftgo_data()
     df_list = [df_coinmarket, df_upcoming, df_nftgo]
-    dfs = pd.concat(df_list)
-    dfs.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
-    dfs.reset_index(drop=True, inplace=True)
-    print(dfs)
-    exit()
-    return dfs
-
-
-def get_tops():
-    df_nftscoring = pd.DataFrame()
-    df_nftscoring = get_nftscoring_data()
-    df_opensea = pd.DataFrame()
-    df_list = [df_nftscoring, df_opensea]
     dfs = pd.concat(df_list)
     dfs.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
     dfs.reset_index(drop=True, inplace=True)
@@ -267,67 +254,6 @@ def get_nftgo_data():
     except Exception as e:
         print(e)
 
-    driver.close()
-    df = pd.DataFrame(rows_list)
-    df.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
-    df.reset_index(drop=True, inplace=True)
-    return df
-
-
-def get_nftscoring_data():
-    print("Scrap nftscoring.com...")
-    # variables
-    url = "https://nftscoring.com/allCollections"
-    driver = ut.selenium_driver()
-    # Hardcoded values but allows to scrap all collections content
-    # These values should change over time
-    driver.set_window_size(1000, 150000)
-    driver.get(url=url)
-    rows_list = []
-
-    x_path = '//*[contains(@class, "table-row")]'
-    try:
-        elems = \
-            WebDriverWait(driver, 10).until(
-                EC.visibility_of_all_elements_located((By.XPATH, x_path)))
-    except Exception as e:
-        print(e)
-        elems = []
-
-    for elem in tqdm(elems):
-        row = {"name": None,
-               "twitter": None,
-               "discord": None,
-               "website": None}
-        href_path = './/*[@href]'
-        hrefs = elem.find_elements(By.XPATH, href_path)
-        for href in hrefs:
-            if "twitter" in href.get_attribute("href"):
-                row["twitter"] = href.get_attribute("href")
-            elif "discord" in href.get_attribute("href"):
-                row["discord"] = href.get_attribute("href")
-            elif "detail" in href.get_attribute("href"):
-                temp_page = ut.selenium_driver()
-                temp_page.get(url=href.get_attribute("href"))
-                x_path = '//*[@id="app"]/section/main/section[1]/section'
-                x_path = '//*[contains(@class, "self-start")]'
-                extra = \
-                    WebDriverWait(temp_page, 10).until(
-                        EC.visibility_of_all_elements_located(
-                            (By.XPATH, x_path)))
-                for e in extra:
-                    hrefs_extra = e.find_elements(By.XPATH, href_path)
-                    for href_extra in hrefs_extra:
-                        if "opensea.io" in href_extra.get_attribute("href"):
-                            name = href_extra.get_attribute("href")
-                            row["name"] = name.split("/")[-1]
-                        elif ("twitter" not in href_extra.get_attribute(
-                            "href")) \
-                                and ("discord" not in href_extra.get_attribute(
-                                    "href")):
-                            row["website"] = href_extra.get_attribute("href")
-                temp_page.close()
-        rows_list.append(row)
     driver.close()
     df = pd.DataFrame(rows_list)
     df.drop_duplicates(subset=['twitter', 'discord'], inplace=True)

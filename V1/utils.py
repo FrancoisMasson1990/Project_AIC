@@ -18,6 +18,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 import undetected_chromedriver as uc
+import sql as sql
 headers = {"Accept": "application/json"}
 
 
@@ -75,10 +76,7 @@ def selenium_driver():
 
 def get_text(elem, x_path):
     value = elem.find_elements(By.XPATH, x_path)
-    print(value[0].get_attribute("innerHTML"))
-    exit()
     if value:
-        print(value[0].get_attribute("innerHTML"))
         return value[0].text
     else:
         return None
@@ -86,7 +84,7 @@ def get_text(elem, x_path):
 
 def get_social_column():
     columns = ["google_trend",
-               "twitter_followers"
+               "twitter_followers",
                "twitter_post",
                "twitter_retweet",
                "twitter_like",
@@ -94,9 +92,34 @@ def get_social_column():
     return columns
 
 
-def add_social_column(df, name, columns):
+def get_market_column():
+    columns = ['one_day_volume',
+               'one_day_change',
+               'one_day_sales',
+               'one_day_average_price',
+               'seven_day_volume',
+               'seven_day_change',
+               'seven_day_sales',
+               'seven_day_average_price',
+               'thirty_day_volume',
+               'thirty_day_change',
+               'thirty_day_sales',
+               'thirty_day_average_price',
+               'total_volume',
+               'total_sales',
+               'total_supply',
+               'count',
+               'num_owners',
+               'average_price',
+               'num_reports',
+               'market_cap',
+               'floor_price']
+    return columns
+
+
+def add_column(df, name, columns):
     for col in columns:
         if col not in df.columns:
             df[col] = 0
-        df.to_pickle(name)
+        sql.to_sql(df, sql_path=name)
     return df

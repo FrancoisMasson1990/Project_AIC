@@ -24,11 +24,10 @@ from tqdm import tqdm
 
 def get_collections(new, old, date):
     # Step 1 : Gather new collection
-    upcomings_df = up.get_upcomings()
+    # upcomings_df = up.get_upcomings()
     # Step 2 : Gather top collection
-    top_df = pd.DataFrame()
-    # top_df = up.get_tops()
-
+    top_df = top.get_tops()
+    exit()
     df = pd.concat([upcomings_df, top_df])
     df.reset_index(drop=True, inplace=True)
     df.insert(loc=0,
@@ -57,8 +56,10 @@ def get_collections(new, old, date):
 
 def update_collections(df, name):
     columns = ut.get_social_column()
-    df = ut.add_social_column(df, name, columns)
+    columns += ut.get_market_column()
+    df = ut.add_column(df, name, columns)
     for i, row in tqdm(df.iterrows(), total=len(df)):
+        mt.get_opensea_metrics(df, row["name"], i)
         mt.get_twitter_metrics(df, row["twitter"], row["date"], i)
         mt.get_discord_metrics(df, row["discord"], i)
         mt.get_google_trends(df, row["name"], row["date"], i)
