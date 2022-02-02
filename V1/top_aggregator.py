@@ -12,8 +12,8 @@ Library to aggregate data into Denoise format
 from top collections on a daily basis
 """
 
-from unicodedata import category
 import pandas as pd
+import numpy as np
 import utils as ut
 from tqdm import tqdm
 import metrics as mt
@@ -25,10 +25,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 def get_tops():
     df_nftscoring = pd.DataFrame()
-    # df_nftscoring = get_nftscoring_data()
+    df_nftscoring = get_nftscoring_data()
     df_opensea = pd.DataFrame()
     df_opensea = get_opensea_data()
-    exit()
     df_list = [df_nftscoring, df_opensea]
     dfs = pd.concat(df_list)
     dfs.drop_duplicates(subset=['name'], inplace=True)
@@ -143,17 +142,22 @@ def get_opensea_data():
                    "discord": None,
                    "website": None}
             row["name"] = scrap[i][table_filter][slug]
-            #infos = mt.get_opensea_infos(row["name"])
-            #collection = infos["collection"]
-            #row["twitter"] = collection.get('twitter_username', None)
-            #row["discord"] = collection.get('discord_url', None)
-            #row["website"] = collection.get('external_url', None)
             rows_list.append(row)
     df = pd.DataFrame(rows_list)
     df.drop_duplicates(subset=['name'], inplace=True)
     df.reset_index(drop=True, inplace=True)
-    print(df)
-    exit()
+
+    col = ["twitter", "discord", "website"]
+    for index, row in tqdm(df.iterrows(), total=len(df)):
+        try:
+            infos = mt.get_opensea_infos(row["name"])
+            collection = infos["collection"]
+            df.loc[index, col] = [collection.get('twitter_username', None),
+                                  collection.get('discord_url', None),
+                                  collection.get('external_url', None)]
+        except Exception as e:
+            print(e)
+    particule = "https://twitter.com/"
+    df.twitter = \
+        np.where((df.twitter.notna()), particule + df.twitter, df.twitter)
     return df
-    print(df)
-    exit()

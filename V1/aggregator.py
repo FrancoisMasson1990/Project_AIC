@@ -24,10 +24,9 @@ from tqdm import tqdm
 
 def get_collections(new, old, date):
     # Step 1 : Gather new collection
-    # upcomings_df = up.get_upcomings()
+    upcomings_df = up.get_upcomings()
     # Step 2 : Gather top collection
     top_df = top.get_tops()
-    exit()
     df = pd.concat([upcomings_df, top_df])
     df.reset_index(drop=True, inplace=True)
     df.insert(loc=0,
