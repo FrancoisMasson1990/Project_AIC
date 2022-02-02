@@ -55,9 +55,9 @@ def get_collections(new, old, date):
 
 
 def update_collections(df, name):
-    columns = ut.get_social_column()
-    columns += ut.get_market_column()
-    df = ut.add_column(df, name, columns)
+    columns = mt.get_social_column()
+    columns += mt.get_market_column()
+    df = mt.add_column(df, name, columns)
     for i, row in tqdm(df.iterrows(), total=len(df)):
         mt.get_opensea_metrics(df, row["name"], i)
         mt.get_twitter_metrics(df, row["twitter"], row["date"], i)

@@ -18,7 +18,6 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 import undetected_chromedriver as uc
-import sql as sql
 headers = {"Accept": "application/json"}
 
 
@@ -49,15 +48,19 @@ def json_extract(obj, key):
     return values
 
 
-def scrap_url(url, key="script", property=None):
+def scrap_url(url, key="script", params={}, property_=None):
     scraper = cloudscraper.create_scraper()
-    r = scraper.get(url, headers=headers)
+    r = scraper.get(url, params=params, headers=headers)
     soup = BeautifulSoup(r.text, 'html.parser')
-    if property:
-        values = soup.find(key, property=property)
+    if property_:
+        values = soup.find(key, property=property_)
         values = values.get("content", None)
     else:
-        values = json.loads(soup.find(key, type='application/json').text)
+        values = soup.find(key, type='application/json')
+        if values:
+            values = json.loads(values.text)
+        else:
+            values = None
     return values
 
 
@@ -80,46 +83,3 @@ def get_text(elem, x_path):
         return value[0].text
     else:
         return None
-
-
-def get_social_column():
-    columns = ["google_trend",
-               "twitter_followers",
-               "twitter_post",
-               "twitter_retweet",
-               "twitter_like",
-               "discord_members"]
-    return columns
-
-
-def get_market_column():
-    columns = ['one_day_volume',
-               'one_day_change',
-               'one_day_sales',
-               'one_day_average_price',
-               'seven_day_volume',
-               'seven_day_change',
-               'seven_day_sales',
-               'seven_day_average_price',
-               'thirty_day_volume',
-               'thirty_day_change',
-               'thirty_day_sales',
-               'thirty_day_average_price',
-               'total_volume',
-               'total_sales',
-               'total_supply',
-               'count',
-               'num_owners',
-               'average_price',
-               'num_reports',
-               'market_cap',
-               'floor_price']
-    return columns
-
-
-def add_column(df, name, columns):
-    for col in columns:
-        if col not in df.columns:
-            df[col] = 0
-        sql.to_sql(df, sql_path=name)
-    return df

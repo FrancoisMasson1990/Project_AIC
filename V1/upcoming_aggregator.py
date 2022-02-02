@@ -46,7 +46,8 @@ def get_coinmarket_data():
     url_filter = "script"
     collection_filter = "upcomingNFTs"
     table_filter = "upcomings"
-    scrap = ut.scrap_url(url, url_filter)
+    scrap = ut.scrap_url(url,
+                         key=url_filter)
     scrap = ut.json_extract(scrap, collection_filter)
     if scrap:
         scrap = scrap[0]
@@ -58,8 +59,10 @@ def get_coinmarket_data():
 
     for page in tqdm(range(1, pages+1)):
         url_ = f"{url}?page={page}"
-        scrap = ut.scrap_url(url_, "script")
-        scrap = ut.json_extract(scrap, "upcomingNFTs")
+        scrap = ut.scrap_url(url_,
+                             key=url_filter)
+        scrap = ut.json_extract(scrap,
+                                collection_filter)
         if scrap:
             df = pd.DataFrame(scrap[0][table_filter])
             dfs.append(df)

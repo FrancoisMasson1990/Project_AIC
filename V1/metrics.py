@@ -18,6 +18,7 @@ import tweepy as tw
 import json
 import utils as ut
 import time
+import sql as sql
 from pytrends.request import TrendReq
 from dateutil import parser
 from opensea import CollectionStats, Collection
@@ -71,7 +72,9 @@ def get_twitter_metrics(df, url, date, index):
 def get_discord_metrics(df, url, index):
     count = None
     try:
-        member = ut.scrap_url(url, key="meta", property="og:description")
+        member = ut.scrap_url(url,
+                              key="meta",
+                              property="og:description")
         time.sleep(1)
         if member:
             # using List comprehension + isdigit() +split()
@@ -112,3 +115,74 @@ def get_opensea_metrics(df, name, index, key="stats"):
 def get_opensea_infos(name):
     infos = Collection(collection_slug=name).fetch()
     return infos
+
+
+def get_opensea_filters():
+    volume = ["one_day_volume",
+              "seven_day_volume",
+              "thirty_day_volume",
+              "total_volume"
+              ]
+    # None = all categories
+    categories = [None,
+                  "new",
+                  "art",
+                  "collectibles",
+                  "domain-names",
+                  "music",
+                  "photography-category",
+                  "sports",
+                  "trading-cards",
+                  "utility",
+                  "virtual-worlds"
+                  ]
+    # None = all chains
+    chains = [None,
+              "ethereum",
+              "matic",
+              "klaytn"
+              ]
+    return [volume, categories, chains]
+
+
+def get_social_column():
+    columns = ["google_trend",
+               "twitter_followers",
+               "twitter_post",
+               "twitter_retweet",
+               "twitter_like",
+               "discord_members"]
+    return columns
+
+
+def get_market_column():
+    columns = ['one_day_volume',
+               'one_day_change',
+               'one_day_sales',
+               'one_day_average_price',
+               'seven_day_volume',
+               'seven_day_change',
+               'seven_day_sales',
+               'seven_day_average_price',
+               'thirty_day_volume',
+               'thirty_day_change',
+               'thirty_day_sales',
+               'thirty_day_average_price',
+               'total_volume',
+               'total_sales',
+               'total_supply',
+               'count',
+               'num_owners',
+               'average_price',
+               'num_reports',
+               'market_cap',
+               'floor_price']
+    return columns
+
+
+def add_column(df, name, columns):
+    for col in columns:
+        if col not in df.columns:
+            df[col] = 0
+        sql.to_sql(df, sql_path=name)
+    return df

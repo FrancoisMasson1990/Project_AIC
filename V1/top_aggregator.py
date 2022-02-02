@@ -12,10 +12,12 @@ Library to aggregate data into Denoise format
 from top collections on a daily basis
 """
 
+from unicodedata import category
 import pandas as pd
 import utils as ut
 from tqdm import tqdm
 import metrics as mt
+from tqdm.contrib.itertools import product as prod
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -98,33 +100,60 @@ def get_nftscoring_data():
 def get_opensea_data():
     print("Scrap opensea.io...")
     url = "https://opensea.io/rankings"
+
     url_filter = "script"
     collection_filter = "edges"
     table_filter = "node"
     slug = "slug"
-    scrap = ut.scrap_url(url, url_filter)
-    scrap = ut.json_extract(scrap, collection_filter)
     rows_list = []
 
-    if scrap:
-        scrap = scrap[0]
-        count = len(scrap)
-    else:
-        raise Exception("Wrong request")
+    # Will do permutation to get several collection
+    filters_opensea = mt.get_opensea_filters()
+    for element in prod(*filters_opensea):
+        filters = {"sortBy": None, "category": None, "chain": None}
+        filters["sortBy"] = element[0]
+        filters["category"] = element[1]
+        filters["chain"] = element[2]
 
-    for i in tqdm(range(count)):
-        row = {"name": None,
-               "twitter": None,
-               "discord": None,
-               "website": None}
-        row["name"] = scrap[i][table_filter][slug]
-        infos = mt.get_opensea_infos(row["name"])
-        collection = infos["collection"]
-        row["twitter"] = collection.get('twitter_username', None)
-        row["discord"] = collection.get('discord_url', None)
-        row["website"] = collection.get('external_url', None)
-        rows_list.append(row)
+        remove = []
+        for key, value in filters.items():
+            if not value:
+                remove.append(key)
+
+        for r in remove:
+            filters.pop(r)
+
+        scrap = ut.scrap_url(url,
+                             key=url_filter,
+                             params=filters)
+        if not scrap:
+            continue
+        scrap = ut.json_extract(scrap,
+                                collection_filter)
+
+        if scrap:
+            scrap = scrap[0]
+            count = len(scrap)
+        else:
+            raise Exception("Wrong request")
+
+        for i in range(count):
+            row = {"name": None,
+                   "twitter": None,
+                   "discord": None,
+                   "website": None}
+            row["name"] = scrap[i][table_filter][slug]
+            #infos = mt.get_opensea_infos(row["name"])
+            #collection = infos["collection"]
+            #row["twitter"] = collection.get('twitter_username', None)
+            #row["discord"] = collection.get('discord_url', None)
+            #row["website"] = collection.get('external_url', None)
+            rows_list.append(row)
     df = pd.DataFrame(rows_list)
-
+    df.drop_duplicates(subset=['name'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    print(df)
+    exit()
+    return df
     print(df)
     exit()
