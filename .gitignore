@@ -30,3 +30,4 @@ checkpoint
 *.pkl
 chromedriver
 .vscode/
+*.db

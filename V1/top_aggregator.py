@@ -17,6 +17,8 @@ import numpy as np
 import utils as ut
 from tqdm import tqdm
 import metrics as mt
+import glob
+import sql as sql
 from tqdm.contrib.itertools import product as prod
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -24,18 +26,28 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_tops():
-    df_nftscoring = pd.DataFrame()
-    df_nftscoring = get_nftscoring_data()
-    df_opensea = pd.DataFrame()
-    df_opensea = get_opensea_data()
-    df_list = [df_nftscoring, df_opensea]
+    websites = get_upcoming_names()
+    df_list = []
+    for website in websites:
+        db = glob.glob("*" + website + ".db")
+        if not db:
+            df_list.append(eval(f"get_{website}_data(website)"))
+        else:
+            df_list.append(sql.load_sql(db[0]))
     dfs = pd.concat(df_list)
     dfs.drop_duplicates(subset=['name'], inplace=True)
     dfs.reset_index(drop=True, inplace=True)
     return dfs
 
 
-def get_nftscoring_data():
+def get_upcoming_names():
+    websites = ["nftscoring",
+                "opensea",
+                ]
+    return websites
+
+
+def get_nftscoring_data(name_path):
     print("Scrap nftscoring.com...")
     # variables
     url = "https://nftscoring.com/allCollections"
@@ -93,10 +105,13 @@ def get_nftscoring_data():
     df = pd.DataFrame(rows_list)
     df.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
     df.reset_index(drop=True, inplace=True)
+    if not name_path.endswith(".db"):
+        name_path += ".db"
+    sql.to_sql(df, sql_path=name_path)
     return df
 
 
-def get_opensea_data():
+def get_opensea_data(name_path):
     print("Scrap opensea.io...")
     url = "https://opensea.io/rankings"
 
@@ -160,4 +175,7 @@ def get_opensea_data():
     particule = "https://twitter.com/"
     df.twitter = \
         np.where((df.twitter.notna()), particule + df.twitter, df.twitter)
+    if not name_path.endswith(".db"):
+        name_path += ".db"
+    sql.to_sql(df, sql_path=name_path)
     return df

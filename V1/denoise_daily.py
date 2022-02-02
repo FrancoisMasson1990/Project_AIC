@@ -26,6 +26,7 @@ if __name__ == "__main__":
     database_old = f'collections_{yesterday.strftime("%y%m%d")}.db'
 
     # TODO :
+    # Generate temp file to reduce time if crashed and need to rerun the code
     # Optimize code by checking if not already present (twitter/discord filter)
     # for new and top collections
     # Get stats and update values of top collection in merged database

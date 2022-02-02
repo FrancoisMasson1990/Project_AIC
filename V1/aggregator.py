@@ -32,7 +32,8 @@ def get_collections(new, old, date):
     df.insert(loc=0,
               column="date",
               value=date.strftime('%Y-%m-%d'))
-
+    print(df)
+    exit()
     # Step 2 : Update database from the day before
     if os.path.exists(old):
         new_collections = []

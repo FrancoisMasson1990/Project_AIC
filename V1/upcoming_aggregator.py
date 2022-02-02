@@ -19,6 +19,8 @@ from tqdm import tqdm
 import time
 import re
 import datetime
+import glob
+import sql as sql
 from dateutil.parser import parse
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -26,20 +28,29 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_upcomings():
-    df_coinmarket = pd.DataFrame()
-    df_coinmarket = get_coinmarket_data()
-    df_upcoming = pd.DataFrame()
-    df_upcoming = get_upcomingnft_data()
-    df_nftgo = pd.DataFrame()
-    df_nftgo = get_nftgo_data()
-    df_list = [df_coinmarket, df_upcoming, df_nftgo]
+    websites = get_upcoming_names()
+    df_list = []
+    for website in websites:
+        db = glob.glob("*" + website + ".db")
+        if not db:
+            df_list.append(eval(f"get_{website}_data(website)"))
+        else:
+            df_list.append(sql.load_sql(db[0]))
     dfs = pd.concat(df_list)
     dfs.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
     dfs.reset_index(drop=True, inplace=True)
     return dfs
 
 
-def get_coinmarket_data():
+def get_upcoming_names():
+    webistes = ["coinmarketcap",
+                "upcomingnft",
+                "nftgo",
+                ]
+    return webistes
+
+
+def get_coinmarket_data(name_path):
     print("Scrap coinmarketcap.com...")
     dfs = []
     url = "https://coinmarketcap.com/nft/upcoming/"
@@ -83,10 +94,13 @@ def get_coinmarket_data():
     temp = dfs["mintPrice"].str.split(" ", n=1, expand=True)[0]
     dfs["mintPrice"] = temp
     dfs = dfs[~dfs["mintPrice"].str.isalpha()]
+    if not name_path.endswith(".db"):
+        name_path += ".db"
+    sql.to_sql(dfs, sql_path=name_path)
     return dfs
 
 
-def get_upcomingnft_data():
+def get_upcomingnft_data(name_path):
     print("Scrap upcomingnft.net...")
     df = pd.DataFrame()
     url = "https://upcomingnft.net/upcoming-events/"
@@ -95,14 +109,14 @@ def get_upcomingnft_data():
     rows_list = []
     names = []
 
-    page_info = '//*[@id="movietable_info"]'
-    page_info = driver.find_element(By.XPATH, page_info)
+    page_ = '//*[@id="movietable_info"]'
+    page_info = driver.find_element(By.XPATH, page_)
     page_info = page_info.get_attribute("innerHTML")
     num = re.findall(r'\d+', page_info)
     while not num:
         print("Error scraping... Retry")
         time.sleep(1)
-        page_info = driver.find_element(By.XPATH, page_info)
+        page_info = driver.find_element(By.XPATH, page_)
         page_info = page_info.get_attribute("innerHTML")
         num = re.findall(r'\d+', page_info)
     rows_by_page = int(num[1])
@@ -199,10 +213,13 @@ def get_upcomingnft_data():
 
     df = pd.DataFrame(rows_list)
     driver.close()
+    if not name_path.endswith(".db"):
+        name_path += ".db"
+    sql.to_sql(df, sql_path=name_path)
     return df
 
 
-def get_nftgo_data():
+def get_nftgo_data(name_path):
     print("Scrap nftgo.io...")
     df = pd.DataFrame()
     url = "https://nftgo.io/nft-drops/"
@@ -233,8 +250,8 @@ def get_nftgo_data():
                         row["discord"] = href.get_attribute("href")
                     else:
                         row["website"] = href.get_attribute("href")
-                name_path = './/*[contains(@class, "nft-drop-card_name")]'
-                row["name"] = ut.get_text(elem, name_path)
+                card_path = './/*[contains(@class, "nft-drop-card_name")]'
+                row["name"] = ut.get_text(elem, card_path)
                 stats_path = './/*[contains(@class, "nft-drop-card_stats")]'
                 stats = ut.get_text(elem, stats_path)
                 stats = stats.split("\n")
@@ -261,4 +278,7 @@ def get_nftgo_data():
     df = pd.DataFrame(rows_list)
     df.drop_duplicates(subset=['twitter', 'discord'], inplace=True)
     df.reset_index(drop=True, inplace=True)
+    if not name_path.endswith(".db"):
+        name_path += ".db"
+    sql.to_sql(df, sql_path=name_path)
     return df
