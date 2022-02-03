@@ -182,8 +182,11 @@ def get_market_column():
 
 
 def add_column(df, name, columns):
+    save = False
     for col in columns:
         if col not in df.columns:
+            save = True
             df[col] = 0
+    if save:
         sql.to_sql(df, sql_path=name)
     return df
