@@ -14,11 +14,12 @@ from top collections on a daily basis
 
 import pandas as pd
 import numpy as np
-import utils as ut
+import denoise.misc.sql as sql
+import denoise.misc.utils as ut
+import denoise.misc.metrics as mt
+import denoise.misc.files as fs
 from tqdm import tqdm
-import metrics as mt
 import glob
-import sql as sql
 from tqdm.contrib.itertools import product as prod
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -26,10 +27,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_tops():
-    websites = get_upcoming_names()
+    data_folder = fs.get_data_root()
+    websites = get_top_names()
     df_list = []
     for website in websites:
-        db = glob.glob("*" + website + ".db")
+        db = glob.glob(str(data_folder / website) + ".db")
         if not db:
             df_list.append(eval(f"get_{website}_data(website)"))
         else:
@@ -40,7 +42,7 @@ def get_tops():
     return dfs
 
 
-def get_upcoming_names():
+def get_top_names():
     websites = ["nftscoring",
                 "opensea",
                 ]

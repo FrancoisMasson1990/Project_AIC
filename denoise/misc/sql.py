@@ -11,7 +11,6 @@ A library that eases the use of sqlite3 through Python
 import os
 import sqlite3 as sql3
 import pandas as pd
-from shutil import copyfile
 from tqdm import tqdm
 from pathlib import Path
 

@@ -16,16 +16,17 @@ https://www.geeksforgeeks.org/python-api-followers-in-tweepy/
 """
 import tweepy as tw
 import json
-import utils as ut
+import denoise.misc.sql as sql
+import denoise.misc.utils as ut
 import time
-import sql as sql
 from pytrends.request import TrendReq
 from dateutil import parser
 from opensea import CollectionStats, Collection
-twitter_keys = "/home/francoismasson/denoise_nft/twitter_key.json"
+from pathlib import Path
 
 
 def tweppy_token():
+    twitter_keys = ut.get_twitter_keys()
     with open(twitter_keys) as json_file:
         keys = json.load(json_file)
     return keys

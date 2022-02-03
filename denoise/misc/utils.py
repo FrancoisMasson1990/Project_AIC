@@ -14,6 +14,7 @@ import requests
 import cloudscraper
 from bs4 import BeautifulSoup
 import json
+import denoise.misc.files as fs
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -83,3 +84,9 @@ def get_text(elem, x_path):
         return value[0].text
     else:
         return None
+
+
+def get_twitter_keys(name="twitter_key.json"):
+    root = fs.get_keys_root()
+    keys = root / name
+    return keys

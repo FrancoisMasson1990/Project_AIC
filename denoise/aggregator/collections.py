@@ -13,13 +13,13 @@ upcoming and top collections on a daily basis
 """
 
 import pandas as pd
-import top_aggregator as top
-import upcoming_aggregator as up
-import os
-import sql as sql
-import utils as ut
-import metrics as mt
+import denoise.aggregator.top_aggregator as top
+import denoise.aggregator.upcoming_aggregator as up
+import denoise.misc.sql as sql
+import denoise.misc.metrics as mt
+import denoise.misc.files as fs
 from tqdm import tqdm
+import os
 
 
 def get_collections(new, old, date):
@@ -32,8 +32,7 @@ def get_collections(new, old, date):
     df.insert(loc=0,
               column="date",
               value=date.strftime('%Y-%m-%d'))
-    print(df)
-    exit()
+
     # Step 2 : Update database from the day before
     if os.path.exists(old):
         new_collections = []
@@ -50,7 +49,14 @@ def get_collections(new, old, date):
             sql.to_sql(df_collections, sql_path=new)
     else:
         sql.to_sql(df, sql_path=new)
-
+        for name in up.get_upcoming_names():
+            db_temp = fs.get_data_root() / (name + ".db")
+            if os.path.exists(db_temp):
+                os.remove(db_temp)
+        for name in top.get_top_names():
+            db_temp = fs.get_data_root() / (name + ".db")
+            if os.path.exists(db_temp):
+                os.remove(db_temp)
     return df
 
 

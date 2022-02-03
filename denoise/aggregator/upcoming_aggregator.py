@@ -14,13 +14,14 @@ from upcoming collections on a daily basis
 
 import pandas as pd
 import numpy as np
-import utils as ut
+import denoise.misc.sql as sql
+import denoise.misc.utils as ut
+import denoise.misc.files as fs
 from tqdm import tqdm
 import time
 import re
 import datetime
 import glob
-import sql as sql
 from dateutil.parser import parse
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -28,10 +29,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_upcomings():
+    data_folder = fs.get_data_root()
     websites = get_upcoming_names()
     df_list = []
     for website in websites:
-        db = glob.glob("*" + website + ".db")
+        db = glob.glob(str(data_folder / website) + ".db")
         if not db:
             df_list.append(eval(f"get_{website}_data(website)"))
         else:
