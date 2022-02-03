@@ -22,7 +22,6 @@ share/python-wheels/
 MANIFEST
 *.csv
 *.joblib
-*.txt
 twitter_key.json
 checkpoint
 *.ckpt*
