@@ -60,14 +60,30 @@ def get_collections(new, old, date):
     return df
 
 
-def update_collections(df, name):
+def update_collections(df,
+                       name,
+                       opensea_metrics=[],
+                       discord_metrics=[],
+                       google_metrics=[],
+                       twitter_metrics=[],
+                       ):
     columns = mt.get_social_column()
     columns += mt.get_market_column()
     df = mt.add_column(df, name, columns)
-    for i, row in tqdm(df.iterrows(), total=len(df)):
-        mt.get_opensea_metrics(df, row["name"], i)
-        mt.get_twitter_metrics(df, row["twitter"], row["date"], i)
-        mt.get_discord_metrics(df, row["discord"], i)
-        mt.get_google_trends(df, row["name"], row["date"], i)
+    for _, row in tqdm(df.iterrows(), total=len(df)):
+        discord_metrics.append(
+            mt.get_discord_metrics(row["discord"]))
+        opensea_metrics.append(
+            mt.get_opensea_metrics(row["name"]))
+        google_metrics.append(
+            mt.get_google_trends(row["name"]))
+        twitter_metrics.append(
+            mt.get_twitter_metrics(row["twitter"],
+                                   row["date"]))
+
+    df[mt.get_discord_column()] = discord_metrics
+    df[mt.get_google_column()] = google_metrics
+    df[mt.get_twitter_column()] = twitter_metrics
+    df[mt.get_opensea_column()] = opensea_metrics
     sql.to_sql(df, sql_path=name)
     return df

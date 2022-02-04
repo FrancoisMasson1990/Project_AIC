@@ -36,6 +36,7 @@ if __name__ == "__main__":
     # Get stats and update values of top collection in merged database
     # Find a way to track minted collection
 
+    database_new = "/home/francoismasson/denoise_nft/data/collections_220203.db"
     if not os.path.exists(database_new):
         df = colc.get_collections(new=database_new,
                                   old=database_old,
