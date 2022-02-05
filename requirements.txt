@@ -2,3 +2,10 @@
 numpy
 tqdm
 pandas
+cloudscraper
+beautifulsoup4
+selenium
+undetected-chromedriver
+tweepy
+pytrends
+opensea-api

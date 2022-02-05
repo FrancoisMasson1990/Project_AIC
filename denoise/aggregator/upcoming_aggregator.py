@@ -52,7 +52,7 @@ def get_upcoming_names():
     return webistes
 
 
-def get_coinmarket_data(name_path):
+def get_coinmarketcap_data(name_path):
     print("Scrap coinmarketcap.com...")
     dfs = []
     url = "https://coinmarketcap.com/nft/upcoming/"
