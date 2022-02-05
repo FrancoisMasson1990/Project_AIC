@@ -1,0 +1,12 @@
+vtk
+Pillow
+scipy
+pydicom
+scikit-image
+natsort
+tensorflow
+scikit-learn
+testresources
+open3d
+vedo
+cylinder_fitting

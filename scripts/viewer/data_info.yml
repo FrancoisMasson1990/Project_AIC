@@ -1,5 +1,5 @@
-data_path : "R:/Imagerie-Data_Labo/Gr_ClavelMA_img/AIC"
-#data_path : "/home/francoismasson/Project_AIC/valve_patient_folder"
+#data_path : "R:/Imagerie-Data_Labo/Gr_ClavelMA_img/AIC"
+data_path : "/home/francoismasson/Project_AIC/data/valve_patient_folder"
 template : False
 labels_2D : False
 multi_label : True
@@ -9,7 +9,7 @@ crop_dim: 320 #-1 #Size to crop images (square, in pixels). If -1, then no cropp
 z_slice_min: 0.15 #ratio (%) of layers from bottom that can be removed based on the location of the valve on the dataset 
 z_slice_max: 0.73 #ratio (%) of layers from top that can be removed based on the location of the valve on the dataset 
 #model_name : "/home/francoismasson/Project_AIC/Viewer/models/unet_model_for_aic_320_v2.hdf5"
-model_name : "C:/Users/masfra01/Desktop/Repository/Project_AIC/Viewer/models/models/unet_model_for_aic_320.hdf5"
+#model_name : "C:/Users/masfra01/Desktop/Repository/Project_AIC/Viewer/models/models/unet_model_for_aic_320.hdf5"
 model_version : 1
 threshold : 850
 spacing : 1 # Number of pixel ignore for the border detection

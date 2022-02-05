@@ -1,31 +1,23 @@
-#
-# -*- coding: utf-8 -*-
-#
-# Copyright (c) 2019 Intel Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# SPDX-License-Identifier: EPL-2.0
-#
+#!/usr/bin/env python3.9
+# *-* coding: utf-8*-*
+"""
+Copyright (C) 2022 DENOISE - All Rights Reserved.
+
+Unauthorized copy of this file, via any medium is strictly
+prohibited. Proprietary and confidential.
+
+Note
+----
+Generate daily denoise data by checking new collections
+and assign social metrics to them
+"""
 
 import os
 import sys
-
-from viewer_3D import Viewer3D
-from viewer_2D import Viewer2D
+import aic.viewer.viewer_2D as v2d
+import aic.viewer.viewer_3D as v3d
 import argparse
 import yaml 
-
 import tensorflow as tf
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -44,19 +36,20 @@ except RuntimeError as e:
     print(e)
 
 def main_3D(data,folder_mask,folder_npy,multi_label,model,template,model_version,**kwargs):
-    viewer = Viewer3D(data,
-                      mode=4,
-                      label=folder_mask,
-                      npy=folder_npy,
-                      multi_label=multi_label,
-                      model=model,
-                      template=template,
-                      model_version=model_version,
-                      **kwargs)
+    viewer = v3d.Viewer3D(data,
+                          mode=4,
+                          label=folder_mask,
+                          npy=folder_npy,
+                          multi_label=multi_label,
+                          model=model,
+                          template=template,
+                          model_version=model_version,
+                          **kwargs)
     viewer.show()
 
+
 def main_2D(data,folder_mask):
-    Viewer2D(data,folder_mask)
+    v2d.Viewer2D(data,folder_mask)
 
 if __name__ == '__main__':
 
@@ -85,11 +78,11 @@ if __name__ == '__main__':
     
     if arg.model_name is not None :
         if arg.model_version == 0: # model_2D_old is a deprecated model generated with tf1 version 
-            from aic_models import model_2D_old
+            from aic.model import model_2D_old
             unet_model = model_2D_old.unet()
             model = unet_model.load_model(arg.model_name,False)
         elif arg.model_version == 1:
-            from aic_models import model_2D
+            from aic.model import model_2D
             unet_model = model_2D.unet()
             model = unet_model.load_model(arg.model_name)
         print("-" * 30)

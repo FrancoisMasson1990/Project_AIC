@@ -9,15 +9,15 @@ from vedo import settings
 from vtk.util.numpy_support import vtk_to_numpy
 import numpy as np
 import glob
-from widget import *
+from aic.viewer.widget import *
+import aic.processing.data_preprocess as dp
 from tqdm import tqdm 
 from scipy import ndimage as ndi
-from aic_models import data_preprocess as dp
 from scipy.spatial import ConvexHull as cvxh
 from skimage.transform import resize
 from tqdm import tqdm
 from cylinder_fitting import fit
-from viewer_2D import Viewer2D
+import aic.viewer.viewer_2D as v2d
 
 class Viewer3D(object):
 
@@ -578,11 +578,11 @@ class Viewer3D(object):
             mask = np.where(np.all(np.isin(points, inner_points),axis=1))
             mask_agatston = self.get_mask_2D(self.predictions_agatston_points[mask])
             # Show the score in 2D mode
-            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,mask_agatston=mask_agatston,\
-                    agatston=True,area=self.area,threshold_max=None)
+            v2d.Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,mask_agatston=mask_agatston,\
+                         agatston=True,area=self.area,threshold_max=None)
         else : 
-            Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,mask_agatston=self.mask.copy(),\
-                    agatston=False,area=self.area)
+            v2d.Viewer2D(data_path=self.data_path,folder_mask="",frame=self.frame,mask_agatston=self.mask.copy(),\
+                         agatston=False,area=self.area)
 
     def button_cast(self,pos:list=None,states:list=None):
         c=["bb", "gray"]
