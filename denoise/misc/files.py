@@ -14,16 +14,20 @@ from pathlib import Path
 
 
 def get_project_root() -> Path:
+    """Get root project folder."""
     return Path(__file__).parent.parent.parent
 
 
 def get_res_root() -> Path:
+    """Get res project folder."""
     return get_project_root() / "res"
 
 
 def get_keys_root() -> Path:
+    """Get key project folder."""
     return get_res_root() / "keys"
 
 
 def get_data_root() -> Path:
+    """Get data project folder."""
     return get_project_root() / "data"

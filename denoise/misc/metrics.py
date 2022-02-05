@@ -26,6 +26,7 @@ from pathlib import Path
 
 
 def tweppy_token():
+    """Get tweepy keys."""
     twitter_keys = ut.get_twitter_keys()
     with open(twitter_keys) as json_file:
         keys = json.load(json_file)
@@ -33,6 +34,7 @@ def tweppy_token():
 
 
 def tweepy_api(keys):
+    """Get tweepy api object."""
     auth = tw.AppAuthHandler(keys["api_key"], keys["api_key_secret"])
     return tw.API(auth, wait_on_rate_limit=True)
 
@@ -43,6 +45,7 @@ def get_twitter_metrics(url,
                         post=None,
                         retweet=None,
                         like=None):
+    """Get twitter metrics."""
     keys = tweppy_token()
     api = tweepy_api(keys)
     if url:
@@ -75,6 +78,7 @@ def get_twitter_metrics(url,
 
 def get_discord_metrics(url,
                         count=None):
+    """Get discord metrics."""
     if url:
         try:
             member = ut.scrap_url(url,
@@ -98,6 +102,7 @@ def get_discord_metrics(url,
 def get_google_trends(name,
                       score=None,
                       date='today 1-m'):
+    """Get Google metrics."""
     # https://hackernoon.com/how-to-use-google-trends-api-with-python
     trends = TrendReq(hl='en-US', tz=360)
     # list of keywords to get data
@@ -111,6 +116,7 @@ def get_google_trends(name,
 
 
 def get_opensea_metrics(name, key="stats"):
+    """Get opensea metrics."""
     stats = CollectionStats(collection_slug=name).fetch()
     if key in list(stats.keys()):
         return list(stats[key].values())
@@ -119,11 +125,13 @@ def get_opensea_metrics(name, key="stats"):
 
 
 def get_opensea_infos(name):
+    """Get opensea infos."""
     infos = Collection(collection_slug=name).fetch()
     return infos
 
 
 def get_opensea_filters():
+    """Get opensea filters."""
     volume = ["one_day_volume",
               "seven_day_volume",
               "thirty_day_volume",
@@ -152,6 +160,7 @@ def get_opensea_filters():
 
 
 def get_twitter_column():
+    """Get twitter columns name."""
     columns = ["twitter_followers",
                "twitter_post",
                "twitter_retweet",
@@ -160,16 +169,19 @@ def get_twitter_column():
 
 
 def get_google_column():
+    """Get Google column name."""
     columns = "google_trend"
     return columns
 
 
 def get_discord_column():
+    """Get Discord columns name."""
     columns = "discord_members"
     return columns
 
 
 def get_social_column():
+    """Get social columns name."""
     columns = [get_discord_column()] + \
               [get_google_column()] + \
               get_twitter_column()
@@ -177,6 +189,7 @@ def get_social_column():
 
 
 def get_opensea_column():
+    """Get opensea columns name."""
     columns = ['one_day_volume',
                'one_day_change',
                'one_day_sales',
@@ -202,11 +215,13 @@ def get_opensea_column():
 
 
 def get_market_column():
+    """Get market columns name."""
     columns = get_opensea_column()
     return columns
 
 
 def add_column(df, name, columns):
+    """Add column to database."""
     save = False
     for col in columns:
         if col not in df.columns:

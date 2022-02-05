@@ -23,6 +23,7 @@ import os
 
 
 def get_collections(new, old, date):
+    """Get collection of NFT."""
     # Step 1 : Gather new collection
     upcomings_df = up.get_upcomings()
     # Step 2 : Gather top collection
@@ -67,6 +68,7 @@ def update_collections(df,
                        google_metrics=[],
                        twitter_metrics=[],
                        ):
+    """Update collection infos of NFT."""
     columns = mt.get_social_column()
     columns += mt.get_market_column()
     df = mt.add_column(df, name, columns)

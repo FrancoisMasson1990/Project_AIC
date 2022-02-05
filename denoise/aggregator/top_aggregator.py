@@ -27,6 +27,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_tops():
+    """Get top collection of NFT."""
     data_folder = fs.get_data_root()
     websites = get_top_names()
     df_list = []
@@ -43,6 +44,7 @@ def get_tops():
 
 
 def get_top_names():
+    """Get top collection sites of NFT."""
     websites = ["nftscoring",
                 "opensea",
                 ]
@@ -50,6 +52,7 @@ def get_top_names():
 
 
 def get_nftscoring_data(name_path):
+    """Scrap collection of nftscoring url."""
     print("Scrap nftscoring.com...")
     # variables
     url = "https://nftscoring.com/allCollections"
@@ -114,6 +117,7 @@ def get_nftscoring_data(name_path):
 
 
 def get_opensea_data(name_path):
+    """Scrap collection of opensea url."""
     print("Scrap opensea.io...")
     url = "https://opensea.io/rankings"
 

@@ -29,6 +29,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def get_upcomings():
+    """Get upcoming collection of NFT."""
     data_folder = fs.get_data_root()
     websites = get_upcoming_names()
     df_list = []
@@ -45,6 +46,7 @@ def get_upcomings():
 
 
 def get_upcoming_names():
+    """Get upcoming collection sites of NFT."""
     webistes = ["coinmarketcap",
                 "upcomingnft",
                 "nftgo",
@@ -53,6 +55,7 @@ def get_upcoming_names():
 
 
 def get_coinmarketcap_data(name_path):
+    """Scrap collection of coinmarketcap url."""
     print("Scrap coinmarketcap.com...")
     dfs = []
     url = "https://coinmarketcap.com/nft/upcoming/"
@@ -103,6 +106,7 @@ def get_coinmarketcap_data(name_path):
 
 
 def get_upcomingnft_data(name_path):
+    """Scrap collection of upcomingnft url."""
     print("Scrap upcomingnft.net...")
     df = pd.DataFrame()
     url = "https://upcomingnft.net/upcoming-events/"
@@ -222,6 +226,7 @@ def get_upcomingnft_data(name_path):
 
 
 def get_nftgo_data(name_path):
+    """Scrap collection of nftgo url."""
     print("Scrap nftgo.io...")
     df = pd.DataFrame()
     url = "https://nftgo.io/nft-drops/"

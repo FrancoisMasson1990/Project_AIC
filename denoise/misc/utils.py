@@ -23,6 +23,7 @@ headers = {"Accept": "application/json"}
 
 
 def get_request(url, headers):
+    """Get url request."""
     response = requests.request("GET", url, headers=headers)
     response = response.text
     return response
@@ -50,6 +51,7 @@ def json_extract(obj, key):
 
 
 def scrap_url(url, key="script", params={}, property_=None):
+    """Scrap url html infos."""
     scraper = cloudscraper.create_scraper()
     r = scraper.get(url, params=params, headers=headers)
     soup = BeautifulSoup(r.text, 'html.parser')
@@ -66,6 +68,7 @@ def scrap_url(url, key="script", params={}, property_=None):
 
 
 def selenium_driver():
+    """Get Selenium Service."""
     path = "../chromedriver/chromedriver"
     browserpath = "/opt/google/chrome/google-chrome"
 
@@ -79,6 +82,7 @@ def selenium_driver():
 
 
 def get_text(elem, x_path):
+    """Get text info using selenium properties."""
     value = elem.find_elements(By.XPATH, x_path)
     if value:
         return value[0].text
@@ -87,6 +91,7 @@ def get_text(elem, x_path):
 
 
 def get_twitter_keys(name="twitter_key.json"):
+    """Get twitter keys access."""
     root = fs.get_keys_root()
     keys = root / name
     return keys
