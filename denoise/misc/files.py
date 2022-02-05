@@ -31,3 +31,23 @@ def get_keys_root() -> Path:
 def get_data_root() -> Path:
     """Get data project folder."""
     return get_project_root() / "data"
+
+
+def get_lib_root() -> Path:
+    """Get lib project folder."""
+    return get_project_root() / "lib"
+
+
+def get_chromedriver_root() -> Path:
+    """Get chromedriver project folder."""
+    return get_lib_root() / "chromedriver"
+
+
+def get_chromedriver_file() -> Path:
+    """Get chromedriver file."""
+    return get_chromedriver_root() / "chromedriver"
+
+
+def get_googlechrome_file() -> Path:
+    """Get google-chrome path."""
+    return Path("/opt/google/chrome/google-chrome")

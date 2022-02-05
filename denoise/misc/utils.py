@@ -69,14 +69,14 @@ def scrap_url(url, key="script", params={}, property_=None):
 
 def selenium_driver():
     """Get Selenium Service."""
-    path = "../chromedriver/chromedriver"
-    browserpath = "/opt/google/chrome/google-chrome"
+    chromedriver_path = fs.get_chromedriver_file()
+    browser_path = fs.get_googlechrome_file()
 
     options = webdriver.ChromeOptions()
-    options.binary_location = browserpath
+    options.binary_location = browser_path
     options.add_argument('--headless')
 
-    service = Service(path)
+    service = Service(chromedriver_path)
     driver = uc.Chrome(service=service, options=options)
     return driver
 
