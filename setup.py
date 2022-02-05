@@ -4,14 +4,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="denoise",  # Replace with your own username
-    version="0.1.0",
+    name="aic", # Replace with your own username
+    version="0.0.1",
     author="Francois Masson",
-    author_email="francois-masson@hortmail.com",
-    description=("Codes required for the Denoise project"),
+    author_email="francois-masson@hotmail.com",
+    description="AIC models",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/FrancoisMasson1990/denoise_nft",
+    url="https://github.com/FrancoisMasson1990/Project_AIC",
     packages=setuptools.find_packages(),
-    python_requires='>=3.9',
+    python_requires='>=3.6',
 )
