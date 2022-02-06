@@ -1,15 +1,15 @@
 #!/usr/bin/env python3.9
 # *-* coding: utf-8*-*
 """
-Copyright (C) 2022 DENOISE - All Rights Reserved.
+Copyright (C) 2022 Project AIC - All Rights Reserved.
 
 Unauthorized copy of this file, via any medium is strictly
 prohibited. Proprietary and confidential.
 
 Note
 ----
-Generate daily denoise data by checking new collections
-and assign social metrics to them
+Main viewer allowing to visualize data, infere model
+and make predictions.
 """
 
 import os
@@ -35,21 +35,6 @@ try:
 except RuntimeError as e:
     print(e)
 
-def main_3D(data,folder_mask,folder_npy,multi_label,model,template,model_version,**kwargs):
-    viewer = v3d.Viewer3D(data,
-                          mode=4,
-                          label=folder_mask,
-                          npy=folder_npy,
-                          multi_label=multi_label,
-                          model=model,
-                          template=template,
-                          model_version=model_version,
-                          **kwargs)
-    viewer.show()
-
-
-def main_2D(data,folder_mask):
-    v2d.Viewer2D(data,folder_mask)
 
 if __name__ == '__main__':
 
@@ -104,14 +89,17 @@ if __name__ == '__main__':
             data.append(os.path.join(root,sub))
 
     if arg.labels_2D :
-        main_2D(data,
-                surface_label_path)
+        v2d.Viewer2D(data=data,
+                     folder_mask=surface_label_path)
     else :
-        main_3D(data,
-                surface_label_path,
-                volume_label_path,
-                arg.multi_label,
-                model,
-                arg.template,
-                arg.model_version,
-                **kwargs)
+        viewer = \
+            v3d.Viewer3D(data,
+                         mode=4,
+                         label=surface_label_path,
+                         npy=volume_label_path,
+                         multi_label=arg.multi_label,
+                         model=model,
+                         template=arg.template,
+                         model_version=arg.model_version,
+                         **kwargs)
+        viewer.show()
