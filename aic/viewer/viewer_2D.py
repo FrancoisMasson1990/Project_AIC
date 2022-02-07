@@ -18,6 +18,8 @@ from matplotlib.widgets import Button, Slider
 from scipy.ndimage import measurements
 import pickle
 import aic.processing.preprocess as dp
+import aic.misc.utils as ut
+import aic.processing.operations as op
 
 
 class Viewer2D(object):
@@ -128,16 +130,16 @@ class Image_2D(object):
 
         # Dicom image
         self.slices = None
-        self.slices = dp.load_scan(self.data_path[self.frame])
-        self.image = dp.get_pixels_hu(self.slices)
+        self.slices = ut.load_scan(self.data_path[self.frame])
+        self.image = op.get_pixels_hu(self.slices)
 
         if self.label_folder != "":
             folder = \
                 os.path.join(
                     self.label_folder,
                     self.data_path[self.frame].split('/')[-2],
-                    data_path[frame].split('/')[-1])
-            self.label = dp.load_mask(folder)
+                    self.data_path[frame].split('/')[-1])
+            self.label = ut.load_mask(folder)
             self.fig_canvas.suptitle(self.data_path[self.frame].split('/')[-2],
                                      fontsize=12)
             if len(self.label) == 0:
@@ -288,10 +290,13 @@ class Image_2D(object):
             self.frame = len(self.data_path)-1
         else:
             self.frame += 1
-        self.slices = dp.load_scan(self.data_path[self.frame])
-        self.image = dp.get_pixels_hu(self.slices)
+        self.slices = ut.load_scan(self.data_path[self.frame])
+        self.image = op.get_pixels_hu(self.slices)
 
         if self.label is not None:
+            # Not working anymore
+            # Should have a function to update label
+            # When switching between patients
             self.label = \
                 dp.get_mask(self.data_path,
                             self.label_folder,
@@ -317,10 +322,13 @@ class Image_2D(object):
         else:
             self.frame -= 1
 
-        self.slices = dp.load_scan(self.data_path[self.frame])
-        self.image = dp.get_pixels_hu(self.slices)
+        self.slices = ut.load_scan(self.data_path[self.frame])
+        self.image = op.get_pixels_hu(self.slices)
 
         if self.label is not None:
+            # Not working anymore
+            # Should have a function to update label
+            # When switching between patients
             self.label = \
                 dp.get_mask(self.data_path,
                             self.label_folder,

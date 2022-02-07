@@ -20,6 +20,8 @@ from vtk.util.numpy_support import vtk_to_numpy
 import glob
 from aic.viewer.widget import *
 import aic.processing.preprocess as dp
+import aic.misc.utils as ut
+import aic.processing.operations as op
 from tqdm import tqdm
 from scipy import ndimage as ndi
 from scipy.spatial import ConvexHull as cvxh
@@ -521,8 +523,8 @@ class Viewer3D(object):
             if not self.infer_view_mode:
                 # Prediction
                 idx = os.path.join(self.data_path[self.frame])
-                img = dp.load_scan(idx)
-                img = dp.get_pixels_hu(img)
+                img = ut.load_scan(idx)
+                img = op.get_pixels_hu(img)
                 crop_values = None
                 # old version, input images were normalized for each slice
                 if self.model_version == 0:
@@ -590,16 +592,16 @@ class Viewer3D(object):
                                    yc*self.spacing[1],
                                    yc+img.shape[2]*self.spacing[1]]
 
-                predictions, _ = dp.resample(predictions,
+                predictions, _ = op.resample(predictions,
                                              [self.spacing[0],
                                               self.spacing[1]],
                                              self.spacing[2],
                                              [1, 1, 1])
-                vertices, _ = dp.make_mesh(predictions, -1)
+                vertices, _ = op.make_mesh(predictions, -1)
 
                 # Clustering
                 self.vertices_predictions = \
-                    dp.clustering(vertices,
+                    op.clustering(vertices,
                                   self.model_version,
                                   self.center,
                                   self.all_numpy_nodes,
@@ -613,21 +615,21 @@ class Viewer3D(object):
                 # Volume Cropping
                 # First prediction : UX visual
                 self.predictions_final = self.img.clone()
-                self.predictions_final = dp.boxe_3d(self.predictions_final,
+                self.predictions_final = op.boxe_3d(self.predictions_final,
                                                     self.vertices_predictions,
                                                     max_=self.max)
                 # Second prediction : Volume
                 self.predictions_agatston = self.volume.clone()
                 self.predictions_agatston = \
-                    dp.boxe_3d(self.predictions_agatston,
+                    op.boxe_3d(self.predictions_agatston,
                                self.vertices_predictions,
                                max_=self.max)
                 # Get the all points in isosurface Mesh/Volume
                 self.predictions_agatston_points = \
-                    dp.to_points(self.predictions_agatston,
+                    op.to_points(self.predictions_agatston,
                                  template=self.template)
                 self.predictions_final_points = \
-                    dp.to_points(self.predictions_final)
+                    op.to_points(self.predictions_final)
                 self.predictions_final_points_threshold = \
                     self.predictions_agatston_points[
                         self.predictions_agatston_points[:, 3] >
@@ -638,7 +640,7 @@ class Viewer3D(object):
                     cvxh(
                         self.predictions_final_points_threshold[:, :3])
                 mask = \
-                    dp.isInHull(self.predictions_agatston_points[:, :3],
+                    op.isInHull(self.predictions_agatston_points[:, :3],
                                 hull)
                 self.predictions_agatston_points = \
                     self.predictions_agatston_points[mask]
@@ -720,7 +722,7 @@ class Viewer3D(object):
             self.w_fit = np.asarray(self.cylinder.normalAt(48))
 
             # Projection along z axis and centered in (0,0,0)
-            points = dp.z_projection(self.predictions_agatston_points,
+            points = op.z_projection(self.predictions_agatston_points,
                                      self.w_fit)
             x_mean = \
                 (np.min(points[:, 0]) + np.max(points[:, 0]))/2
@@ -777,14 +779,14 @@ class Viewer3D(object):
                     predictions_agatston[predictions_agatston[:, 2] == z]
                 if predictions_final_tmp.shape[0] > 2:
                     xc, yc, _, _ = \
-                        dp.leastsq_circle(predictions_final_tmp[:, 0],
+                        op.leastsq_circle(predictions_final_tmp[:, 0],
                                           predictions_final_tmp[:, 1])
                     circle_center = np.array([xc, yc, z])
                     # Estimate the min value by slices
                     r_fit = []
                     for point in predictions_final_tmp[:, :3]:
                         # Exclude intensity points
-                        r_fit.append(dp.euclidean(point, circle_center))
+                        r_fit.append(op.euclidean(point, circle_center))
                     if len(r_fit) > 0:
                         r_fit = np.array(r_fit)
                         # Based on experimental analysis on template valve,
@@ -798,7 +800,7 @@ class Viewer3D(object):
                         d = []
                         for point in predictions_agatston[:, :3]:
                             # Exclude intensity points
-                            d.append(dp.euclidean(point, circle_center))
+                            d.append(op.euclidean(point, circle_center))
                         d = np.array(d)
                         if i < first_slices or i > last_slices:
                             if predictions_final_tmp.shape[0] > 30:
@@ -888,8 +890,8 @@ class Viewer3D(object):
     def iso_surface(self, data):
         """Generate iso surface."""
         # Check that mask and image have the same size
-        self.slices = dp.load_scan(self.data_path[self.frame])
-        self.shape = dp.get_pixels_hu(self.slices)
+        self.slices = ut.load_scan(self.data_path[self.frame])
+        self.shape = op.get_pixels_hu(self.slices)
 
         self.img = load(data)
         # Following lines used to get the mask
