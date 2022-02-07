@@ -16,6 +16,8 @@ from tensorflow.keras.utils import Sequence
 import numpy as np
 import matplotlib.pyplot as plt
 from aic.processing import preprocess as dp
+import aic.misc.utils as ut
+import aic.processing.operations as op
 
 
 class DatasetGenerator(Sequence):
@@ -33,8 +35,8 @@ class DatasetGenerator(Sequence):
                  z_slice_min=-1,
                  z_slice_max=-1):
         """Init function."""
-        img = dp.load_scan(filenames[0])
-        img = dp.get_pixels_hu(img)
+        img = ut.load_scan(filenames[0])
+        img = op.get_pixels_hu(img)
         # We'll assume z-dimension (slice)
         # is last so we will invert dim in the batch
         self.slice_dim = 2
@@ -146,7 +148,7 @@ class DatasetGenerator(Sequence):
                 image_filename = self.filenames[idx]
                 label_filename = self.labelnames[idx]
 
-                label = dp.load_mask(label_filename)
+                label = ut.load_mask(label_filename)
                 label = dp.preprocess_label(label)
 
                 index_z_crop = []
@@ -177,8 +179,8 @@ class DatasetGenerator(Sequence):
 
                 label = np.moveaxis(label, 0, -1)
 
-                img = dp.load_scan(image_filename)
-                img = dp.get_pixels_hu(img)
+                img = ut.load_scan(image_filename)
+                img = op.get_pixels_hu(img)
 
                 if (self.z_slice_min != -1) and (self.z_slice_max != -1):
                     img = img[index_z_crop]
