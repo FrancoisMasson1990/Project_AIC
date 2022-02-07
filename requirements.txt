@@ -10,3 +10,5 @@ testresources
 open3d
 vedo
 cylinder_fitting
+gspread
+oauth2client
