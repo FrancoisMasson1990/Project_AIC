@@ -55,11 +55,11 @@ def update_sheet_cells(df, sheet, col="G", header=4):
     cell_list = sheet.range(start+":"+end)
 
     # Write the array to worksheet
-    l = 0
+    index = 0
     for index, row in tqdm(df.iterrows(), total=len(df)):
         if index >= header-1:
-            cell_list[l].value = row["score"]
-            l += 1
+            cell_list[index].value = row["score"]
+            index += 1
 
     sheet.update_cells(cell_list)
 

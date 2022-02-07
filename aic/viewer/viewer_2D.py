@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
 from scipy.ndimage import measurements
 import pickle
-import aic.processing.data_preprocess as dp
+import aic.processing.preprocess as dp
 
 
 class Viewer2D(object):

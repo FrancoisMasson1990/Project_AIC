@@ -19,7 +19,7 @@ from vedo import settings
 from vtk.util.numpy_support import vtk_to_numpy
 import glob
 from aic.viewer.widget import *
-import aic.processing.data_preprocess as dp
+import aic.processing.preprocess as dp
 from tqdm import tqdm
 from scipy import ndimage as ndi
 from scipy.spatial import ConvexHull as cvxh
