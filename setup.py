@@ -1,10 +1,23 @@
+#!/usr/bin/env python3.9
+# *-* coding: utf-8*-*
+"""
+Copyright (C) 2022 Project AIC - All Rights Reserved.
+
+Unauthorized copy of this file, via any medium is strictly
+prohibited. Proprietary and confidential.
+
+Note
+----
+Build-in library
+"""
 import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="aic", # Replace with your own username
+    # Replace with your own username
+    name="aic",
     version="0.0.1",
     author="Francois Masson",
     author_email="francois-masson@hotmail.com",
