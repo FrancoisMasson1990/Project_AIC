@@ -15,7 +15,7 @@ import numpy as np
 import os
 import json
 from natsort import natsorted
-from glob import glob
+import glob
 import pydicom
 
 

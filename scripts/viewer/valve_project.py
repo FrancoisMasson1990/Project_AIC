@@ -82,12 +82,12 @@ if __name__ == '__main__':
     else:
         model = None
 
-    data_path = os.path.join(data_path,
-                             "datasets_dcm")
     surface_label_path = os.path.join(data_path,
                                       "labels_2d_npy")
     volume_label_path = os.path.join(data_path,
                                      "labels_3d_npy")
+    data_path = os.path.join(data_path,
+                             "datasets_dcm")
     sub_folders = os.listdir(data_path)
     data = []
     for sub_folder in sub_folders:
@@ -99,11 +99,11 @@ if __name__ == '__main__':
                                      sub))
 
     if labels_2D:
-        v2d.Viewer2D(data=data,
+        v2d.Viewer2D(data_path=data,
                      folder_mask=surface_label_path)
     else:
         viewer = \
-            v3d.Viewer3D(data,
+            v3d.Viewer3D(data_path=data,
                          mode=4,
                          label=surface_label_path,
                          npy=volume_label_path,

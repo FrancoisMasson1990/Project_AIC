@@ -138,8 +138,12 @@ class Image_2D(object):
                 os.path.join(
                     self.label_folder,
                     self.data_path[self.frame].split('/')[-2],
-                    self.data_path[frame].split('/')[-1])
-            self.label = ut.load_mask(folder)
+                    self.data_path[self.frame].split('/')[-1])
+
+            if os.path.exists(folder):
+                self.label = ut.load_mask(folder)
+            else:
+                self.label = []
             self.fig_canvas.suptitle(self.data_path[self.frame].split('/')[-2],
                                      fontsize=12)
             if len(self.label) == 0:
@@ -293,27 +297,27 @@ class Image_2D(object):
         self.slices = ut.load_scan(self.data_path[self.frame])
         self.image = op.get_pixels_hu(self.slices)
 
-        if self.label is not None:
-            # Not working anymore
-            # Should have a function to update label
-            # When switching between patients
-            self.label = \
-                dp.get_mask(self.data_path,
-                            self.label_folder,
-                            self.frame,
-                            self.fig_canvas)
+        folder = \
+            os.path.join(
+                self.label_folder,
+                self.data_path[self.frame].split('/')[-2],
+                self.data_path[self.frame].split('/')[-1])
 
-        self.axislicer.clear()
-        self.slicer = \
-            Slider(self.axislicer,
-                   'Image',
-                   0,
-                   len(self.image)-1,
-                   valinit=len(self.image)//2,
-                   valstep=1)
+        if os.path.exists(folder):
+            self.label = ut.load_mask(folder)
+        else:
+            self.label = []
+        if len(self.label) == 0:
+            self.label = None
+
         self.fig_canvas.suptitle(
             self.data_path[self.frame].split('/')[-2],
             fontsize=12)
+
+        self.slicer.ax.set_xlim(0, len(self.image)-1)
+        self.slicer.valmax = len(self.image)-1
+        self.slicer.valinit = len(self.image)//2
+        self.slicer.reset()
 
     def prev(self, event):
         """Update slice by previous event."""
@@ -325,27 +329,27 @@ class Image_2D(object):
         self.slices = ut.load_scan(self.data_path[self.frame])
         self.image = op.get_pixels_hu(self.slices)
 
-        if self.label is not None:
-            # Not working anymore
-            # Should have a function to update label
-            # When switching between patients
-            self.label = \
-                dp.get_mask(self.data_path,
-                            self.label_folder,
-                            self.frame,
-                            self.fig_canvas)
+        folder = \
+            os.path.join(
+                self.label_folder,
+                self.data_path[self.frame].split('/')[-2],
+                self.data_path[self.frame].split('/')[-1])
 
-        self.axislicer.clear()
-        self.slicer = \
-            Slider(self.axislicer,
-                   'Image',
-                   0,
-                   len(self.image)-1,
-                   valinit=len(self.image)//2,
-                   valstep=1)
+        if os.path.exists(folder):
+            self.label = ut.load_mask(folder)
+        else:
+            self.label = []
+        if len(self.label) == 0:
+            self.label = None
+
         self.fig_canvas.suptitle(
             self.data_path[self.frame].split('/')[-2],
             fontsize=12)
+
+        self.slicer.ax.set_xlim(0, len(self.image)-1)
+        self.slicer.valmax = len(self.image)-1
+        self.slicer.valinit = len(self.image)//2
+        self.slicer.reset()
 
     def update(self, val):
         """Update slice render."""
