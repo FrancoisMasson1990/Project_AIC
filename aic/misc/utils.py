@@ -148,7 +148,16 @@ def load_scan(path):
     for f in files:
         if f.endswith('.dcm'):
             file_dcm.append(f)
-    slices = [pydicom.read_file(path + '/' + s) for s in file_dcm]
+    return get_slices(file_dcm, path)
+
+
+def get_slices(file_dcm,
+               path=None):
+    """Get Slice metadata."""
+    if path:
+        slices = [pydicom.read_file(path + '/' + s) for s in file_dcm]
+    else:
+        slices = [pydicom.read_file(s) for s in file_dcm]
     slices.sort(key=lambda x: int(x.InstanceNumber))
 
     try:
@@ -161,7 +170,6 @@ def load_scan(path):
 
     for s in slices:
         s.SliceThickness = slice_thickness
-
     return slices
 
 

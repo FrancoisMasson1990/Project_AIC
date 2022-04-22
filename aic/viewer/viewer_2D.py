@@ -15,11 +15,11 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
-from scipy.ndimage import measurements
 import pickle
-import aic.processing.preprocess as dp
+import bz2
 import aic.misc.utils as ut
 import aic.processing.operations as op
+import aic.processing.scoring as sc
 
 
 class Viewer2D(object):
@@ -209,11 +209,24 @@ class Image_2D(object):
         if self.agatston_bool:
             self.score = 0.0
             self._prediction_view = None
-            self.agatston_score_slice()
+            self.prediction = \
+                sc.agatston_score_slice(
+                    self.image,
+                    self.mask_agatston,
+                    self.index,
+                    self.area,
+                    self.threshold_min,
+                    self.threshold_max)
             self._prediction_view = \
                 self.axis2.imshow(self.prediction,
                                   cmap='jet')
-            self.score = self.agatston_score()
+            self.score = \
+                sc.agatston_score(
+                    self.image,
+                    self.mask_agatston,
+                    self.area,
+                    self.threshold_min,
+                    self.threshold_max)
             self.axis2.set_xlabel("Agatston score : {:.3f}".format(self.score))
             self.save_prediction()
 
@@ -234,59 +247,8 @@ class Image_2D(object):
             self.data_path[self.frame].replace("datasets_dcm",
                                                "predictions")
         os.makedirs(folder, exist_ok=True)
-        with open(folder + "/prediction.pkl", 'wb') as f:
+        with bz2.BZ2File(folder + "/prediction.pbz2", 'wb') as f:
             pickle.dump(save_predict, f)
-
-    def agatston_score_slice(self):
-        """Get Agatston score by slide."""
-        self.prediction = self.image[self.index].copy()
-        self.prediction[self.mask_agatston[self.index] == 0] = 0
-        if self.threshold_min is not None:
-            self.prediction[self.prediction < self.threshold_min] = 0
-        if self.threshold_max is not None:
-            self.prediction[self.prediction > self.threshold_max] = 0
-        self.prediction[self.prediction > 0] = 1
-        area_, lw = self.area_measurements(self.prediction)
-        for j, number_of_pix in enumerate(area_):
-            if j != 0:
-                # density higher than 1mm2
-                if number_of_pix*self.area <= 1:
-                    self.prediction[lw == j] = 0
-        self.prediction = \
-            np.ma.masked_where(self.prediction == 0,
-                               self.prediction)
-
-    def area_measurements(self, slice_):
-        """Estimate area."""
-        slice_[slice_ != 0] = 1
-        lw, num = measurements.label(slice_)
-        area_ = measurements.sum(slice_, lw, index=np.arange(lw.max() + 1))
-        return area_, lw
-
-    def agatston_score(self):
-        """Get Agatston score."""
-        score = 0.0
-        for i in range(len(self.image)):
-            prediction = self.image[i].copy()
-            prediction[self.mask_agatston[i] == 0] = 0
-            if self.threshold_min is not None:
-                prediction[prediction < self.threshold_min] = 0
-            if self.threshold_max is not None:
-                prediction[prediction > self.threshold_max] = 0
-            area_, lw = self.area_measurements(prediction)
-            for j, number_of_pix in enumerate(area_):
-                if j != 0:
-                    # density higher than 1mm2
-                    if number_of_pix * self.area <= 1:
-                        prediction[lw == j] = 0
-
-            prediction[np.logical_and(prediction >= 130, prediction < 200)] = 1
-            prediction[np.logical_and(prediction >= 200, prediction < 300)] = 2
-            prediction[np.logical_and(prediction >= 300, prediction < 400)] = 3
-            prediction[prediction > 400] = 4
-
-            score += self.area*np.sum(prediction)
-        return score
 
     def next(self, event):
         """Update slice by next event."""

@@ -30,3 +30,5 @@ MANIFEST
 *.tmp
 *.hdf5
 *.zip
+*.pbz2
+*.mp4

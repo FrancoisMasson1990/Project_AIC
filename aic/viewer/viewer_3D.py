@@ -628,6 +628,13 @@ class Viewer3D(object):
                 self.predictions_agatston_points = \
                     op.to_points(self.predictions_agatston,
                                  template=self.template)
+                # data = self.predictions_agatston_points
+                # index = \
+                #     np.where((data[:, 0] > 130) & (data[:, 0] < 180)
+                #              & (data[:, 1] > 120) & (data[:, 1] < 160)
+                #              & (data[:, 2] > 80) & (data[:, 2] < 130))
+                # data = data[index]
+                # self.predictions_agatston_points = data
                 self.predictions_final_points = \
                     op.to_points(self.predictions_final)
                 self.predictions_final_points_threshold = \
@@ -647,6 +654,10 @@ class Viewer3D(object):
 
                 actor_ = self.label_3d(self.predictions_final_points,
                                        c=[0, 1, 0])
+                # actor_ = self.label_3d(self.predictions_agatston_points,
+                #         c=[0, 1, 0])
+                # actor_ = self.label_3d(self.predictions_final_points_threshold,
+                #                        c=[0, 1, 0])
 
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
@@ -713,7 +724,7 @@ class Viewer3D(object):
     def buttonfuncAgatston(self):
         """Estimation of Agatston score by projecting prediction along z axis.
 
-        For each layer, least_square cylinder fitting and rrremove point
+        For each layer, least_square cylinder fitting and remove point
         outside the fitted cylinder
         """
         if self.fitting_view_mode:
