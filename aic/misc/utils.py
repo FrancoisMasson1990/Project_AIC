@@ -17,6 +17,7 @@ import json
 from natsort import natsorted
 import glob
 import pydicom
+import shutil
 
 
 def get_file_list(data_path, seed=816, split=0.7):
@@ -179,3 +180,16 @@ def load_mask(path):
     mask = natsorted(mask)
 
     return mask
+
+
+def save_dicom(files_dcm,
+               path="./cache/tmp"):
+    """Save to pydicom object to dcm format."""
+    if not isinstance(files_dcm, list):
+        files_dcm = [files_dcm]
+    slices = [pydicom.read_file(s) for s in files_dcm]
+    if os.path.exists(path) and os.path.isdir(path):
+        shutil.rmtree(path)
+    os.makedirs(path, exist_ok=True)
+    for i, s in enumerate(slices):
+        s.save_as(f"{path}/{i}.dcm")

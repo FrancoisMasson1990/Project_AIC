@@ -19,14 +19,11 @@ from vedo import settings
 from vtk.util.numpy_support import vtk_to_numpy
 import glob
 from aic.viewer.widget import *
-import aic.processing.preprocess as dp
 import aic.misc.utils as ut
+import aic.model.inference as infer
 import aic.processing.operations as op
-from tqdm import tqdm
+import aic.processing.fitting as ft
 from scipy import ndimage as ndi
-from scipy.spatial import ConvexHull as cvxh
-from tqdm import tqdm
-from cylinder_fitting import fit
 import aic.viewer.viewer_2D as v2d
 vtk.vtkObject.GlobalWarningDisplayOff()
 
@@ -521,82 +518,15 @@ class Viewer3D(object):
         self.infer.switch()
         if self.model is not None:
             if not self.infer_view_mode:
-                # Prediction
-                idx = os.path.join(self.data_path[self.frame])
-                img = ut.load_scan(idx)
-                img = op.get_pixels_hu(img)
-                crop_values = None
-                # old version, input images were normalized for each slice
-                if self.model_version == 0:
-                    img = dp.preprocess_inputs(img)
-                # new version, input images were normalized according to z
-                elif self.model_version == 1:
-                    # padding
-                    # Need for the mesh reconstruct
-                    padding = np.zeros(img.shape) - 2
-                    if self.crop_dim != -1:
-                        img = dp.crop_dim(img,
-                                          crop_dim=self.crop_dim)
-                    if (self.z_slice_min is not None) \
-                            and (self.z_slice_max is not None):
-                        min_ = int(self.z_slice_min*img.shape[0])
-                        max_ = int(self.z_slice_max*img.shape[0])
-                        index_z_crop = np.arange(min_, max_)
-                        img = img[index_z_crop]
-                    img = dp.preprocess_img(img)
-                    img = np.expand_dims(img, -1)
-                else:
-                    print("Unknown/Unsupported version")
-                    exit()
-
-                pred_list = []
-                # https://www.raddq.com/dicom-processing-segmentation-visualization-in-python/
-                for i in tqdm(range(img.shape[0])):
-                    pred = np.expand_dims(img[i, :, :, :], 0)
-                    prediction = self.model.predict(pred)
-                    if self.model_version == 0:
-                        prediction = np.argmax(prediction.squeeze(), axis=-1)
-                        prediction = np.rot90(prediction, axes=(1, 0))
-                        prediction = np.expand_dims(prediction, 0)
-                        prediction[prediction == 0] = -1
-                    elif self.model_version == 1:
-                        prediction = prediction[0, :, :, 0]
-                        prediction = np.rot90(prediction, axes=(1, 0))
-                        prediction = np.expand_dims(prediction, 0)
-                        prediction[prediction != 1.0] = -2
-                    else:
-                        print("Unknown/Unsupported version")
-                        exit()
-                    pred_list.append(prediction)
-                predictions = np.vstack(pred_list)
-                # Padding reconstruction
-                if self.model_version == 1:
-                    if self.crop_dim != -1:
-                        xc = (self.dimensions[0] - self.crop_dim) // 2
-                        yc = (self.dimensions[1] - self.crop_dim) // 2
-                    else:
-                        xc = 0
-                        yc = 0
-                    if (self.z_slice_min is not None) \
-                            and (self.z_slice_max is not None):
-                        padding[index_z_crop,
-                                xc:xc+img.shape[1],
-                                yc:yc+img.shape[2]] = predictions
-                    else:
-                        padding[:,
-                                xc:xc+img.shape[1],
-                                yc:yc+img.shape[2]] = predictions
-                    predictions = padding
-                    crop_values = [xc*self.spacing[0],
-                                   xc+img.shape[1]*self.spacing[0],
-                                   yc*self.spacing[1],
-                                   yc+img.shape[2]*self.spacing[1]]
-
-                predictions, _ = op.resample(predictions,
-                                             [self.spacing[0],
-                                              self.spacing[1]],
-                                             self.spacing[2],
-                                             [1, 1, 1])
+                predictions, crop_values = \
+                    infer.get_predictions(self.model,
+                                          self.model_version,
+                                          self.data_path[self.frame],
+                                          self.crop_dim,
+                                          self.z_slice_max,
+                                          self.z_slice_min,
+                                          self.spacing,
+                                          self.dimensions)
                 vertices, _ = op.make_mesh(predictions, -1)
 
                 # Clustering
@@ -628,37 +558,23 @@ class Viewer3D(object):
                 self.predictions_agatston_points = \
                     op.to_points(self.predictions_agatston,
                                  template=self.template)
-                # data = self.predictions_agatston_points
-                # index = \
-                #     np.where((data[:, 0] > 130) & (data[:, 0] < 180)
-                #              & (data[:, 1] > 120) & (data[:, 1] < 160)
-                #              & (data[:, 2] > 80) & (data[:, 2] < 130))
-                # data = data[index]
-                # self.predictions_agatston_points = data
                 self.predictions_final_points = \
                     op.to_points(self.predictions_final)
                 self.predictions_final_points_threshold = \
                     self.predictions_agatston_points[
                         self.predictions_agatston_points[:, 3] >
                         self.threshold]
-
                 # Convex-Hull estimation
                 hull = \
-                    cvxh(
+                    ft.convex_hull(
                         self.predictions_final_points_threshold[:, :3])
                 mask = \
                     op.isInHull(self.predictions_agatston_points[:, :3],
                                 hull)
                 self.predictions_agatston_points = \
                     self.predictions_agatston_points[mask]
-
                 actor_ = self.label_3d(self.predictions_final_points,
                                        c=[0, 1, 0])
-                # actor_ = self.label_3d(self.predictions_agatston_points,
-                #         c=[0, 1, 0])
-                # actor_ = self.label_3d(self.predictions_final_points_threshold,
-                #                        c=[0, 1, 0])
-
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -693,7 +609,8 @@ class Viewer3D(object):
             # Cylinder Fit
             print("performing fitting...")
             self.w_fit, self.C_fit, self.r_fit, self.fit_err = \
-                fit(self.predictions_final_points_threshold[:, :3],
+                ft.fitting_cylinder(
+                    self.predictions_final_points_threshold[:, :3],
                     guess_angles=None)
             print("fitting done !")
             self.cylinder = \
@@ -731,109 +648,13 @@ class Viewer3D(object):
             # Update center and axis if object was moved
             self.C_fit = np.asarray(self.cylinder.GetCenter())
             self.w_fit = np.asarray(self.cylinder.normalAt(48))
-
-            # Projection along z axis and centered in (0,0,0)
-            points = op.z_projection(self.predictions_agatston_points,
-                                     self.w_fit)
-            x_mean = \
-                (np.min(points[:, 0]) + np.max(points[:, 0]))/2
-            y_mean = \
-                (np.min(points[:, 1]) + np.max(points[:, 1]))/2
-            z_mean = \
-                (np.min(points[:, 2]) + np.max(points[:, 2]))/2
-
-            if points.shape[1] == 4:
-                # 4 dimension due to intensity value
-                points -= np.array([x_mean,
-                                    y_mean,
-                                    z_mean,
-                                    0])
-            else:
-                points -= np.array([x_mean,
-                                    y_mean,
-                                    z_mean])
-            # Rounding of layer due to floating error
-            points[:, 2] = np.round(points[:, 2])
-
-            predictions_agatston_points = \
-                points[points[:, 3] < self.threshold]
-            predictions_final_points_threshold = \
-                points[points[:, 3] >= self.threshold]
-
-            # Loop to remove outside points
-            inner_points = []
-            # Hack to avoid first and last layer where few points lead to wrong
-            # circle estimation
-            first_slices = \
-                int(np.percentile(
-                    np.arange(
-                        len(np.unique(
-                            predictions_agatston_points[:, 2])
-                            )
-                        ), 20))
-            last_slices = \
-                int(np.percentile(
-                    np.arange(
-                        len(np.unique(
-                            predictions_agatston_points[:, 2])
-                            )
-                        ), 80))
-            for i, z in enumerate(
-                    np.unique(predictions_agatston_points[:, 2])):
-                predictions_final_tmp = \
-                    predictions_final_points_threshold.copy()
-                predictions_final_tmp = \
-                    predictions_final_tmp[predictions_final_tmp[:, 2] == z]
-                predictions_agatston = \
-                    predictions_agatston_points.copy()
-                predictions_agatston = \
-                    predictions_agatston[predictions_agatston[:, 2] == z]
-                if predictions_final_tmp.shape[0] > 2:
-                    xc, yc, _, _ = \
-                        op.leastsq_circle(predictions_final_tmp[:, 0],
-                                          predictions_final_tmp[:, 1])
-                    circle_center = np.array([xc, yc, z])
-                    # Estimate the min value by slices
-                    r_fit = []
-                    for point in predictions_final_tmp[:, :3]:
-                        # Exclude intensity points
-                        r_fit.append(op.euclidean(point, circle_center))
-                    if len(r_fit) > 0:
-                        r_fit = np.array(r_fit)
-                        # Based on experimental analysis on template valve,
-                        # residual space along stent
-                        if self.ratio_spacing is not None:
-                            r_fit = np.min(r_fit) - \
-                                self.ratio_spacing*self.spacing[0]
-                        else:
-                            r_fit = np.min(r_fit)
-                        # Estimate the distance of each point for the agatston
-                        d = []
-                        for point in predictions_agatston[:, :3]:
-                            # Exclude intensity points
-                            d.append(op.euclidean(point, circle_center))
-                        d = np.array(d)
-                        if i < first_slices or i > last_slices:
-                            if predictions_final_tmp.shape[0] > 30:
-                                p = \
-                                    predictions_agatston[np.where(d < r_fit)]
-                            else:
-                                p = np.empty((0, 4))
-                        else:
-                            p = \
-                                predictions_agatston[np.where(d < r_fit)]
-                    else:
-                        p = np.empty((0, 4))
-                else:
-                    p = np.empty((0, 4))
-                inner_points.append(p)
-            inner_points = np.concatenate(inner_points)
-            mask = \
-                np.where(np.all(np.isin(points, inner_points),
-                                axis=1))
             mask_agatston = \
-                self.get_mask_2D(
-                    self.predictions_agatston_points[mask])
+                op.get_candidates(self.predictions_agatston_points,
+                                  self.w_fit,
+                                  self.threshold,
+                                  self.ratio_spacing,
+                                  self.spacing,
+                                  self.dimensions)
             # Show the score in 2D mode
             v2d.Viewer2D(data_path=self.data_path,
                          folder_mask="",
@@ -884,6 +705,7 @@ class Viewer3D(object):
         if self.threshold is None:
             scrange = self.img.GetScalarRange()
             self.threshold = (2 * scrange[0] + scrange[1]) / 3.0
+            print(self.threshold)
 
         if self.template:
             points = vtk_to_numpy(self.volume.topoints()
@@ -955,26 +777,6 @@ class Viewer3D(object):
         self.init = False
 
         return self.ia
-
-    def get_mask_2D(self, data):
-        """Generate mask."""
-        print("Generating mask...")
-        mask_agatston = np.zeros([self.dimensions[2],
-                                  self.dimensions[0],
-                                  self.dimensions[1]],
-                                 dtype=np.uint8)
-
-        # all voxels have value zero except ones predicted:
-        for d in tqdm(data):
-            x = int(d[0]/self.spacing[0])
-            y = int(d[1]/self.spacing[1])
-            z = int(d[2]/self.spacing[2])
-            mask_agatston[z, x, y] = 1
-
-        for k in range(self.dimensions[2]):
-            mask_agatston[k, ::] = np.rot90(mask_agatston[k, ::])
-
-        return mask_agatston
 
     def label_3d(self, data, c=[1, 0, 0]):
         """Generate 3D Labels."""

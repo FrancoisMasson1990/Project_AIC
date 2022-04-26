@@ -12,6 +12,9 @@ Library for scoring function
 """
 
 import numpy as np
+import bz2
+import pickle
+import os
 from scipy.ndimage import measurements
 
 
@@ -77,3 +80,31 @@ def agatston_score(image,
 
         score += area*np.sum(prediction)
     return score
+
+
+def save_prediction(image,
+                    mask_agatston,
+                    path,
+                    score,
+                    area,
+                    online=False):
+    """Save prediction in dictionnary."""
+    save_predict = {}
+    save_predict["score"] = score
+    save_predict["image"] = image
+    save_predict["area"] = area
+    save_predict["mask_agatston"] = mask_agatston
+    if not online:
+        save_predict["data_path"] =\
+            "/".join(
+                [path.split("/")[-2],
+                 path.split("/")[-1]])
+        folder = \
+            path.replace("datasets_dcm",
+                         "predictions")
+    else:
+        folder = path
+    os.makedirs(folder, exist_ok=True)
+    with bz2.BZ2File(folder + "/prediction.pbz2", 'wb') as f:
+        pickle.dump(save_predict, f)
+    return save_predict

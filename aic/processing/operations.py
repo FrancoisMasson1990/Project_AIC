@@ -251,9 +251,19 @@ def boxe_3d(volume_array, predict, max_=None):
                 right=1 - (x_max/(dimensions[0]*spacing[0])),
                 # x_min
                 left=(x_min/(dimensions[1]*spacing[1])),)
-    if isinstance(volume_array, mesh.Mesh):
+    elif isinstance(volume_array, mesh.Mesh):
         volume_array = volume_array.crop(
             bounds=[x_min, x_max, y_min, y_max, z_min, z_max])
+    elif isinstance(volume_array, np.ndarray):
+        print('here')
+        index = \
+            np.where((volume_array[:, 0] > x_min)
+                     & (volume_array[:, 0] < x_max)
+                     & (volume_array[:, 1] > y_min)
+                     & (volume_array[:, 1] < y_max)
+                     & (volume_array[:, 2] > z_min)
+                     & (volume_array[:, 2] < z_max))
+        volume_array = volume_array[index]
     return volume_array
 
 
@@ -479,3 +489,141 @@ def euclidean(point1, point2):
     """
     dist = np.linalg.norm(point1 - point2)
     return dist
+
+
+def get_mask_2D(data,
+                dimensions,
+                spacing):
+    """Generate mask."""
+    print("Generating mask...")
+    mask_agatston = np.zeros([dimensions[2],
+                              dimensions[0],
+                              dimensions[1]],
+                             dtype=np.uint8)
+
+    # all voxels have value zero except ones predicted:
+    for d in tqdm(data):
+        x = int(d[0]/spacing[0])
+        y = int(d[1]/spacing[1])
+        z = int(d[2]/spacing[2])
+        mask_agatston[z, x, y] = 1
+
+    for k in range(dimensions[2]):
+        mask_agatston[k, ::] = np.rot90(mask_agatston[k, ::])
+    return mask_agatston
+
+
+def get_candidates(predictions_agatston_points,
+                   w_fit,
+                   threshold,
+                   ratio_spacing,
+                   spacing,
+                   dimensions):
+    """Get Agatston candidates."""
+    # Projection along z axis and centered in (0,0,0)
+    predictions_agatston_points_final = \
+        predictions_agatston_points.copy()
+    points = z_projection(predictions_agatston_points,
+                          w_fit)
+    x_mean = \
+        (np.min(points[:, 0]) + np.max(points[:, 0]))/2
+    y_mean = \
+        (np.min(points[:, 1]) + np.max(points[:, 1]))/2
+    z_mean = \
+        (np.min(points[:, 2]) + np.max(points[:, 2]))/2
+
+    if points.shape[1] == 4:
+        # 4 dimension due to intensity value
+        points -= np.array([x_mean,
+                            y_mean,
+                            z_mean,
+                            0])
+    else:
+        points -= np.array([x_mean,
+                            y_mean,
+                            z_mean])
+    # Rounding of layer due to floating error
+    points[:, 2] = np.round(points[:, 2])
+
+    predictions_agatston_points = \
+        points[points[:, 3] < threshold]
+    predictions_final_points_threshold = \
+        points[points[:, 3] >= threshold]
+
+    # Loop to remove outside points
+    inner_points = []
+    # Hack to avoid first and last layer where few points lead to wrong
+    # circle estimation
+    first_slices = \
+        int(np.percentile(
+            np.arange(
+                len(np.unique(
+                    predictions_agatston_points[:, 2])
+                    )
+                ), 20))
+    last_slices = \
+        int(np.percentile(
+            np.arange(
+                len(np.unique(
+                    predictions_agatston_points[:, 2])
+                    )
+                ), 80))
+    for i, z in enumerate(
+            np.unique(predictions_agatston_points[:, 2])):
+        predictions_final_tmp = \
+            predictions_final_points_threshold.copy()
+        predictions_final_tmp = \
+            predictions_final_tmp[predictions_final_tmp[:, 2] == z]
+        predictions_agatston = \
+            predictions_agatston_points.copy()
+        predictions_agatston = \
+            predictions_agatston[predictions_agatston[:, 2] == z]
+        if predictions_final_tmp.shape[0] > 2:
+            xc, yc, _, _ = \
+                leastsq_circle(predictions_final_tmp[:, 0],
+                               predictions_final_tmp[:, 1])
+            circle_center = np.array([xc, yc, z])
+            # Estimate the min value by slices
+            r_fit = []
+            for point in predictions_final_tmp[:, :3]:
+                # Exclude intensity points
+                r_fit.append(euclidean(point, circle_center))
+            if len(r_fit) > 0:
+                r_fit = np.array(r_fit)
+                # Based on experimental analysis on template valve,
+                # residual space along stent
+                if ratio_spacing is not None:
+                    r_fit = np.min(r_fit) - \
+                        ratio_spacing*spacing[0]
+                else:
+                    r_fit = np.min(r_fit)
+                # Estimate the distance of each point for the agatston
+                d = []
+                for point in predictions_agatston[:, :3]:
+                    # Exclude intensity points
+                    d.append(euclidean(point, circle_center))
+                d = np.array(d)
+                if i < first_slices or i > last_slices:
+                    if predictions_final_tmp.shape[0] > 30:
+                        p = \
+                            predictions_agatston[np.where(d < r_fit)]
+                    else:
+                        p = np.empty((0, 4))
+                else:
+                    p = \
+                        predictions_agatston[np.where(d < r_fit)]
+            else:
+                p = np.empty((0, 4))
+        else:
+            p = np.empty((0, 4))
+        inner_points.append(p)
+    inner_points = np.concatenate(inner_points)
+    mask = \
+        np.where(np.all(np.isin(points, inner_points),
+                        axis=1))
+    mask_agatston = \
+        get_mask_2D(
+            predictions_agatston_points_final[mask],
+            dimensions,
+            spacing)
+    return mask_agatston

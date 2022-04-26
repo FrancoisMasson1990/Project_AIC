@@ -228,27 +228,13 @@ class Image_2D(object):
                     self.threshold_min,
                     self.threshold_max)
             self.axis2.set_xlabel("Agatston score : {:.3f}".format(self.score))
-            self.save_prediction()
+            _ = sc.save_prediction(self.image,
+                                   self.mask_agatston,
+                                   self.data_path[self.frame],
+                                   self.score,
+                                   self.area)
 
         self.slicer.on_changed(self.update)
-
-    def save_prediction(self):
-        """Save prediction in dictionnary."""
-        save_predict = {}
-        save_predict["data_path"] =\
-            "/".join(
-                [self.data_path[self.frame].split("/")[-2],
-                 self.data_path[self.frame].split("/")[-1]])
-        save_predict["score"] = self.score
-        save_predict["image"] = self.image
-        save_predict["area"] = self.area
-        save_predict["mask_agatston"] = self.mask_agatston
-        folder = \
-            self.data_path[self.frame].replace("datasets_dcm",
-                                               "predictions")
-        os.makedirs(folder, exist_ok=True)
-        with bz2.BZ2File(folder + "/prediction.pbz2", 'wb') as f:
-            pickle.dump(save_predict, f)
 
     def next(self, event):
         """Update slice by next event."""
