@@ -12,6 +12,7 @@ Library for the files manager
 """
 
 import os
+import shutil
 
 
 def rm_tmp_files(typ=None):
@@ -23,6 +24,14 @@ def rm_tmp_files(typ=None):
                 os.remove(t)
             elif t.endswith(typ):
                 os.remove(t)
+
+
+def rm_tmp_folders(typ=None):
+    """Remove tmp file."""
+    tmps = ['./cache/tmp']
+    for t in tmps:
+        if os.path.exists(t):
+            shutil.rmtree(t)
 
 
 def mk_tmp_folder():

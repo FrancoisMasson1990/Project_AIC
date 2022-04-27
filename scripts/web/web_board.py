@@ -23,6 +23,7 @@ warnings.filterwarnings('ignore')
 
 
 fs.mk_tmp_folder()
+fs.rm_tmp_folders()
 fs.rm_tmp_files()
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -170,6 +171,8 @@ app.layout = html.Div(
                component_property='last_modified'))
 def update_output(contents, names, dates):
     """Update graphes."""
+    fs.rm_tmp_folders()
+    fs.rm_tmp_files()
     output = vs.parse_contents(contents, names, dates)
     fig = vs.update_graph(output)
     score = None
