@@ -22,6 +22,7 @@ import aic.processing.operations as op
 import aic.processing.fitting as ft
 import aic.model.loaders as ld
 import aic.processing.scoring as sc
+import aic.model.from_tflite as tfl
 from vedo.io import load as vedo_load
 from vedo.volume import Volume
 from vtk.util.numpy_support import vtk_to_numpy
@@ -57,7 +58,7 @@ def get_inference(data,
             threshold = config.get("threshold", None)
             ratio_spacing = config.get("spacing", None)
         # Load model
-        model = ld.load_model(model_name, model_version)
+        model = ld.load_tflitemodel(model_name)
         path = "./cache/tmp/"
         # Get Dicom files
         data = deepcopy(slices)
@@ -97,7 +98,8 @@ def get_inference(data,
                             z_slice_max=z_slice_max,
                             z_slice_min=z_slice_min,
                             spacing=spacing,
-                            dimensions=dimensions)
+                            dimensions=dimensions,
+                            lite=True)
         file_prog.close()
         sys.stderr = std_err_backup
         vertices, _ = op.make_mesh(predictions, -1)
@@ -207,22 +209,9 @@ def get_predictions(model,
         if not lite:
             prediction = model.predict(pred)
         else:
-            interpreter = model
-            interpreter.allocate_tensors()
-            input_details = interpreter.get_input_details()
-            output_details = interpreter.get_output_details()
-            input_shape = input_details[0]['shape']
-            # input_data = np.array(np.random.random_sample(input_shape), dtype=np.float32)
-            input_data = pred
-            interpreter.set_tensor(input_details[0]['index'], input_data)
-
-            interpreter.invoke()
-
-            # The function `get_tensor()` returns a copy of the tensor data.
-            # Use `tensor()` in order to get a pointer to the tensor.
-            output_data = interpreter.get_tensor(output_details[0]['index'])
-            prediction = output_data
-
+            print(model)
+            prediction = tfl.get_interpreter(model,
+                                             input=pred)
         if model_version == 0:
             prediction = np.argmax(prediction.squeeze(), axis=-1)
             prediction = np.rot90(prediction, axes=(1, 0))

@@ -26,19 +26,40 @@ def load_model(model_name,
             model_name = fs.get_models_root() / model_name
         else:
             print(f"Could not find {model_name}")
-            model = None
-        if model_version == 0:
-            from aic.model import model_2D_old
-            unet_model = model_2D_old.unet()
-            model = unet_model.load_model(model_name,
-                                          False)
-        elif model_version == 1:
-            from aic.model import model_2D
-            unet_model = model_2D.unet()
-            model = unet_model.load_model(model_name)
-        print("-" * 30)
-        print("Model load successfully")
-        print("-" * 30)
+            model_name = None
+        if model_name:
+            if model_version == 0:
+                from aic.model import model_2D_old
+                unet_model = model_2D_old.unet()
+                model = unet_model.load_model(model_name,
+                                              False)
+            elif model_version == 1:
+                from aic.model import model_2D
+                unet_model = model_2D.unet()
+                model = unet_model.load_model(model_name)
+            print("-" * 30)
+            print("Model load successfully")
+            print("-" * 30)
+    return model
+
+
+def load_tflitemodel(model_name):
+    """Load TFLite AI model."""
+    model = None
+    if model_name is not None:
+        if not os.path.exists(model_name):
+            model_name = fs.get_models_root() / model_name
+        else:
+            print(f"Could not find {model_name}")
+            model_name = None
+        if model_name:
+            import tflite_runtime.interpreter as tflite
+            model = \
+                tflite.Interpreter(
+                    model_path=str(model_name))
+            print("-" * 30)
+            print("Model load successfully")
+            print("-" * 30)
     return model
 
 
