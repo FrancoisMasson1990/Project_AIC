@@ -209,7 +209,8 @@ def get_predictions(model,
         if not lite:
             prediction = model.predict(pred)
         else:
-            print(model)
+            with open('readme.txt', 'w') as f:
+                f.write('readme')
             prediction = tfl.get_interpreter(model,
                                              input=pred)
         if model_version == 0:
