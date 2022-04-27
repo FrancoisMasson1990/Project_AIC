@@ -166,7 +166,9 @@ def get_predictions(model,
                     z_slice_max=None,
                     z_slice_min=None,
                     spacing=None,
-                    dimensions=None):
+                    dimensions=None,
+                    lite=False,
+                    ):
     """Get model predictions."""
     if isinstance(data, str):
         idx = os.path.join(data)
@@ -202,7 +204,25 @@ def get_predictions(model,
     # https://www.raddq.com/dicom-processing-segmentation-visualization-in-python/
     for i in tqdm(range(img.shape[0])):
         pred = np.expand_dims(img[i, :, :, :], 0)
-        prediction = model.predict(pred)
+        if not lite:
+            prediction = model.predict(pred)
+        else:
+            interpreter = model
+            interpreter.allocate_tensors()
+            input_details = interpreter.get_input_details()
+            output_details = interpreter.get_output_details()
+            input_shape = input_details[0]['shape']
+            # input_data = np.array(np.random.random_sample(input_shape), dtype=np.float32)
+            input_data = pred
+            interpreter.set_tensor(input_details[0]['index'], input_data)
+
+            interpreter.invoke()
+
+            # The function `get_tensor()` returns a copy of the tensor data.
+            # Use `tensor()` in order to get a pointer to the tensor.
+            output_data = interpreter.get_tensor(output_details[0]['index'])
+            prediction = output_data
+
         if model_version == 0:
             prediction = np.argmax(prediction.squeeze(), axis=-1)
             prediction = np.rot90(prediction, axes=(1, 0))
