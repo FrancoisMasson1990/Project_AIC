@@ -19,6 +19,7 @@ import pickle
 import plotly.express as px
 import plotly.graph_objects as go
 import aic.processing.scoring as sc
+import aic.misc.files as fs
 from tqdm import tqdm
 import bz2
 import base64
@@ -144,8 +145,10 @@ def parse_contents(contents, filenames, dates):
         if data:
             # Should send back dict with same element has the
             # predictions.pbz2
+            config = fs.get_configs_root() / 'web_config.yml' 
             response = infer.get_inference(data,
-                                           files_types)
+                                           files_types,
+                                           str(config))
     else:
         contents = contents[0]
         filenames = filenames[0]

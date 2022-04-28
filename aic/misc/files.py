@@ -58,6 +58,11 @@ def get_lib_root() -> Path:
     return get_project_root() / "lib"
 
 
+def get_configs_root() -> Path:
+    """Get config project folder."""
+    return get_project_root() / "configs"
+
+
 def get_valve_credentials() -> Path:
     """Get valve json."""
     return get_credentials_root / "valve-project-332716.json"

@@ -23,7 +23,8 @@ ld.load_framework(sys)
 
 if __name__ == '__main__':
 
-    config = ld.load_config('./data_info.yml')
+    config = fs.get_configs_root() / 'viewer_config.yml'  
+    config = ld.load_config(str(config))
     data_path = config.get("data_path", fs.get_valve_root())
     labels_2D = config.get("labels_2D", None)
     multi_label = config.get("multi_label", None)
