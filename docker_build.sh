@@ -1,1 +1,2 @@
-docker build --tag project-aic-docker .
+#!/bin/bash
+docker-compose up -d

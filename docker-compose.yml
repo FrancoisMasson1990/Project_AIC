@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  dash:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: project_aic_dash
+    command: python app.py
+    ports:
+      - "80:8080"

@@ -15,4 +15,3 @@ RUN python3.9 -m pip install -r requirements-docker.txt
 RUN python3.9 -m pip install -e . --user
 
 WORKDIR /Project_AIC/scripts/web
-CMD ["python3", "-m" , "flask", "run", "--host=0.0.0.0"]

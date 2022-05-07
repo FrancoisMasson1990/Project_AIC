@@ -1,2 +1,2 @@
-./docker_build.sh
-docker run project-aic-docker
+#!/bin/bash
+docker-compose up -d

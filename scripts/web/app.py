@@ -19,7 +19,7 @@ import warnings
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html, Dash
-from flask import Flask
+#from flask import Flask
 warnings.filterwarnings('ignore')
 
 
@@ -27,7 +27,7 @@ fs.mk_tmp_folder()
 fs.rm_tmp_folders()
 fs.rm_tmp_files()
 # Initialize the app
-server = Flask(__name__)
+#server = Flask(__name__)
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.title = 'Agatston Score Dashboard'
 app._favicon = "heart.ico"
@@ -290,4 +290,4 @@ def callback_progress(n_intervals):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(host='0.0.0.0', port=8080, debug=True)
