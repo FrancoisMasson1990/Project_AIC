@@ -19,6 +19,7 @@ import warnings
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html, Dash
+from flask import Flask
 warnings.filterwarnings('ignore')
 
 
@@ -26,6 +27,7 @@ fs.mk_tmp_folder()
 fs.rm_tmp_folders()
 fs.rm_tmp_files()
 # Initialize the app
+server = Flask(__name__)
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.title = 'Agatston Score Dashboard'
 app._favicon = "heart.ico"
