@@ -24,6 +24,8 @@ from scipy import optimize
 import vtk
 from vedo import *
 from vedo import volume, mesh
+import aic.processing.fitting as ft
+import aic.misc.files as fs
 
 
 def get_pixels_hu(scans):
@@ -251,7 +253,7 @@ def z_projection(points, w_fit, save=False, name='projection_array.npy'):
             name += '.npy'
         with open(name, 'wb') as f:
             np.save(f, points)
-    return points
+    return points, matrix
 
 
 def matrix_transformation(w_fit):
@@ -302,40 +304,24 @@ def closest_element(value, upper=True):
     return closest_element
 
 
-def icp(predictions,
-        template,
-        threshold,
-        w_fit,
-        cylinder,
+def icp(source,
+        target,
+        transformation=np.eye(4),
         verbose=False,
         show=False):
     """Apply ICP.
 
     Apply Iterative Closest Point to match point cloud valve with template
     """
-    source = template.copy()
-    source_threshold = source[source[:, 3] > threshold]
     # Pass source to Open3D.o3d.geometry.PointCloud and visualize
     pcd_source_threshold = o3d.geometry.PointCloud()
     pcd_source_threshold.points = o3d.utility.Vector3dVector(
-        source_threshold[:, :3])
+        source[:, :3])
 
-    target_raw = predictions.copy()
-    target = target_raw[target_raw[:, 3] > threshold]
     # Pass source to Open3D.o3d.geometry.PointCloud and visualize
     pcd_target = o3d.geometry.PointCloud()
     pcd_target.points = o3d.utility.Vector3dVector(target[:, :3])
 
-    transformation = matrix_transformation(w_fit)
-    translation = np.array([[cylinder.getTransform().GetMatrix().GetElement(
-        r, c) for c in range(4)] for r in range(4)])[:, 3]
-    transformation[:, 3] = translation
-    rot_x = np.array([[1, 0, 0, 0],
-                      [0, 0, -1, 0],
-                      [0, 1, 0, 0],
-                      [0, 0, 0, 1]])
-
-    transformation = transformation@rot_x
     threshold = 10.0
     print("Apply point-to-point ICP")
     reg_p2p = \
@@ -428,18 +414,8 @@ def get_mask_2D(data,
     return mask_agatston
 
 
-def get_candidates(predictions_agatston_points,
-                   w_fit,
-                   threshold,
-                   ratio_spacing,
-                   spacing,
-                   dimensions):
-    """Get Agatston candidates."""
-    # Projection along z axis and centered in (0,0,0)
-    predictions_agatston_points_final = \
-        predictions_agatston_points.copy()
-    points = z_projection(predictions_agatston_points,
-                          w_fit)
+def centered_point(points):
+    """Put points centered in (0,0,0)."""
     x_mean = \
         (np.min(points[:, 0]) + np.max(points[:, 0]))/2
     y_mean = \
@@ -453,10 +429,68 @@ def get_candidates(predictions_agatston_points,
                             y_mean,
                             z_mean,
                             0])
+        translation = np.array([x_mean,
+                                y_mean,
+                                z_mean,
+                                0])
     else:
         points -= np.array([x_mean,
                             y_mean,
                             z_mean])
+        translation = np.array([x_mean,
+                                y_mean,
+                                z_mean])
+    return points, translation
+
+
+def get_native_valve(radius):
+    """Load native valve based on radius."""
+    path = fs.get_native_root / str(radius) / '.npy'
+    with open(str(path), 'rb') as f:
+        native = np.load(f)
+    return native
+
+
+def get_candidates(predictions_agatston_points,
+                   w_fit,
+                   r_fit,
+                   threshold,
+                   ratio_spacing,
+                   spacing,
+                   dimensions):
+    """Get Agatston candidates."""
+    # Projection along z axis
+    predictions_agatston_points_final = \
+        predictions_agatston_points.copy()
+    points, matrix = z_projection(predictions_agatston_points,
+                                  w_fit)
+    # Center in (0,0,0)
+    points, translation = centered_point(points)
+    # Determine the radius of the valve
+    taille = closest_element(2*r_fit)
+    # Load associated native valve
+    native = get_native_valve(taille)
+    # ICP Registration
+    native = icp(source=native, target=points)
+    # Hull method
+    hull = ft.convex_hull(native[:, :3])
+    mask_hull = isInHull(points[:, :3],
+                         hull)
+    points = points[mask_hull]
+    # Affine transformation in original location
+    points += translation 
+    if points.shape[1] == 4:
+        points = \
+            (np.linalg.inv(matrix)@(points.T)).T
+    else:
+        points = \
+            (np.linalg.inv(matrix[:3, :3])@(points[:, :3].T)).T          
+    with open('test.npy','wb') as f:
+        np.save(f, points)
+    # Algo a developer
+    # Chargement de la valve native correspondante et icp fit
+    # Estimation des points à l'intérieur de la valve (A vérifier)
+    ##############################################################
     # Rounding of layer due to floating error
     points[:, 2] = np.round(points[:, 2])
 
