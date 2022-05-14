@@ -38,6 +38,11 @@ def get_data_root() -> Path:
     return get_project_root() / "data"
 
 
+def get_native_root() -> Path:
+    """Get native folder."""
+    return get_project_root() / "natives"
+
+
 def get_valve_root() -> Path:
     """Get valve project folder."""
     return get_data_root() / "valve_patient_folder"
