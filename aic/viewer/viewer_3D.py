@@ -25,6 +25,7 @@ import aic.processing.operations as op
 import aic.processing.fitting as ft
 from scipy import ndimage as ndi
 import aic.viewer.viewer_2D as v2d
+import aic.model.loaders as ld
 vtk.vtkObject.GlobalWarningDisplayOff()
 
 
@@ -33,15 +34,10 @@ class Viewer3D(object):
 
     def __init__(self,
                  data_path: str,
-                 frame=0,
                  mode=1,
                  label='/label_mask/',
                  npy=None,
-                 multi_label=False,
-                 model=None,
-                 template: bool = False,
-                 model_version=1,
-                 template_directory="./templates/",
+                 frame=0,
                  **kwargs):
         """Init function."""
         self.frame = frame
@@ -50,7 +46,6 @@ class Viewer3D(object):
         self.data_path = data_path
         self.colors = vtk.vtkNamedColors()
         self.window_size = (1200, 800)
-        self.model = model
         if mode == 1:
             self.mode = ['ray_cast']
         elif mode == 2:
@@ -87,18 +82,24 @@ class Viewer3D(object):
         self.area = None
         self.label_folder = label
         self.npy_folder = npy
-        self.multi_label = multi_label
-        self.template = template
-        self.max = None
-        self.model_version = model_version
-        self.template_directory = template_directory
+        self.template_directory = "./templates/"
 
         # Extra parameters passed
+        self.multi_label = kwargs.get("multi_label", False)
+        self.template = kwargs.get("template", False)
+        self.max = kwargs.get("max", None)
+        self.model_version = kwargs.get("model_version", 1)
         self.crop_dim = kwargs.get("crop_dim", -1)
         self.z_slice_min = kwargs.get("z_slice_min", None)
         self.z_slice_max = kwargs.get("z_slice_max", None)
         self.threshold = kwargs.get("threshold", None)
         self.ratio_spacing = kwargs.get("spacing", None)
+
+        # Model loading
+        self.model= kwargs.get("model_name", None)
+        self.model = \
+            ld.load_model(self.model,
+                          self.model_version)
 
         '''One render window, multiple viewports'''
         self.rw = vtk.vtkRenderWindow()
