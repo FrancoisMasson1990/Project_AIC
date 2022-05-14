@@ -12,4 +12,10 @@ vedo
 cylinder_fitting
 gspread
 oauth2client
-Flask
+psutil
+dash
+dash-bootstrap-components
+plotly
+tqdm
+numpy
+PyYAML
