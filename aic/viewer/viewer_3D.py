@@ -652,6 +652,7 @@ class Viewer3D(object):
             mask_agatston = \
                 op.get_candidates(self.predictions_agatston_points,
                                   self.w_fit,
+                                  self.r_fit,
                                   self.threshold,
                                   self.ratio_spacing,
                                   self.spacing,
