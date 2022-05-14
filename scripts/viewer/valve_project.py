@@ -25,24 +25,11 @@ if __name__ == '__main__':
 
     config = fs.get_configs_root() / 'viewer_config.yml'  
     config = ld.load_config(str(config))
+
     data_path = config.get("data_path", fs.get_valve_root())
     labels_2D = config.get("labels_2D", None)
-    multi_label = config.get("multi_label", None)
-    model_name = config.get("model_name", None)
-    model_version = config.get("model_version", None)
-    template = config.get("template", None)
-    crop_dim = config.get("crop_dim", -1)
-    z_slice_min = config.get("z_slice_min", None)
-    z_slice_max = config.get("z_slice_max", None)
-    threshold = config.get("threshold", None)
-    spacing = config.get("spacing", None)
-    kwargs = {"crop_dim": crop_dim,
-              "z_slice_min": z_slice_min,
-              "z_slice_max": z_slice_max,
-              "threshold": threshold,
-              "spacing": spacing}
-
-    model = ld.load_model(model_name, model_version)
+    config.pop("data_path",None)
+    config.pop("labels_2D",None)
     surface_label_path = os.path.join(data_path,
                                       "labels_2d_npy")
     volume_label_path = os.path.join(data_path,
@@ -68,9 +55,6 @@ if __name__ == '__main__':
                          mode=4,
                          label=surface_label_path,
                          npy=volume_label_path,
-                         multi_label=multi_label,
-                         model=model,
-                         template=template,
-                         model_version=model_version,
-                         **kwargs)
+                         **config,
+                         )
         viewer.show()
