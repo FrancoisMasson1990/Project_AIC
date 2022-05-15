@@ -314,7 +314,14 @@ class Image_2D(object):
             self._image2.set_data(self.image[self.index])
 
         if self.agatston_bool:
-            self.agatston_score_slice()
+            self.prediction = \
+                sc.agatston_score_slice(
+                    self.image,
+                    self.mask_agatston,
+                    self.index,
+                    self.area,
+                    self.threshold_min,
+                    self.threshold_max)
             if self._prediction_view is None:
                 self._prediction_view = \
                     self.axis2.imshow(self.prediction,
