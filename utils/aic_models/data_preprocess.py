@@ -450,22 +450,21 @@ def boxe_3d(volume_array,predict,max_=None):
 	return volume_array
 
 def normalize(v):
-    '''Normalize a vector based on its 2 norm.'''
+    """Normalize a vector based on its 2 norm."""
     if 0 == np.linalg.norm(v):
         return v
     return v / np.linalg.norm(v)
 
 def point_line_distance(p, l_p, l_v):
-    '''Calculate the distance between a point and a line defined
+    """Calculate the distance between a point and a line defined.
     by a point and a direction vector.
-    '''
+    """
     l_v = normalize(l_v)
     u = p - l_p
     return np.linalg.norm(u - np.dot(u, l_v) * l_v)
 
 def to_points(data,threshold=None,template=False):
-	'''Extract point from Volume/Mesh polydata.
-    '''
+	"""Extract point from Volume/Mesh polydata."""
 	if isinstance(data,volume.Volume):
 		points = vtk_to_numpy(data.topoints().GetMapper().GetInput().GetPoints().GetData())
 		scalar = np.expand_dims(vtk_to_numpy(data.imagedata().GetPointData().GetScalars()),axis=1) #Pixel value intensity
@@ -511,9 +510,7 @@ def z_projection(points,w_fit,save=False,name='projection_array.npy'):
 	return points
 
 def matrix_transformation(w_fit):
-	"""
-		Calculate matrix of transformation from direction of the cylinder axis
-	"""
+	"""Calculate matrix of transformation from direction of the cylinder axis."""
 	theta = np.arccos(w_fit[2])
 	phi = np.arctan2(w_fit[1], w_fit[0])
 	t = vtk.vtkTransform()
@@ -526,11 +523,11 @@ def matrix_transformation(w_fit):
 	return matrix_array
 
 def isInHull(P,hull):
-	'''
-	Determine if the list of points P lies inside the hull
+	"""Determine if the list of points P lies inside the hull.
+ 
 	:return: list
 	List of boolean where true means that the point is inside the convex hull
-	'''
+	"""
 	A = hull.equations[:,0:-1]
 	b = np.transpose(np.array([hull.equations[:,-1]]))
 	isInHullBool = np.all((A @ np.transpose(P)) <= np.tile(-b,(1,len(P))),axis=0)
@@ -618,9 +615,7 @@ def f(c, x, y):
 	return Ri - Ri.mean()
 
 def leastsq_circle(x,y):
-	"""
-	Coordinates of the barycenter
-	"""
+	"""Calculate cordinates of the barycenter."""
 	x_m = np.mean(x)
 	y_m = np.mean(y)
 	center_estimate = x_m, y_m
@@ -632,8 +627,6 @@ def leastsq_circle(x,y):
 	return xc, yc, R, residu
 
 def euclidean(point1,point2):
-	"""
-	Calculating Euclidean distance using linalg.norm()
-	"""
+	"""Calculate Euclidean distance using linalg.norm()."""
 	dist = np.linalg.norm(point1 - point2)
 	return dist
