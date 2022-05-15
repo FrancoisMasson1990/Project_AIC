@@ -40,7 +40,7 @@ def get_data_root() -> Path:
 
 def get_native_root() -> Path:
     """Get native folder."""
-    return get_project_root() / "natives"
+    return get_data_root() / "natives"
 
 
 def get_valve_root() -> Path:
