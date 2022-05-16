@@ -314,8 +314,8 @@ def icp(source,
     Apply Iterative Closest Point to match point cloud valve with template
     """
     # Pass source to Open3D.o3d.geometry.PointCloud and visualize
-    pcd_source_threshold = o3d.geometry.PointCloud()
-    pcd_source_threshold.points = o3d.utility.Vector3dVector(
+    pcd_source = o3d.geometry.PointCloud()
+    pcd_source.points = o3d.utility.Vector3dVector(
         source[:, :3])
 
     # Pass source to Open3D.o3d.geometry.PointCloud and visualize
@@ -327,7 +327,7 @@ def icp(source,
     print("Apply point-to-point ICP")
     reg_p2p = \
         o3d.pipelines.registration.registration_icp(
-            pcd_source_threshold, pcd_target,
+            pcd_source, pcd_target,
             threshold, transformation,
             o3d.pipelines.registration.TransformationEstimationPointToPoint(),
             o3d.pipelines.registration.ICPConvergenceCriteria(
@@ -341,16 +341,16 @@ def icp(source,
         print(np.asarray(reg_p2p.correspondence_set))
 
     if show:
-        pcd_source_threshold.paint_uniform_color([1, 0, 0])
+        pcd_source.paint_uniform_color([1, 0, 0])
         pcd_target.paint_uniform_color([0, 0, 1])
-        pcd_source_threshold.transform(reg_p2p.transformation)
+        pcd_source.transform(reg_p2p.transformation)
         mesh_frame = \
             o3d.geometry.TriangleMesh.create_coordinate_frame(
                 size=0.6,
                 origin=[0, 0, 0])
         o3d.visualization.draw_geometries([
-            mesh_frame, 
-            pcd_source_threshold,
+            mesh_frame,
+            # pcd_source,
             pcd_target])
 
     pcd_source = o3d.geometry.PointCloud()
@@ -455,13 +455,13 @@ def get_native_valve(radius, typ="Magna"):
     """Load native valve based on radius."""
     path = \
         fs.get_native_root() / typ / 'projected' / \
-            ('_').join([typ, str(radius)]) / 'projected.npy'
+        ('_').join([typ, str(radius)]) / 'projected.npy'
     with open(str(path), 'rb') as f:
-       native = np.load(f)
+        native = np.load(f)
     return native
 
 
-def get_candidates(predictions_agatston_points,
+def get_candidates(points,
                    w_fit,
                    r_fit,
                    threshold,
@@ -471,116 +471,122 @@ def get_candidates(predictions_agatston_points,
     """Get Agatston candidates."""
     # Projection along z axis
     predictions_agatston_points_final = \
-        predictions_agatston_points.copy()
-    points, matrix = z_projection(predictions_agatston_points,
+        points.copy()
+    points, matrix = z_projection(points,
                                   w_fit)
     # Center in (0,0,0)
-    points, translation = centered_point(points)
+    points, translation = \
+        centered_point(points)
     # Determine the radius of the valve
     taille = closest_element(2*r_fit)
     # Load associated native valve
     native = get_native_valve(taille)
     # ICP Registration
-    native = icp(source=native, target=points, show=True)
+    native = icp(source=native,
+                 target=points,
+                 show=False)
     # Hull method
     hull = ft.convex_hull(native[:, :3])
     mask_hull = isInHull(points[:, :3],
                          hull)
     points = points[mask_hull]
-    # Affine transformation in original location
-    points += translation 
-    if points.shape[1] == 4:
-        points = \
-            (np.linalg.inv(matrix)@(points.T)).T
-    else:
-        points = \
-            (np.linalg.inv(matrix[:3, :3])@(points[:, :3].T)).T
 
-    # Algo a developer
-    # Estimation des points à l'intérieur de la valve (A vérifier)
-    ##############################################################
-    # Rounding of layer due to floating error
-    points[:, 2] = np.round(points[:, 2])
+    native = icp(source=native,
+                 target=points,
+                 show=True)
+    print('ok')
+    # # Affine transformation in original location
+    # points += translation
+    # if points.shape[1] == 4:
+    #     points = (np.linalg.inv(matrix)@(points.T)).T
+    # else:
+    #     points = (np.linalg.inv(matrix[:3, :3])@(points[:, :3].T)).T
 
-    predictions_agatston_points = \
-        points[points[:, 3] < threshold]
-    predictions_final_points_threshold = \
-        points[points[:, 3] >= threshold]
+    # # Algo a developer
+    # # Estimation des points à l'intérieur de la valve (A vérifier)
+    # ##############################################################
+    # # Rounding of layer due to floating error
+    # points[:, 2] = np.round(points[:, 2])
 
-    # Loop to remove outside points
-    inner_points = []
-    # Hack to avoid first and last layer where few points lead to wrong
-    # circle estimation
-    first_slices = \
-        int(np.percentile(
-            np.arange(
-                len(np.unique(
-                    predictions_agatston_points[:, 2])
-                    )
-                ), 20))
-    last_slices = \
-        int(np.percentile(
-            np.arange(
-                len(np.unique(
-                    predictions_agatston_points[:, 2])
-                    )
-                ), 80))
-    for i, z in enumerate(
-            np.unique(predictions_agatston_points[:, 2])):
-        predictions_final_tmp = \
-            predictions_final_points_threshold.copy()
-        predictions_final_tmp = \
-            predictions_final_tmp[predictions_final_tmp[:, 2] == z]
-        predictions_agatston = \
-            predictions_agatston_points.copy()
-        predictions_agatston = \
-            predictions_agatston[predictions_agatston[:, 2] == z]
-        if predictions_final_tmp.shape[0] > 2:
-            xc, yc, _, _ = \
-                leastsq_circle(predictions_final_tmp[:, 0],
-                               predictions_final_tmp[:, 1])
-            circle_center = np.array([xc, yc, z])
-            # Estimate the min value by slices
-            r_fit = []
-            for point in predictions_final_tmp[:, :3]:
-                # Exclude intensity points
-                r_fit.append(euclidean(point, circle_center))
-            if len(r_fit) > 0:
-                r_fit = np.array(r_fit)
-                # Based on experimental analysis on template valve,
-                # residual space along stent
-                if ratio_spacing is not None:
-                    r_fit = np.min(r_fit) - \
-                        ratio_spacing*spacing[0]
-                else:
-                    r_fit = np.min(r_fit)
-                # Estimate the distance of each point for the agatston
-                d = []
-                for point in predictions_agatston[:, :3]:
-                    # Exclude intensity points
-                    d.append(euclidean(point, circle_center))
-                d = np.array(d)
-                if i < first_slices or i > last_slices:
-                    if predictions_final_tmp.shape[0] > 30:
-                        p = \
-                            predictions_agatston[np.where(d < r_fit)]
-                    else:
-                        p = np.empty((0, 4))
-                else:
-                    p = \
-                        predictions_agatston[np.where(d < r_fit)]
-            else:
-                p = np.empty((0, 4))
-        else:
-            p = np.empty((0, 4))
-        inner_points.append(p)
-    inner_points = np.concatenate(inner_points)
-    mask = \
-        np.where(np.all(np.isin(points, inner_points),
-                        axis=1))
-    mask_agatston = \
-        get_mask_2D(
-            predictions_agatston_points_final[mask],
-            dimensions,
-            spacing)
+    # predictions_agatston_points = \
+    #     points[points[:, 3] < threshold]
+    # predictions_final_points_threshold = \
+    #     points[points[:, 3] >= threshold]
+
+    # # Loop to remove outside points
+    # inner_points = []
+    # # Hack to avoid first and last layer where few points lead to wrong
+    # # circle estimation
+    # first_slices = \
+    #     int(np.percentile(
+    #         np.arange(
+    #             len(np.unique(
+    #                 predictions_agatston_points[:, 2])
+    #                 )
+    #             ), 20))
+    # last_slices = \
+    #     int(np.percentile(
+    #         np.arange(
+    #             len(np.unique(
+    #                 predictions_agatston_points[:, 2])
+    #                 )
+    #             ), 80))
+    # for i, z in enumerate(
+    #         np.unique(predictions_agatston_points[:, 2])):
+    #     predictions_final_tmp = \
+    #         predictions_final_points_threshold.copy()
+    #     predictions_final_tmp = \
+    #         predictions_final_tmp[predictions_final_tmp[:, 2] == z]
+    #     predictions_agatston = \
+    #         predictions_agatston_points.copy()
+    #     predictions_agatston = \
+    #         predictions_agatston[predictions_agatston[:, 2] == z]
+    #     if predictions_final_tmp.shape[0] > 2:
+    #         xc, yc, _, _ = \
+    #             leastsq_circle(predictions_final_tmp[:, 0],
+    #                            predictions_final_tmp[:, 1])
+    #         circle_center = np.array([xc, yc, z])
+    #         # Estimate the min value by slices
+    #         r_fit = []
+    #         for point in predictions_final_tmp[:, :3]:
+    #             # Exclude intensity points
+    #             r_fit.append(euclidean(point, circle_center))
+    #         if len(r_fit) > 0:
+    #             r_fit = np.array(r_fit)
+    #             # Based on experimental analysis on template valve,
+    #             # residual space along stent
+    #             if ratio_spacing is not None:
+    #                 r_fit = np.min(r_fit) - \
+    #                     ratio_spacing*spacing[0]
+    #             else:
+    #                 r_fit = np.min(r_fit)
+    #             # Estimate the distance of each point for the agatston
+    #             d = []
+    #             for point in predictions_agatston[:, :3]:
+    #                 # Exclude intensity points
+    #                 d.append(euclidean(point, circle_center))
+    #             d = np.array(d)
+    #             if i < first_slices or i > last_slices:
+    #                 if predictions_final_tmp.shape[0] > 30:
+    #                     p = \
+    #                         predictions_agatston[np.where(d < r_fit)]
+    #                 else:
+    #                     p = np.empty((0, 4))
+    #             else:
+    #                 p = \
+    #                     predictions_agatston[np.where(d < r_fit)]
+    #         else:
+    #             p = np.empty((0, 4))
+    #     else:
+    #         p = np.empty((0, 4))
+    #     inner_points.append(p)
+    # inner_points = np.concatenate(inner_points)
+    # mask = \
+    #     np.where(np.all(np.isin(points, inner_points),
+    #                     axis=1))
+    # mask_agatston = \
+    #     get_mask_2D(
+    #         predictions_agatston_points_final[mask],
+    #         dimensions,
+    #         spacing)
     return mask_agatston
