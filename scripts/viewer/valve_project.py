@@ -23,13 +23,13 @@ ld.load_framework(sys)
 
 if __name__ == '__main__':
 
-    config = fs.get_configs_root() / 'viewer_config.yml'  
+    config = fs.get_configs_root() / 'viewer_config.yml'
     config = ld.load_config(str(config))
 
     data_path = config.get("data_path", fs.get_valve_root())
     labels_2D = config.get("labels_2D", None)
-    config.pop("data_path",None)
-    config.pop("labels_2D",None)
+    config.pop("data_path", None)
+    config.pop("labels_2D", None)
     surface_label_path = os.path.join(data_path,
                                       "labels_2d_npy")
     volume_label_path = os.path.join(data_path,
