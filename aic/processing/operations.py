@@ -320,7 +320,8 @@ def icp(source,
 
     # Pass source to Open3D.o3d.geometry.PointCloud and visualize
     pcd_target = o3d.geometry.PointCloud()
-    pcd_target.points = o3d.utility.Vector3dVector(target[:, :3])
+    pcd_target.points = o3d.utility.Vector3dVector(
+        target[:, :3])
 
     threshold = 10.0
     print("Apply point-to-point ICP")
@@ -343,7 +344,14 @@ def icp(source,
         pcd_source_threshold.paint_uniform_color([1, 0, 0])
         pcd_target.paint_uniform_color([0, 0, 1])
         pcd_source_threshold.transform(reg_p2p.transformation)
-        o3d.visualization.draw_geometries([pcd_source_threshold, pcd_target])
+        mesh_frame = \
+            o3d.geometry.TriangleMesh.create_coordinate_frame(
+                size=0.6,
+                origin=[0, 0, 0])
+        o3d.visualization.draw_geometries([
+            mesh_frame, 
+            pcd_source_threshold,
+            pcd_target])
 
     pcd_source = o3d.geometry.PointCloud()
     pcd_source.points = o3d.utility.Vector3dVector(source[:, :3])
@@ -443,11 +451,13 @@ def centered_point(points):
     return points, translation
 
 
-def get_native_valve(radius):
+def get_native_valve(radius, typ="Magna"):
     """Load native valve based on radius."""
-    path = fs.get_native_root / str(radius) / '.npy'
+    path = \
+        fs.get_native_root() / typ / 'projected' / \
+            ('_').join([typ, str(radius)]) / 'projected.npy'
     with open(str(path), 'rb') as f:
-        native = np.load(f)
+       native = np.load(f)
     return native
 
 
@@ -471,7 +481,7 @@ def get_candidates(predictions_agatston_points,
     # Load associated native valve
     native = get_native_valve(taille)
     # ICP Registration
-    native = icp(source=native, target=points)
+    native = icp(source=native, target=points, show=True)
     # Hull method
     hull = ft.convex_hull(native[:, :3])
     mask_hull = isInHull(points[:, :3],
@@ -484,11 +494,9 @@ def get_candidates(predictions_agatston_points,
             (np.linalg.inv(matrix)@(points.T)).T
     else:
         points = \
-            (np.linalg.inv(matrix[:3, :3])@(points[:, :3].T)).T          
-    with open('test.npy','wb') as f:
-        np.save(f, points)
+            (np.linalg.inv(matrix[:3, :3])@(points[:, :3].T)).T
+
     # Algo a developer
-    # Chargement de la valve native correspondante et icp fit
     # Estimation des points à l'intérieur de la valve (A vérifier)
     ##############################################################
     # Rounding of layer due to floating error
