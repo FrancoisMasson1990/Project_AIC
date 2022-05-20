@@ -52,3 +52,25 @@ Contains several scripts such as
 - Endpoint Web API
 
 ![alt gui](img/gui_render.jpg "Gui Render")
+
+
+## Method of calculation of Agatston Score
+The calculation is based on the weighted density score given to the highest attenuation value (HU) multiplied by the area of the calcification speck.
+
+### Density factor
+130-199 HU: 1
+200-299 HU: 2
+300-399 HU: 3
+400+ HU: 4
+
+For example, if a calcified speck has a maximum attenuation value of 400 HU and occupies 8 sq mm area, then its calcium score will be 32.
+The score of every calcified speck is summed up to give the total calcium score.  
+
+Grading of coronary artery disease (based on total calcium score)
+no evidence of CAD: 0 calcium score
+minimal: 1-10
+mild: 11-100
+moderate: 101-400
+severe: >400
+Guidelines for coronary calcium scoring by 2010 ACCF task force
+These guidelines are latest at time of writing (July 2016):
