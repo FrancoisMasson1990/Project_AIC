@@ -350,13 +350,14 @@ def icp(source,
                 origin=[0, 0, 0])
         o3d.visualization.draw_geometries([
             mesh_frame,
-            # pcd_source,
+            pcd_source,
             pcd_target])
 
     pcd_source = o3d.geometry.PointCloud()
     pcd_source.points = o3d.utility.Vector3dVector(source[:, :3])
 
-    return np.asarray(pcd_source.transform(reg_p2p.transformation).points)
+    return np.asarray(pcd_source.transform(reg_p2p.transformation).points), \
+        reg_p2p.transformation
 
 
 def calc_R(x, y, xc, yc):
@@ -465,128 +466,84 @@ def get_candidates(points,
                    w_fit,
                    r_fit,
                    threshold,
-                   ratio_spacing,
                    spacing,
                    dimensions):
     """Get Agatston candidates."""
     # Projection along z axis
-    predictions_agatston_points_final = \
-        points.copy()
-    points, matrix = z_projection(points,
-                                  w_fit)
+    valve = points.copy()
+    valve, affine = z_projection(valve,
+                                 w_fit)
     # Center in (0,0,0)
-    points, translation = \
-        centered_point(points)
+    valve, translation = \
+        centered_point(valve)
     # Determine the radius of the valve
     taille = closest_element(2*r_fit)
     # Load associated native valve
     native = get_native_valve(taille)
-    # ICP Registration
-    native = icp(source=native,
-                 target=points,
-                 show=False)
-    # Hull method
+    # Arbitrary level of threshold to find the metalic part
+    native_threshold = native[native[:, 3] > threshold]
+    valve_threshold = valve[valve[:, 3] > threshold]
+    # Perform ICP using mainly metalic part
+    _, matrix = \
+        icp(source=native_threshold,
+            target=valve_threshold)
+    # Apply given affine transformation
+    pcd_ = o3d.geometry.PointCloud()
+    pcd_.points = o3d.utility.Vector3dVector(native[:, :3])
+    native[:, :3] = np.asarray(pcd_.transform(matrix).points)
+    # Perform Convex-Hull algo to extract outside part
     hull = ft.convex_hull(native[:, :3])
-    mask_hull = isInHull(points[:, :3],
+    mask_hull = isInHull(valve[:, :3],
                          hull)
-    points = points[mask_hull]
+    # Apply masks
+    valve = valve[mask_hull]
+    # Add a column that will play the role of index
+    valve = np.insert(valve,
+                      valve.shape[1],
+                      np.arange(len(valve)),
+                      axis=1)
+    # Project along z axis to help for circle-points fitting
+    valve_p = valve.copy()
+    valve_p[:, 2] = np.round(valve_p[:, 2])
+    valve_threshold = \
+        valve_p[valve_p[:, 3] > threshold]
 
-    native = icp(source=native,
-                 target=points,
-                 show=True)
-    print('ok')
-    # # Affine transformation in original location
-    # points += translation
-    # if points.shape[1] == 4:
-    #     points = (np.linalg.inv(matrix)@(points.T)).T
-    # else:
-    #     points = (np.linalg.inv(matrix[:3, :3])@(points[:, :3].T)).T
+    # For each layer, attempt to fit a circle using the component
+    # of the metalic part and remove points outside of it by saving
+    # its index position for the last column
+    candidates = np.array([False]*valve.shape[0])
+    p_fit = []
+    for i, z in enumerate(
+            np.unique(valve_p[:, 2])):
+        valve_threshold_z = valve_threshold[valve_threshold[:, 2] == z]
+        if valve_threshold_z.shape[0] > 2:
+            xc, yc, r, _ = \
+                leastsq_circle(valve_threshold_z[:, 0],
+                               valve_threshold_z[:, 1])
+            circle_center = np.array([xc, yc, z])
+            for point in valve_p[valve_p[:, 2] == z]:
+                dist = euclidean(point[:3], circle_center)
+                if dist < r:
+                    p_fit.append(int(point[-1]))
+    p_fit = np.array(p_fit)
+    candidates[p_fit] = True
 
-    # # Algo a developer
-    # # Estimation des points à l'intérieur de la valve (A vérifier)
-    # ##############################################################
-    # # Rounding of layer due to floating error
-    # points[:, 2] = np.round(points[:, 2])
-
-    # predictions_agatston_points = \
-    #     points[points[:, 3] < threshold]
-    # predictions_final_points_threshold = \
-    #     points[points[:, 3] >= threshold]
-
-    # # Loop to remove outside points
-    # inner_points = []
-    # # Hack to avoid first and last layer where few points lead to wrong
-    # # circle estimation
-    # first_slices = \
-    #     int(np.percentile(
-    #         np.arange(
-    #             len(np.unique(
-    #                 predictions_agatston_points[:, 2])
-    #                 )
-    #             ), 20))
-    # last_slices = \
-    #     int(np.percentile(
-    #         np.arange(
-    #             len(np.unique(
-    #                 predictions_agatston_points[:, 2])
-    #                 )
-    #             ), 80))
-    # for i, z in enumerate(
-    #         np.unique(predictions_agatston_points[:, 2])):
-    #     predictions_final_tmp = \
-    #         predictions_final_points_threshold.copy()
-    #     predictions_final_tmp = \
-    #         predictions_final_tmp[predictions_final_tmp[:, 2] == z]
-    #     predictions_agatston = \
-    #         predictions_agatston_points.copy()
-    #     predictions_agatston = \
-    #         predictions_agatston[predictions_agatston[:, 2] == z]
-    #     if predictions_final_tmp.shape[0] > 2:
-    #         xc, yc, _, _ = \
-    #             leastsq_circle(predictions_final_tmp[:, 0],
-    #                            predictions_final_tmp[:, 1])
-    #         circle_center = np.array([xc, yc, z])
-    #         # Estimate the min value by slices
-    #         r_fit = []
-    #         for point in predictions_final_tmp[:, :3]:
-    #             # Exclude intensity points
-    #             r_fit.append(euclidean(point, circle_center))
-    #         if len(r_fit) > 0:
-    #             r_fit = np.array(r_fit)
-    #             # Based on experimental analysis on template valve,
-    #             # residual space along stent
-    #             if ratio_spacing is not None:
-    #                 r_fit = np.min(r_fit) - \
-    #                     ratio_spacing*spacing[0]
-    #             else:
-    #                 r_fit = np.min(r_fit)
-    #             # Estimate the distance of each point for the agatston
-    #             d = []
-    #             for point in predictions_agatston[:, :3]:
-    #                 # Exclude intensity points
-    #                 d.append(euclidean(point, circle_center))
-    #             d = np.array(d)
-    #             if i < first_slices or i > last_slices:
-    #                 if predictions_final_tmp.shape[0] > 30:
-    #                     p = \
-    #                         predictions_agatston[np.where(d < r_fit)]
-    #                 else:
-    #                     p = np.empty((0, 4))
-    #             else:
-    #                 p = \
-    #                     predictions_agatston[np.where(d < r_fit)]
-    #         else:
-    #             p = np.empty((0, 4))
-    #     else:
-    #         p = np.empty((0, 4))
-    #     inner_points.append(p)
-    # inner_points = np.concatenate(inner_points)
-    # mask = \
-    #     np.where(np.all(np.isin(points, inner_points),
-    #                     axis=1))
-    # mask_agatston = \
-    #     get_mask_2D(
-    #         predictions_agatston_points_final[mask],
-    #         dimensions,
-    #         spacing)
+    valve_candidates = valve[candidates][:, :4]
+    valve = valve[~candidates][:, :4]
+    # Affine transformation in original location
+    valve_candidates += translation
+    if valve_candidates.shape[1] == 4:
+        valve_candidates = \
+            (np.linalg.inv(
+                affine)@(valve_candidates.T)).T
+    else:
+        valve_candidates = \
+            (np.linalg.inv(
+                affine[:3, :3])
+             @ (valve_candidates[:, :3].T)).T
+    mask_agatston = \
+        get_mask_2D(
+            valve_candidates,
+            dimensions,
+            spacing)
     return mask_agatston
