@@ -19,6 +19,8 @@
 #
 
 """
+Copyright (C) 2022 Project AIC - All Rights Reserved.
+
 This module loads the data from data.py, creates a TensorFlow/Keras model
 from model.py, trains the model on the data, and then saves the
 best model.
@@ -31,9 +33,9 @@ import sys
 import yaml
 from tqdm import tqdm
 import numpy as np
-from aic_models.dataloader import get_file_list
+from aic.misc.utils import get_file_list, load_mask
 import psutil
-from aic_models import data_preprocess as dp
+
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
 # If hyperthreading is enabled, then use
@@ -100,7 +102,7 @@ if __name__ == "__main__":
     ratio_max = []
     for label_filename in tqdm(labels):
         index = []
-        label = dp.load_mask(label_filename)
+        label = load_mask(label_filename)
         ## Stack the loaded npy files
         label = [np.load(label[i]) for i in range(len(label))]
         label = np.stack(label, axis=0)
