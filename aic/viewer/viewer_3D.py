@@ -96,7 +96,7 @@ class Viewer3D(object):
         self.ratio_spacing = kwargs.get("spacing", None)
 
         # Model loading
-        self.model= kwargs.get("model_name", None)
+        self.model = kwargs.get("model_name", None)
         self.model = \
             ld.load_model(self.model,
                           self.model_version)
@@ -654,7 +654,6 @@ class Viewer3D(object):
                                   self.w_fit,
                                   self.r_fit,
                                   self.threshold,
-                                  self.ratio_spacing,
                                   self.spacing,
                                   self.dimensions)
             # Show the score in 2D mode
