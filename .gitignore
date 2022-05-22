@@ -33,4 +33,5 @@ MANIFEST
 *.pbz2
 *.mp4
 *.tflite
-valve-project-332716.json
+res/credentials/
+sandbox/
