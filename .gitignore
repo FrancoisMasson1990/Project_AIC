@@ -33,5 +33,6 @@ MANIFEST
 *.pbz2
 *.mp4
 *.tflite
+*.db
 res/credentials/
 sandbox/
