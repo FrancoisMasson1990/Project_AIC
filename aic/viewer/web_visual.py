@@ -49,31 +49,36 @@ def generate_imgs(data, index, fig):
 
 def generate_mask(data, index, fig):
     """Generate masks."""
+    imgs = data["image"][index]
     masks = data["mask_agatston"][index]
     area = data["area"]
     threshold_min = data["threshold_min"]
     threshold_max = data["threshold_max"]
     # Update prediction
     for i in tqdm(range(masks.shape[0])):
-        mask = masks[i].astype('float')
+        prediction = imgs[i].copy()
+        mask = masks[i]
+        prediction[mask == 0] = 0
         if threshold_min is not None:
-            mask[mask < threshold_min] = 0
+            prediction[prediction < threshold_min] = 0
         if threshold_max is not None:
-            mask[mask > threshold_max] = 0
-        area_, lw = sc.area_measurements(mask)
+            prediction[prediction > threshold_max] = 0
+        prediction[prediction > 0] = 1
+        area_, lw = sc.area_measurements(prediction)
         for j, number_of_pix in enumerate(area_):
             if j != 0:
                 # (density higher than 1mm2)
                 if number_of_pix*area <= 1:
-                    mask[lw == j] = 0
-        mask[mask < 1] = np.nan
-        fig.add_trace(go.Heatmap(z=mask,
+                    prediction[lw == j] = 0
+        prediction = prediction.astype('float')
+        prediction[prediction < 1] = np.nan
+        prediction[prediction >= 1] = 1
+        fig.add_trace(go.Heatmap(z=prediction,
                                  hoverongaps=False,
                                  colorscale="Reds",
                                  hoverinfo="skip",
                                  showscale=False))
-        fig.data[i+masks.shape[0]].visible = False
-
+        fig.data[i+masks.shape[0]].visible = False        
     return fig
 
 
@@ -151,7 +156,7 @@ def parse_contents(contents, filenames, dates):
         if data:
             # Should send back dict with same element has the
             # predictions.pbz2
-            config = fs.get_configs_root() / 'web_config.yml' 
+            config = fs.get_configs_root() / 'web_config.yml'
             response = infer.get_inference(data,
                                            files_types,
                                            str(config))

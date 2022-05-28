@@ -15,15 +15,15 @@ import numpy as np
 import bz2
 import pickle
 import os
-from scipy.ndimage import measurements
+from scipy.ndimage import measurements, morphology
 
 
 def agatston_score_slice(image,
                          mask_agatston,
                          index,
                          area,
-                         threshold_min=130,
-                         threshold_max=450):
+                         threshold_min=None,
+                         threshold_max=None):
     """Get Agatston score by slide."""
     prediction = image[index].copy()
     prediction[mask_agatston[index] == 0] = 0
@@ -46,8 +46,10 @@ def agatston_score_slice(image,
 
 def area_measurements(slice_):
     """Estimate area."""
-    slice_[slice_ != 0] = 1
-    lw, num = measurements.label(slice_)
+    # Generate a structuring element that will consider
+    # features connected even if they touch diagonally
+    s = morphology.generate_binary_structure(2, 2)
+    lw, num = measurements.label(slice_, structure=s)
     area_ = measurements.sum(slice_, lw, index=np.arange(lw.max() + 1))
     return area_, lw
 
@@ -55,8 +57,8 @@ def area_measurements(slice_):
 def agatston_score(image,
                    mask_agatston,
                    area,
-                   threshold_min=130,
-                   threshold_max=450):
+                   threshold_min=None,
+                   threshold_max=None):
     """Get Agatston score."""
     score = 0.0
     for i in range(len(image)):
@@ -66,18 +68,20 @@ def agatston_score(image,
             prediction[prediction < threshold_min] = 0
         if threshold_max is not None:
             prediction[prediction > threshold_max] = 0
-        area_, lw = area_measurements(prediction)
+
+        measurement = prediction.copy()
+        measurement[measurement > 0] = 1
+        area_, lw = area_measurements(measurement)
         for j, number_of_pix in enumerate(area_):
             if j != 0:
                 # density higher than 1mm2
                 if number_of_pix * area <= 1:
                     prediction[lw == j] = 0
 
-        prediction[np.logical_and(prediction >= 130, prediction < 200)] = 1
-        prediction[np.logical_and(prediction >= 200, prediction < 300)] = 2
-        prediction[np.logical_and(prediction >= 300, prediction < 400)] = 3
         prediction[prediction > 400] = 4
-
+        prediction[prediction >= 300] = 3
+        prediction[prediction >= 200] = 2
+        prediction[prediction >= 130] = 1
         score += area*np.sum(prediction)
     return score
 
@@ -87,6 +91,8 @@ def save_prediction(image,
                     path,
                     score,
                     area,
+                    threshold_min,
+                    threshold_max,
                     online=False):
     """Save prediction in dictionnary."""
     save_predict = {}
@@ -94,6 +100,8 @@ def save_prediction(image,
     save_predict["image"] = image
     save_predict["area"] = area
     save_predict["mask_agatston"] = mask_agatston
+    save_predict["threshold_min"] = threshold_min
+    save_predict["threshold_max"] = threshold_max
     if not online:
         save_predict["data_path"] =\
             "/".join(
