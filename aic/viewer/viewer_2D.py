@@ -29,8 +29,8 @@ class Viewer2D(object):
                  data_path: str,
                  folder_mask: str,
                  frame=0,
-                 threshold_min=130,
-                 threshold_max=450,
+                 threshold_min=None,
+                 threshold_max=None,
                  mask_agatston=None,
                  agatston=False,
                  area=None):
@@ -110,8 +110,8 @@ class Image_2D(object):
                  axis2,
                  axislicer,
                  fig,
-                 threshold_min=130,
-                 threshold_max=450,
+                 threshold_min=None,
+                 threshold_max=None,
                  mask_agatston=None,
                  agatston=False,
                  area=None):
@@ -232,7 +232,9 @@ class Image_2D(object):
                                    self.mask_agatston,
                                    self.data_path[self.frame],
                                    self.score,
-                                   self.area)
+                                   self.area,
+                                   self.threshold_min,
+                                   self.threshold_max)
 
         self.slicer.on_changed(self.update)
 
