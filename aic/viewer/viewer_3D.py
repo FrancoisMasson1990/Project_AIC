@@ -663,6 +663,7 @@ class Viewer3D(object):
                          mask_agatston=mask_agatston,
                          agatston=True,
                          area=self.area,
+                         threshold_min=None,
                          threshold_max=None)
         else:
             v2d.Viewer2D(data_path=self.data_path,

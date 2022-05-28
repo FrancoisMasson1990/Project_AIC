@@ -26,6 +26,7 @@ from vedo import *
 from vedo import volume, mesh
 import aic.processing.fitting as ft
 import aic.misc.files as fs
+import aic.misc.sql as sql
 
 
 def get_pixels_hu(scans):
@@ -462,12 +463,30 @@ def get_native_valve(radius, typ="Magna"):
     return native
 
 
+def get_thickness_infos(size,
+                        layer,
+                        database=str(fs.get_native_root() 
+                                     / "Magna" 
+                                     / "thickness_info.db"),
+                        columns=["thickness"]):
+    """Get thickness infos of native valve."""
+    conditions = [f'size = "{size}"',
+                  f'layer = "{layer}"']
+    args = {"conditions": conditions,
+            "columns": columns}
+    df = sql.load_sql(database,
+                      **args)
+    if not df.empty:
+        return float(df.iloc[0]['thickness'])
+
+
 def get_candidates(points,
                    w_fit,
                    r_fit,
                    threshold,
                    spacing,
-                   dimensions):
+                   dimensions,
+                   circle_threshold=1000):
     """Get Agatston candidates."""
     # Projection along z axis
     valve = points.copy()
@@ -477,9 +496,9 @@ def get_candidates(points,
     valve, translation = \
         centered_point(valve)
     # Determine the radius of the valve
-    taille = closest_element(2*r_fit)
+    size = closest_element(2*r_fit)
     # Load associated native valve
-    native = get_native_valve(taille)
+    native = get_native_valve(size)
     # Arbitrary level of threshold to find the metalic part
     native_threshold = native[native[:, 3] > threshold]
     valve_threshold = valve[valve[:, 3] > threshold]
@@ -506,28 +525,34 @@ def get_candidates(points,
     valve_p = valve.copy()
     valve_p[:, 2] = np.round(valve_p[:, 2])
     valve_threshold = \
-        valve_p[valve_p[:, 3] > threshold]
-
+        valve_p[valve_p[:, 3] > circle_threshold]
     # For each layer, attempt to fit a circle using the component
     # of the metalic part and remove points outside of it by saving
     # its index position for the last column
     candidates = np.array([False]*valve.shape[0])
     p_fit = []
-    for i, z in enumerate(
-            np.unique(valve_p[:, 2])):
-        valve_threshold_z = valve_threshold[valve_threshold[:, 2] == z]
-        if valve_threshold_z.shape[0] > 2:
+    for _, z in enumerate(
+            np.unique(valve_p[:, 2])[3:4]):
+        # valve_z = valve_p[valve_p[:, 2] == z]
+        valve_z = valve_threshold[valve_threshold[:, 2] == z]
+        if valve_z.shape[0] > 2:
+            # Fit a circle using 2 points for each layer
             xc, yc, r, _ = \
-                leastsq_circle(valve_threshold_z[:, 0],
-                               valve_threshold_z[:, 1])
+                leastsq_circle(valve_z[:, 0],
+                               valve_z[:, 1])
             circle_center = np.array([xc, yc, z])
             for point in valve_p[valve_p[:, 2] == z]:
+                # Measure the distance from the center of the circle
                 dist = euclidean(point[:3], circle_center)
-                if dist < r:
+                # Get thickness from a native valve
+                thick = get_thickness_infos(size=size,
+                                            layer=z)
+                # Keep only points where distance < radius - thickness
+                # Half pixel resolution
+                if (thick) and (dist < (size/2 - thick - spacing[0])):
                     p_fit.append(int(point[-1]))
     p_fit = np.array(p_fit)
     candidates[p_fit] = True
-
     valve_candidates = valve[candidates][:, :4]
     valve = valve[~candidates][:, :4]
     # Affine transformation in original location
