@@ -151,12 +151,14 @@ def get_inference(data,
                 mask_agatston,
                 area,
                 threshold_min=130,
-                threshold_max=450)
+                threshold_max=None)
         results = sc.save_prediction(image,
                                      mask_agatston,
                                      path='./cache',
                                      score=score,
                                      area=area,
+                                     threshold_min=130,
+                                     threshold_max=None,
                                      online=True)
         return results
 
