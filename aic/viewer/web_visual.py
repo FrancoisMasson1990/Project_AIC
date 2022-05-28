@@ -51,9 +51,15 @@ def generate_mask(data, index, fig):
     """Generate masks."""
     masks = data["mask_agatston"][index]
     area = data["area"]
+    threshold_min = data["threshold_min"]
+    threshold_max = data["threshold_max"]
     # Update prediction
     for i in tqdm(range(masks.shape[0])):
         mask = masks[i].astype('float')
+        if threshold_min is not None:
+            mask[mask < threshold_min] = 0
+        if threshold_max is not None:
+            mask[mask > threshold_max] = 0
         area_, lw = sc.area_measurements(mask)
         for j, number_of_pix in enumerate(area_):
             if j != 0:
