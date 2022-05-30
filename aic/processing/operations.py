@@ -465,8 +465,8 @@ def get_native_valve(radius, typ="Magna"):
 
 def get_thickness_infos(size,
                         layer,
-                        database=str(fs.get_native_root() 
-                                     / "Magna" 
+                        database=str(fs.get_native_root()
+                                     / "Magna"
                                      / "thickness_info.db"),
                         columns=["thickness"]):
     """Get thickness infos of native valve."""
@@ -549,26 +549,33 @@ def get_candidates(points,
                                             layer=z)
                 # Keep only points where distance < radius - thickness
                 # Half pixel resolution
-                if (thick) and (dist < (size/2 - thick - spacing[0])):
+                if (thick) and (dist < (size/2 - thick - 1.5*spacing[0])):
                     p_fit.append(int(point[-1]))
-    p_fit = np.array(p_fit)
-    candidates[p_fit] = True
-    valve_candidates = valve[candidates][:, :4]
-    valve = valve[~candidates][:, :4]
-    # Affine transformation in original location
-    valve_candidates += translation
-    if valve_candidates.shape[1] == 4:
-        valve_candidates = \
-            (np.linalg.inv(
-                affine)@(valve_candidates.T)).T
+    if p_fit:
+        p_fit = np.array(p_fit)
+        candidates[p_fit] = True
+        valve_candidates = valve[candidates][:, :4]
+        valve = valve[~candidates][:, :4]
+        # Affine transformation in original location
+        valve_candidates += translation
+        if valve_candidates.shape[1] == 4:
+            valve_candidates = \
+                (np.linalg.inv(
+                    affine)@(valve_candidates.T)).T
+        else:
+            valve_candidates = \
+                (np.linalg.inv(
+                    affine[:3, :3])
+                 @ (valve_candidates[:, :3].T)).T
+        mask_agatston = \
+            get_mask_2D(
+                valve_candidates,
+                dimensions,
+                spacing)
     else:
-        valve_candidates = \
-            (np.linalg.inv(
-                affine[:3, :3])
-             @ (valve_candidates[:, :3].T)).T
-    mask_agatston = \
-        get_mask_2D(
-            valve_candidates,
-            dimensions,
-            spacing)
+        mask_agatston = \
+            np.zeros([dimensions[2],
+                      dimensions[0],
+                      dimensions[1]],
+                     dtype=np.uint8)
     return mask_agatston
