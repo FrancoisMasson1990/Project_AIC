@@ -529,7 +529,6 @@ def get_candidates(points,
     # For each layer, attempt to fit a circle using the component
     # of the metalic part and remove points outside of it by saving
     # its index position for the last column
-    candidates = np.array([False]*valve.shape[0])
     p_fit = []
     for _, z in enumerate(
             np.unique(valve_p[:, 2])[3:4]):
@@ -553,9 +552,7 @@ def get_candidates(points,
                     p_fit.append(int(point[-1]))
     if p_fit:
         p_fit = np.array(p_fit)
-        candidates[p_fit] = True
-        valve_candidates = valve[candidates][:, :4]
-        valve = valve[~candidates][:, :4]
+        valve_candidates = valve[p_fit][:, :4]
         # Affine transformation in original location
         valve_candidates += translation
         if valve_candidates.shape[1] == 4:
