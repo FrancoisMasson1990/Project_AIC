@@ -78,11 +78,11 @@ def generate_mask(data, index, fig):
                                  colorscale="Reds",
                                  hoverinfo="skip",
                                  showscale=False))
-        fig.data[i+masks.shape[0]].visible = False        
+        fig.data[i+masks.shape[0]].visible = False
     return fig
 
 
-def update_graph(data):
+def update_graph_2d(data):
     """Draw prediction graphes."""
     fig = go.Figure()
     fig.update_layout(showlegend=False)
@@ -134,6 +134,37 @@ def update_graph(data):
             sliders=sliders,
         )
 
+    fig.update_layout(template="plotly_dark")
+    fig.update_layout(paper_bgcolor='#1e1e1e',
+                      plot_bgcolor='#1e1e1e')
+    return fig
+
+
+def update_graph_3d():
+    """Draw prediction graphes."""
+    fig = go.Figure()
+    fig.update_layout(showlegend=False)
+    fig.update_xaxes(visible=False)
+    fig.update_yaxes(visible=False)
+    # Helix equation
+    t = np.linspace(0, 20, 100)
+    x, y, z = np.cos(t), np.sin(t), t
+
+    fig = go.Figure(data=[go.Scatter3d(
+        x=x,
+        y=y,
+        z=z,
+        mode='markers',
+        marker=dict(
+            size=12,
+            color=z,
+            colorscale='Viridis',
+            opacity=0.8
+        )
+    )])
+
+    # tight layout
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.update_layout(template="plotly_dark")
     fig.update_layout(paper_bgcolor='#1e1e1e',
                       plot_bgcolor='#1e1e1e')

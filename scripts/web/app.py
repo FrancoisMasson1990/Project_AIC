@@ -25,6 +25,8 @@ warnings.filterwarnings('ignore')
 fs.mk_tmp_folder()
 fs.rm_tmp_folders()
 fs.rm_tmp_files()
+tab_style = {'backgroundColor': '#1e1e1e',
+             'color': 'white'}
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.title = 'Agatston Score Dashboard'
@@ -143,21 +145,39 @@ app.layout = html.Div(
                              ),
                     html.Div(className='eight columns div-for-charts bg-grey',
                              children=[
-                                 dcc.Graph(id='agatston-graph',
-                                           style={'height': '150vh'}),
-                                 dbc.Progress(id="pbar",
-                                              striped=True,
-                                              animated=True),
-                                 dcc.Interval(id='timer_progress',
-                                              interval=1000)
-                                 ]),
-                              ])
+                                 dcc.Tabs([
+                                     dcc.Tab(
+                                         label='2D View',
+                                         children=[
+                                             dcc.Graph(id='agatston-graph-2d',
+                                                       style={'height': '100vh'
+                                                              }),
+                                             dbc.Progress(id="pbar",
+                                                          striped=True,
+                                                          animated=True),
+                                             dcc.Interval(id='timer_progress',
+                                                          interval=1000)],
+                                         style=tab_style,
+                                         selected_style=tab_style,
+                                         ),
+                                     dcc.Tab(
+                                         label='3D View',
+                                         children=[
+                                             dcc.Graph(id='agatston-graph-3d',
+                                                       style={'height': '100vh'
+                                                              })],
+                                         style=tab_style,
+                                         selected_style=tab_style,
+                                         ),
+                                     ]),
+                                 ])
+                    ]),
         ]
 )
 
 
 @app.callback(
-    dash.Output(component_id='agatston-graph',
+    dash.Output(component_id='agatston-graph-2d',
                 component_property='figure'),
     dash.Output(component_id='score',
                 component_property='value'),
@@ -169,12 +189,12 @@ app.layout = html.Div(
                component_property='filename'),
     dash.State(component_id='upload-data',
                component_property='last_modified'))
-def update_output(contents, names, dates):
-    """Update graphes."""
+def update_output_2d(contents, names, dates):
+    """Update 2d graphes."""
     fs.rm_tmp_folders()
     fs.rm_tmp_files()
     output = vs.parse_contents(contents, names, dates)
-    fig = vs.update_graph(output)
+    fig = vs.update_graph_2d(output)
     score = None
     string = 'Project Valve AIC For Patient : '
     if output and 'score' in output.keys():
@@ -186,6 +206,22 @@ def update_output(contents, names, dates):
         with bz2.BZ2File('./cache/prediction.pbz2', 'wb') as f:
             pickle.dump(output, f)
     return fig, score, string
+
+
+@app.callback(
+    dash.Output(component_id='agatston-graph-3d',
+                component_property='figure'),
+    dash.Input(component_id='upload-data',
+               component_property='contents'),
+    dash.State(component_id='upload-data',
+               component_property='filename'),
+    dash.State(component_id='upload-data',
+               component_property='last_modified'))
+def update_output_3d(contents, names, dates):
+    """Update 3d graphes."""
+    fig = vs.update_graph_3d()
+    score = None
+    return fig
 
 
 @app.callback(
