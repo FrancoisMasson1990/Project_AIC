@@ -140,31 +140,44 @@ def update_graph_2d(data):
     return fig
 
 
-def update_graph_3d():
+def update_graph_3d(data):
     """Draw prediction graphes."""
     fig = go.Figure()
     fig.update_layout(showlegend=False)
     fig.update_xaxes(visible=False)
     fig.update_yaxes(visible=False)
-    # Helix equation
-    t = np.linspace(0, 20, 100)
-    x, y, z = np.cos(t), np.sin(t), t
+    if data:
+        if "valve" in data.keys():
+            x = data["valve"][:, 0]
+            y = data["valve"][:, 1]
+            z = data["valve"][:, 2]
 
-    fig = go.Figure(data=[go.Scatter3d(
-        x=x,
-        y=y,
-        z=z,
-        mode='markers',
-        marker=dict(
-            size=12,
-            color=z,
-            colorscale='Viridis',
-            opacity=0.8
-        )
-    )])
+            fig.add_trace(go.Scatter3d(
+                x=x,
+                y=y,
+                z=z,
+                mode='markers',
+                marker=dict(
+                    size=5,
+                    color='white',
+                    opacity=0.8
+                )))
+        if "candidate" in data.keys():
+            x = data["candidate"][:, 0]
+            y = data["candidate"][:, 1]
+            z = data["candidate"][:, 2]
 
-    # tight layout
-    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
+            fig.add_trace(go.Scatter3d(
+                x=x,
+                y=y,
+                z=z,
+                mode='markers',
+                marker=dict(
+                    size=5,
+                    color='red',
+                    opacity=0.8
+                )))
+
     fig.update_layout(template="plotly_dark")
     fig.update_layout(paper_bgcolor='#1e1e1e',
                       plot_bgcolor='#1e1e1e')

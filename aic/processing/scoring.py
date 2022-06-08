@@ -93,6 +93,8 @@ def save_prediction(image,
                     area,
                     threshold_min,
                     threshold_max,
+                    valve,
+                    candidate,
                     online=False):
     """Save prediction in dictionnary."""
     save_predict = {}
@@ -102,6 +104,8 @@ def save_prediction(image,
     save_predict["mask_agatston"] = mask_agatston
     save_predict["threshold_min"] = threshold_min
     save_predict["threshold_max"] = threshold_max
+    save_predict["valve"] = valve
+    save_predict["candidate"] = candidate
     if not online:
         save_predict["data_path"] =\
             "/".join(

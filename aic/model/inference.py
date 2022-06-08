@@ -138,11 +138,11 @@ def get_inference(data,
             ft.fitting_cylinder(
                 predictions_final_points_threshold[:, :3],
                 guess_angles=None)
-        mask_agatston = \
+        mask_agatston, valve, candidate = \
             op.get_candidates(predictions_agatston_points,
                               w_fit=w_fit,
+                              r_fit=r_fit,
                               threshold=threshold,
-                              ratio_spacing=ratio_spacing,
                               spacing=spacing,
                               dimensions=dimensions)
         score = \
@@ -159,6 +159,8 @@ def get_inference(data,
                                      area=area,
                                      threshold_min=130,
                                      threshold_max=None,
+                                     valve=valve,
+                                     candidate=candidate,
                                      online=True)
         return results
 

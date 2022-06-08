@@ -649,7 +649,7 @@ class Viewer3D(object):
             # Update center and axis if object was moved
             self.C_fit = np.asarray(self.cylinder.GetCenter())
             self.w_fit = np.asarray(self.cylinder.normalAt(48))
-            mask_agatston = \
+            mask_agatston, valve, candidate = \
                 op.get_candidates(self.predictions_agatston_points,
                                   self.w_fit,
                                   self.r_fit,
@@ -664,7 +664,9 @@ class Viewer3D(object):
                          agatston=True,
                          area=self.area,
                          threshold_min=130,
-                         threshold_max=None)
+                         threshold_max=None,
+                         valve=valve,
+                         candidate=candidate)
         else:
             v2d.Viewer2D(data_path=self.data_path,
                          folder_mask="",

@@ -33,7 +33,9 @@ class Viewer2D(object):
                  threshold_max=None,
                  mask_agatston=None,
                  agatston=False,
-                 area=None):
+                 area=None,
+                 valve=None,
+                 candidate=None):
         """Init function."""
         self.frame_init = frame
         self.data_path = data_path
@@ -43,6 +45,10 @@ class Viewer2D(object):
         self.area = area
         self.threshold_min = threshold_min
         self.threshold_max = threshold_max
+
+        # Extra parameters passed
+        self.valve = valve
+        self.candidate = candidate
 
         # Callback
         self.draw()
@@ -71,7 +77,9 @@ class Viewer2D(object):
                                 threshold_max=self.threshold_max,
                                 mask_agatston=self.mask_agatston,
                                 agatston=self.agatston,
-                                area=self.area)
+                                area=self.area,
+                                valve=self.valve,
+                                candidate=self.candidate)
 
             plt.show()
         else:
@@ -114,7 +122,9 @@ class Image_2D(object):
                  threshold_max=None,
                  mask_agatston=None,
                  agatston=False,
-                 area=None):
+                 area=None,
+                 valve=None,
+                 candidate=None):
         """Init function."""
         self.data_path = data_path
         self.label_folder = label_folder
@@ -127,6 +137,8 @@ class Image_2D(object):
         self.threshold_min = threshold_min
         self.threshold_max = threshold_max
         self.area = area
+        self.valve = valve
+        self.candidate = candidate
 
         # Dicom image
         self.slices = None
@@ -234,7 +246,9 @@ class Image_2D(object):
                                    self.score,
                                    self.area,
                                    self.threshold_min,
-                                   self.threshold_max)
+                                   self.threshold_max,
+                                   self.valve,
+                                   self.candidate)
 
         self.slicer.on_changed(self.update)
 

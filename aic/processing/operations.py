@@ -276,6 +276,20 @@ def matrix_transformation(w_fit):
     return matrix_array
 
 
+def affine_projection(points, affine):
+    """Apply Affine transformation."""
+    if points.shape[1] == 4:
+        points = \
+            (np.linalg.inv(
+                affine)@(points.T)).T
+    else:
+        points = \
+            (np.linalg.inv(
+                affine[:3, :3])
+                @ (points[:, :3].T)).T
+    return points
+
+
 def isInHull(P, hull):
     """Determine if the list of points P lies inside the hull.
 
@@ -529,10 +543,10 @@ def get_candidates(points,
     # For each layer, attempt to fit a circle using the component
     # of the metalic part and remove points outside of it by saving
     # its index position for the last column
+    candidates = np.array([False]*valve.shape[0])
     p_fit = []
     for _, z in enumerate(
-            np.unique(valve_p[:, 2])[3:4]):
-        # valve_z = valve_p[valve_p[:, 2] == z]
+            np.unique(valve_p[:, 2])[2:-2]):
         valve_z = valve_threshold[valve_threshold[:, 2] == z]
         if valve_z.shape[0] > 2:
             # Fit a circle using 2 points for each layer
@@ -552,27 +566,31 @@ def get_candidates(points,
                     p_fit.append(int(point[-1]))
     if p_fit:
         p_fit = np.array(p_fit)
-        valve_candidates = valve[p_fit][:, :4]
-        # Affine transformation in original location
+        candidates[p_fit] = True
+        valve_candidates = valve[candidates][:, :4]
         valve_candidates += translation
-        if valve_candidates.shape[1] == 4:
-            valve_candidates = \
-                (np.linalg.inv(
-                    affine)@(valve_candidates.T)).T
-        else:
-            valve_candidates = \
-                (np.linalg.inv(
-                    affine[:3, :3])
-                 @ (valve_candidates[:, :3].T)).T
+        valve_candidates = affine_projection(valve_candidates,
+                                             affine)
+        valve = valve[~candidates][:, :4]
+        valve += translation
+        valve = affine_projection(valve,
+                                  affine)
         mask_agatston = \
             get_mask_2D(
                 valve_candidates,
                 dimensions,
                 spacing)
     else:
+        valve_candidates = valve[candidates][:, :4]
+        valve_candidates += translation
+        valve_candidates = affine_projection(valve_candidates,
+                                             affine)
+        valve += translation
+        valve = affine_projection(valve,
+                                  affine)
         mask_agatston = \
             np.zeros([dimensions[2],
                       dimensions[0],
                       dimensions[1]],
                      dtype=np.uint8)
-    return mask_agatston
+    return mask_agatston, valve, valve_candidates

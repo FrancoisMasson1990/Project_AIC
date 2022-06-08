@@ -179,6 +179,8 @@ app.layout = html.Div(
 @app.callback(
     dash.Output(component_id='agatston-graph-2d',
                 component_property='figure'),
+    dash.Output(component_id='agatston-graph-3d',
+                component_property='figure'),
     dash.Output(component_id='score',
                 component_property='value'),
     dash.Output(component_id='patient_name',
@@ -194,7 +196,8 @@ def update_output_2d(contents, names, dates):
     fs.rm_tmp_folders()
     fs.rm_tmp_files()
     output = vs.parse_contents(contents, names, dates)
-    fig = vs.update_graph_2d(output)
+    fig_2d = vs.update_graph_2d(output)
+    fig_3d = vs.update_graph_3d(output)
     score = None
     string = 'Project Valve AIC For Patient : '
     if output and 'score' in output.keys():
@@ -205,23 +208,7 @@ def update_output_2d(contents, names, dates):
     if output:
         with bz2.BZ2File('./cache/prediction.pbz2', 'wb') as f:
             pickle.dump(output, f)
-    return fig, score, string
-
-
-@app.callback(
-    dash.Output(component_id='agatston-graph-3d',
-                component_property='figure'),
-    dash.Input(component_id='upload-data',
-               component_property='contents'),
-    dash.State(component_id='upload-data',
-               component_property='filename'),
-    dash.State(component_id='upload-data',
-               component_property='last_modified'))
-def update_output_3d(contents, names, dates):
-    """Update 3d graphes."""
-    fig = vs.update_graph_3d()
-    score = None
-    return fig
+    return fig_2d, fig_3d, score, string
 
 
 @app.callback(
