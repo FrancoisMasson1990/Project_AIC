@@ -173,11 +173,13 @@ def update_graph_3d(data):
                 z=z,
                 mode='markers',
                 marker=dict(
-                    size=5,
+                    size=3,
                     color='red',
                     opacity=0.8
                 )))
-
+        fig.update_scenes(xaxis_visible=False,
+                          yaxis_visible=False,
+                          zaxis_visible=False)
     fig.update_layout(template="plotly_dark")
     fig.update_layout(paper_bgcolor='#1e1e1e',
                       plot_bgcolor='#1e1e1e')
