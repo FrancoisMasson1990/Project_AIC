@@ -15,8 +15,6 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
-import pickle
-import bz2
 import aic.misc.utils as ut
 import aic.processing.operations as op
 import aic.processing.scoring as sc
