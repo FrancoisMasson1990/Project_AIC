@@ -34,5 +34,6 @@ MANIFEST
 *.mp4
 *.tflite
 *.db
+*events.out*
 res/credentials/
 sandbox/
