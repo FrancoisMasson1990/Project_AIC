@@ -20,7 +20,7 @@ import aic.misc.utils as ut
 import aic.processing.operations as op
 
 
-class DatasetGenerator(Sequence):
+class DatasetGenerator2D(Sequence):
     """TensorFlow Dataset from Python/NumPy Iterator."""
 
     def __init__(self,
@@ -246,16 +246,13 @@ class DatasetGenerator(Sequence):
 
             if (idy + self.batch_size) < num_slices:
                 # We have enough slices for batch
-                img_batch, label_batch = \
-                    img[:, :, idy:idy + self.batch_size],
-                label[:, :, idy:idy+self.batch_size]
+                img_batch = img[:, :, idy:idy + self.batch_size]
+                label_batch = label[:, :, idy:idy+self.batch_size]
 
             else:  # We need to pad the batch with slices
-
                 # Get remaining slices
-                img_batch, label_batch = \
-                    img[:, :, -self.batch_size:],
-                label[:, :, -self.batch_size:]
+                img_batch = img[:, :, -self.batch_size:],
+                label_batch = label[:, :, -self.batch_size:]
 
             if self.augment:
                 img_batch, label_batch = self.augment_data(

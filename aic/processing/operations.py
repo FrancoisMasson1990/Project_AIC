@@ -499,8 +499,7 @@ def get_candidates(points,
                    r_fit,
                    threshold,
                    spacing,
-                   dimensions,
-                   circle_threshold=1000):
+                   dimensions):
     """Get Agatston candidates."""
     # Projection along z axis
     valve = points.copy()
@@ -539,7 +538,7 @@ def get_candidates(points,
     valve_p = valve.copy()
     valve_p[:, 2] = np.round(valve_p[:, 2])
     valve_threshold = \
-        valve_p[valve_p[:, 3] > circle_threshold]
+        valve_p[valve_p[:, 3] > threshold]
     # For each layer, attempt to fit a circle using the component
     # of the metalic part and remove points outside of it by saving
     # its index position for the last column
@@ -562,7 +561,7 @@ def get_candidates(points,
                                             layer=z)
                 # Keep only points where distance < radius - thickness
                 # Half pixel resolution
-                if (thick) and (dist < (size/2 - thick - 1.5*spacing[0])):
+                if (thick) and (dist < (r - thick - 1.1*spacing[0])):
                     p_fit.append(int(point[-1]))
     if p_fit:
         p_fit = np.array(p_fit)

@@ -20,12 +20,12 @@ import pydicom
 import shutil
 
 
-def get_file_list(data_path, seed=816, split=0.7):
+def get_file_list(data_path, json_filename, seed=816, split=0.7):
     """Get list of files.
 
     Shuffling of the dataset required for the model training/evaluation
     """
-    experiment_data = json_export(data_path)
+    experiment_data = json_export(json_filename)
 
     # Print information about the Magna valve experiment data
     print("*" * 30)
@@ -33,7 +33,6 @@ def get_file_list(data_path, seed=816, split=0.7):
     print("Dataset name:        ", experiment_data["name"])
     print("Dataset description: ", experiment_data["description"])
     print("Tensor image size:   ", experiment_data["tensorImageSize"])
-    print("Dataset release:     ", experiment_data["release"])
     print("=" * 30)
     print("*" * 30)
 
@@ -44,9 +43,10 @@ def get_file_list(data_path, seed=816, split=0.7):
     split the validation set into separate test and validation
     sets.
     """
-
-    image_files = expand_list(experiment_data["dataset_folder"])
-    label_files = expand_list(experiment_data["label_folder"])
+    dataset_folder = data_path + experiment_data["dataset_folder"]
+    label_folder = data_path + experiment_data["label_folder"]
+    image_files = expand_list(dataset_folder)
+    label_files = expand_list(label_folder)
 
     assert len(image_files) == len(
         label_files), "Files and labels don't have the same length"
@@ -95,27 +95,26 @@ def get_file_list(data_path, seed=816, split=0.7):
     print("Number of validation files = {}".format(len(validateList)))
     print("Number of testing files    = {}".format(len(testList)))
 
-    return trainFiles, trainLabels, validateFiles, \
-        validateLabels, testFiles, testLabels
+    return (trainFiles, trainLabels, validateFiles,
+            validateLabels, testFiles, testLabels)
 
 
-def slice_file_list(data_path):
+def slice_file_list(data_path, json_filename):
     """Get the max number of slice in the dataset.
 
     Required for the Dataloader Generator
     """
-    experiment_data = json_export(data_path)
+    experiment_data = json_export(json_filename)
+    dataset_folder = data_path + experiment_data["dataset_folder"]
     num_slice_max = expand_list(
-        experiment_data["dataset_folder"], format='/*.dcm')
+        dataset_folder, format='/*.dcm')
     num_slice_max = max(len(x) for x in num_slice_max)
 
     return num_slice_max
 
 
-def json_export(data_path):
+def json_export(json_filename):
     """Extract dataset informations contained into a json file."""
-    json_filename = os.path.join(data_path, "dataset.json")
-
     try:
         with open(json_filename, "r") as fp:
             experiment_data = json.load(fp)

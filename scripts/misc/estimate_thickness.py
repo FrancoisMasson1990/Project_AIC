@@ -26,29 +26,22 @@ if __name__ == '__main__':
               29,
               ]
     dfs = []
+    threshold = 900
     for j in layers:
         # load projected native valve
-        path = f'/home/francoismasson/Project_AIC/data/natives/' + \
-            'Magna/projected/Magna_{j}/projected.npy'
+        path = fs.get_native_root() / \
+            f'Magna/projected/Magna_{j}/projected.npy'
         with open(str(path), 'rb') as f:
             native = np.load(f)
-
-        # Add a column that will play the role of index
-        native = np.insert(native,
-                           native.shape[1],
-                           np.arange(len(native)),
-                           axis=1)
 
         valve = native.copy()
         # Project along z axis to help for circle-points fitting
         valve_p = valve.copy()
         valve_p[:, 2] = np.round(valve_p[:, 2])
         valve_threshold = valve_p.copy()
-        # valve_threshold = \
-        #     valve_p[valve_p[:, 3] > threshold]
-
+        valve_threshold = \
+            valve_p[valve_p[:, 3] > threshold]
         candidates = np.array([False]*valve.shape[0])
-        p_fit = []
         # For each layer, attempt to fit a circle using the component
         # of the metalic part and remove points outside of it by saving
         # its index position for the last column
@@ -65,9 +58,7 @@ if __name__ == '__main__':
                 for point in valve_p[valve_p[:, 2] == z]:
                     dist = op.euclidean(point[:3], circle_center)
                     layer.append(dist)
-                    if dist < r:
-                        p_fit.append(int(point[-1]))
-                df.append([z, j/2 - min(np.asarray(layer))])
+                df.append([z, r - min(np.asarray(layer))])
 
         df = np.array(df)
         df = pd.DataFrame(df, columns=["layer", "thickness"])

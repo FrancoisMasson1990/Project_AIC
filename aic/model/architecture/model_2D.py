@@ -19,23 +19,22 @@
 #
 
 """
+2D Unet Architecture.
+
 This module contains all of the model definition code.
 You can try custom models by modifying the code here.
 """
 
 import os
-import time
-import shutil
-
 import tensorflow as tf
 from tensorflow import keras as K
+import aic.processing.metrics as mt
+
 
 class unet(object):
-    """
-    2D U-Net model class
-    """
+    """2D U-Net model class."""
 
-    def __init__(self, 
+    def __init__(self,
                  channels_first=None,
                  fms=None,
                  output_path=None,
@@ -48,7 +47,7 @@ class unet(object):
                  use_upsampling=None,
                  use_dropout=None,
                  print_model=None):
-
+        """Init class."""
         self.channels_first = channels_first
         if self.channels_first:
             """
@@ -76,21 +75,21 @@ class unet(object):
         self.inference_filename = inference_filename
 
         self.metrics = [self.dice_coef, self.soft_dice_coef]
-        #self.loss = self.dice_coef_loss
-        self.loss = self.combined_dice_ce_loss
+        # self.loss = self.dice_coef_loss
+        self.loss = self.combined_dice_coef_loss
 
-        #Tversky method
-        #self.metrics = [self.tversky]
-        #self.loss = self.focal_tversky_loss
+        # Tversky method
+        # self.metrics = [self.tversky]
+        # self.loss = self.focal_tversky_loss
 
         self.optimizer = K.optimizers.Adam(learning_rate=self.learningrate)
 
         self.custom_objects = {
-            "combined_dice_ce_loss": self.combined_dice_ce_loss,
+            "combined_dice_ce_loss": self.combined_dice_coef_loss,
             "dice_coef_loss": self.dice_coef_loss,
             "dice_coef": self.dice_coef,
             "soft_dice_coef": self.soft_dice_coef,
-            "focal_tversky_loss" : self.focal_tversky_loss,
+            "focal_tversky_loss": self.focal_tversky_loss,
             "tversky": self.tversky}
 
         self.blocktime = blocktime
@@ -101,86 +100,62 @@ class unet(object):
         self.use_dropout = use_dropout
         self.print_model = print_model
 
-    def dice_coef(self, target, prediction, axis=(1, 2), smooth=0.0001):
-        """
-        Sorenson Dice
-        \frac{  2 \times \left | T \right | \cap \left | P \right |}{ \left | T \right | +  \left | P \right |  }
-        where T is ground truth mask and P is the prediction mask
-        """
-        prediction = K.backend.round(prediction)  # Round to 0 or 1
+    def dice_coef(self,
+                  target,
+                  prediction):
+        """Get the Sorenson Dice."""
+        return mt.dice_coef(target=target,
+                            prediction=prediction)
 
-        intersection = tf.reduce_sum(target * prediction, axis=axis)
-        union = tf.reduce_sum(target + prediction, axis=axis)
-        numerator = tf.constant(2.) * intersection + smooth
-        denominator = union + smooth
-        coef = numerator / denominator
+    def soft_dice_coef(self,
+                       target,
+                       prediction):
+        """Get the Sorenson (Soft) Dice."""
+        return mt.soft_dice_coef(target=target,
+                                 prediction=prediction)
 
-        return tf.reduce_mean(coef)
+    def dice_coef_loss(self,
+                       target,
+                       prediction):
+        """Get the Sorenson (Soft) Dice loss.
 
-    def soft_dice_coef(self, target, prediction, axis=(1, 2), smooth=0.0001):
-        """
-        Sorenson (Soft) Dice  - Don't round the predictions
-        \frac{  2 \times \left | T \right | \cap \left | P \right |}{ \left | T \right | +  \left | P \right |  }
-        where T is ground truth mask and P is the prediction mask
-        """
-
-        intersection = tf.reduce_sum(target * prediction, axis=axis)
-        union = tf.reduce_sum(target + prediction, axis=axis)
-        numerator = tf.constant(2.) * intersection + smooth
-        denominator = union + smooth
-        coef = numerator / denominator
-
-        return tf.reduce_mean(coef)
-
-    def dice_coef_loss(self, target, prediction, axis=(1, 2), smooth=0.0001):
-        """
-        Sorenson (Soft) Dice loss
         Using -log(Dice) as the loss since it is better behaved.
         Also, the log allows avoidance of the division which
         can help prevent underflow when the numbers are very small.
         """
-        intersection = tf.reduce_sum(prediction * target, axis=axis)
-        p = tf.reduce_sum(prediction, axis=axis)
-        t = tf.reduce_sum(target, axis=axis)
-        numerator = tf.reduce_mean(intersection + smooth)
-        denominator = tf.reduce_mean(t + p + smooth)
-        dice_loss = -tf.math.log(2.*numerator) + tf.math.log(denominator)
+        return mt.dice_coef_loss(target=target,
+                                 prediction=prediction)
 
-        return dice_loss
+    def combined_dice_coef_loss(self,
+                                target,
+                                prediction):
+        """Combine Dice and Binary Cross Entropy Loss."""
+        return mt.combined_dice_coef_loss(
+            weight_dice_loss=self.weight_dice_loss,
+            target=target,
+            prediction=prediction)
 
-    def combined_dice_ce_loss(self, target, prediction, axis=(1, 2), smooth=0.0001):
-        """
-        Combined Dice and Binary Cross Entropy Loss
-        """
-        return self.weight_dice_loss*self.dice_coef_loss(target, prediction, axis, smooth) + \
-            (1-self.weight_dice_loss)*K.losses.binary_crossentropy(target, prediction)
-    
-    def tversky(self, target, prediction, smooth=1, alpha=0.7):
+    def tversky(self,
+                target,
+                prediction):
+        """Get tversky loss."""
+        return mt.tversky(target=target,
+                          prediction=prediction,
+                          channels_first=self.channels_first
+                          )
 
-        # Flatten the input data
-        if self.channels_first:
-            y_true = K.backend.permute_dimensions(target, (3,1,2,0))
-            y_pred = K.backend.permute_dimensions(prediction, (3,1,2,0))
-        else :
-            y_true = target
-            y_pred = prediction
-
-        y_true_pos = K.backend.flatten(y_true)
-        y_pred_pos = K.backend.flatten(y_pred)
-        true_pos = K.backend.sum(y_true_pos * y_pred_pos)
-        false_neg = K.backend.sum(y_true_pos * (1 - y_pred_pos))
-        false_pos = K.backend.sum((1 - y_true_pos) * y_pred_pos)
-        return (true_pos + smooth) / (true_pos + alpha * false_neg +
-                                  (1 - alpha) * false_pos + smooth)
-
-    def focal_tversky_loss(self, target, prediction, gamma=1.25):
-        tv = self.tversky(target, prediction)
-        return K.backend.pow((1 - tv), gamma)
+    def focal_tversky_loss(self,
+                           target,
+                           prediction):
+        """Get focal tversky loss."""
+        return mt.focal_tversky_loss(target=target,
+                                     prediction=prediction)
 
     def unet_model(self, imgs_shape, msks_shape,
                    dropout=0.2,
                    final=False):
-        """
+        """Define the UNet model.
+
         U-Net Model
         ===========
         Based on https://arxiv.org/abs/1505.04597
@@ -188,7 +163,6 @@ class unet(object):
         the decoder path. The alternative is to use Transposed
         Convolution.
         """
-
         if not final:
             if self.use_upsampling:
                 print("Using UpSampling2D")
@@ -254,7 +228,8 @@ class unet(object):
         if self.use_upsampling:
             up = K.layers.UpSampling2D(name="upE", size=(2, 2))(encodeE)
         else:
-            up = K.layers.Conv2DTranspose(name="transconvE", filters=self.fms*8,
+            up = K.layers.Conv2DTranspose(name="transconvE",
+                                          filters=self.fms*8,
                                           **params_trans)(encodeE)
         concatD = K.layers.concatenate(
             [up, encodeD], axis=self.concat_axis, name="concatD")
@@ -267,7 +242,8 @@ class unet(object):
         if self.use_upsampling:
             up = K.layers.UpSampling2D(name="upC", size=(2, 2))(decodeC)
         else:
-            up = K.layers.Conv2DTranspose(name="transconvC", filters=self.fms*4,
+            up = K.layers.Conv2DTranspose(name="transconvC",
+                                          filters=self.fms*4,
                                           **params_trans)(decodeC)
         concatC = K.layers.concatenate(
             [up, encodeC], axis=self.concat_axis, name="concatC")
@@ -280,7 +256,8 @@ class unet(object):
         if self.use_upsampling:
             up = K.layers.UpSampling2D(name="upB", size=(2, 2))(decodeB)
         else:
-            up = K.layers.Conv2DTranspose(name="transconvB", filters=self.fms*2,
+            up = K.layers.Conv2DTranspose(name="transconvB",
+                                          filters=self.fms*2,
                                           **params_trans)(decodeB)
         concatB = K.layers.concatenate(
             [up, encodeB], axis=self.concat_axis, name="concatB")
@@ -293,7 +270,8 @@ class unet(object):
         if self.use_upsampling:
             up = K.layers.UpSampling2D(name="upA", size=(2, 2))(decodeA)
         else:
-            up = K.layers.Conv2DTranspose(name="transconvA", filters=self.fms,
+            up = K.layers.Conv2DTranspose(name="transconvA",
+                                          filters=self.fms,
                                           **params_trans)(decodeA)
         concatA = K.layers.concatenate(
             [up, encodeA], axis=self.concat_axis, name="concatA")
@@ -304,7 +282,8 @@ class unet(object):
             name="convOutb", filters=self.fms, **params)(convOut)
 
         prediction = K.layers.Conv2D(name="PredictionMask",
-                                     filters=num_chan_out, kernel_size=(1, 1),
+                                     filters=num_chan_out,
+                                     kernel_size=(1, 1),
                                      activation="sigmoid")(convOut)
 
         model = K.models.Model(inputs=[inputs], outputs=[
@@ -315,7 +294,6 @@ class unet(object):
         if final:
             model.trainable = False
         else:
-
             model.compile(optimizer=optimizer,
                           loss=self.loss,
                           metrics=self.metrics)
@@ -326,10 +304,7 @@ class unet(object):
         return model
 
     def get_callbacks(self):
-        """
-        Define any callbacks for the training
-        """
-
+        """Define any callbacks for the training."""
         model_filename = os.path.join(
             self.output_path, self.inference_filename)
 
@@ -341,33 +316,35 @@ class unet(object):
                                                        monitor="val_loss",
                                                        save_best_only=True)
 
-        directoryName = "unet_block{}_inter{}_intra{}".format(self.blocktime,
-                                                              self.num_threads,
-                                                              self.num_inter_threads)
+        directoryName = \
+            "unet_block{}_inter{}_intra{}".format(self.blocktime,
+                                                  self.num_threads,
+                                                  self.num_inter_threads)
 
         # Tensorboard callbacks
         if (self.use_upsampling):
-            tensorboard_filename = os.path.join(self.output_path,
-                                                "keras_tensorboard_upsampling/{}".format(
-                                                    directoryName))
+            tensorboard_filename = \
+                os.path.join(self.output_path,
+                             "keras_tensorboard_upsampling/{}".format(
+                                 directoryName))
         else:
-            tensorboard_filename = os.path.join(self.output_path,
-                                                "keras_tensorboard_transposed/{}".format(
-                                                    directoryName))
+            tensorboard_filename = \
+                os.path.join(self.output_path,
+                             "keras_tensorboard_transposed/{}".format(
+                                 directoryName))
 
         tensorboard_checkpoint = K.callbacks.TensorBoard(
             log_dir=tensorboard_filename,
             write_graph=True, write_images=True)
 
-        early_stopping = K.callbacks.EarlyStopping(patience=5, restore_best_weights=True)
+        early_stopping = K.callbacks.EarlyStopping(patience=5,
+                                                   restore_best_weights=True)
 
-        return model_filename, [model_checkpoint, early_stopping, tensorboard_checkpoint]
+        return model_filename, [model_checkpoint, early_stopping,
+                                tensorboard_checkpoint]
 
     def evaluate_model(self, model_filename, ds_test):
-        """
-        Evaluate the best model on the validation dataset
-        """
-
+        """Evaluate the best model on the validation dataset."""
         model = K.models.load_model(
             model_filename, custom_objects=self.custom_objects)
 
@@ -383,16 +360,16 @@ class unet(object):
     def create_model(self, imgs_shape, msks_shape,
                      dropout=0.2,
                      final=False):
-        """
+        """Create model.
+
         If you have other models, you can try them here
         """
-        return self.unet_model(imgs_shape, msks_shape,
+        return self.unet_model(imgs_shape,
+                               msks_shape,
                                dropout=dropout,
                                final=final)
 
     def load_model(self, model_filename):
-        """
-        Load a model from Keras file
-        """
-
-        return K.models.load_model(model_filename, custom_objects=self.custom_objects)
+        """Load a model from Keras file."""
+        return K.models.load_model(model_filename,
+                                   custom_objects=self.custom_objects)

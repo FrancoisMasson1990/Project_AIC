@@ -35,5 +35,6 @@ MANIFEST
 *.tflite
 *.db
 *events.out*
+dataset_2d.json
 res/credentials/
 sandbox/
