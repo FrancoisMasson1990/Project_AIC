@@ -36,5 +36,6 @@ MANIFEST
 *.db
 *events.out*
 dataset_2d.json
+dataset_3d.json
 res/credentials/
 sandbox/

@@ -54,17 +54,16 @@ if __name__ == "__main__":
     batch_size = config.get("batch_size", None)
     crop_dim = config.get("crop_dim", None)
     channels_first = config.get("channels_first", None)
-    featuremaps = config.get("featuremaps", None)
+    filters = config.get("filters", None)
+    learning_rate = config.get("learning_rate", None)
+    weight_dice_loss = config.get("weight_dice_loss", None)
     output_path = config.get("output_path", None)
     inference_filename = config.get("inference_filename", None)
     if inference_filename:
         inference_filename += \
             datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S') + \
             '.hdf5'
-    use_dropout = config.get("use_dropout", None)
     use_upsampling = config.get("use_upsampling", None)
-    learning_rate = config.get("learning_rate", None)
-    weight_dice_loss = config.get("weight_dice_loss", None)
     print_model = config.get("print_model", None)
     z_slice_min = config.get("z_slice_min", None)
     z_slice_max = config.get("z_slice_max", None)
@@ -135,14 +134,12 @@ if __name__ == "__main__":
     """
 
     unet_model = unet(channels_first=channels_first,
-                      fms=featuremaps,
-                      output_path=output_path,
-                      inference_filename=inference_filename,
+                      filters=filters,
+                      use_upsampling=use_upsampling,
                       learning_rate=learning_rate,
                       weight_dice_loss=weight_dice_loss,
-                      use_upsampling=use_upsampling,
-                      use_dropout=use_dropout,
-                      print_model=print_model,
+                      output_path=output_path,
+                      inference_filename=inference_filename,
                       blocktime=blocktime,
                       num_threads=num_threads,
                       num_inter_threads=num_inter_threads)

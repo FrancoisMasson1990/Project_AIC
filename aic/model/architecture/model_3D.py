@@ -35,16 +35,15 @@ class unet(object):
 
     def __init__(self,
                  channels_first=None,
-                 fms=None,
+                 filters=None,
+                 use_upsampling=None,
+                 learning_rate=None,
+                 weight_dice_loss=None,
                  output_path=None,
                  inference_filename=None,
                  blocktime=None,
                  num_threads=None,
-                 learning_rate=None,
-                 weight_dice_loss=None,
                  num_inter_threads=None,
-                 use_upsampling=None,
-                 use_dropout=None,
                  print_model=None):
         """Init class."""
         self.channels_first = channels_first
@@ -62,7 +61,7 @@ class unet(object):
             self.concat_axis = -1
             self.data_format = "channels_last"
 
-        self.fms = fms  # 32 or 16 depending on your memory size
+        self.filters = filters
 
         self.learningrate = learning_rate
         self.weight_dice_loss = weight_dice_loss
@@ -96,7 +95,6 @@ class unet(object):
         self.num_inter_threads = num_inter_threads
 
         self.use_upsampling = use_upsampling
-        self.use_dropout = use_dropout
         self.print_model = print_model
 
     def dice_coef(self,
@@ -152,7 +150,7 @@ class unet(object):
 
     def ConvolutionBlock(self, x, name, filters, params):
         """Get Convolution Block.
-        
+
         Convolutional block of layers
         Per the original paper this is back to back 3D convs
         with batch norm and then ReLU.
@@ -181,28 +179,44 @@ class unet(object):
                       kernel_initializer="he_uniform")
 
         # Transposed convolution parameters
-        params_trans = dict(kernel_size=(2, 2, 2), strides=(2, 2, 2),
+        params_trans = dict(kernel_size=(2, 2, 2),
+                            strides=(2, 2, 2),
                             padding="same",
                             kernel_initializer="he_uniform")
 
         # BEGIN - Encoding path
-        encodeA = self.ConvolutionBlock(inputs, "encodeA", self.fms, params)
+        encodeA = self.ConvolutionBlock(inputs,
+                                        "encodeA",
+                                        self.filters,
+                                        params)
         poolA = K.layers.MaxPooling3D(name="poolA",
                                       pool_size=(2, 2, 2))(encodeA)
 
-        encodeB = self.ConvolutionBlock(poolA, "encodeB", self.fms*2, params)
+        encodeB = self.ConvolutionBlock(poolA,
+                                        "encodeB",
+                                        self.filters*2,
+                                        params)
         poolB = K.layers.MaxPooling3D(name="poolB",
                                       pool_size=(2, 2, 2))(encodeB)
 
-        encodeC = self.ConvolutionBlock(poolB, "encodeC", self.fms*4, params)
+        encodeC = self.ConvolutionBlock(poolB,
+                                        "encodeC",
+                                        self.filters*4,
+                                        params)
         poolC = K.layers.MaxPooling3D(name="poolC",
                                       pool_size=(2, 2, 2))(encodeC)
 
-        encodeD = self.ConvolutionBlock(poolC, "encodeD", self.fms*8, params)
+        encodeD = self.ConvolutionBlock(poolC,
+                                        "encodeD",
+                                        self.filters*8,
+                                        params)
         poolD = K.layers.MaxPooling3D(name="poolD",
                                       pool_size=(2, 2, 2))(encodeD)
 
-        encodeE = self.ConvolutionBlock(poolD, "encodeE", self.fms*16, params)
+        encodeE = self.ConvolutionBlock(poolD,
+                                        "encodeE",
+                                        self.filters*16,
+                                        params)
         # END - Encoding path
 
         # BEGIN - Decoding path
@@ -210,47 +224,59 @@ class unet(object):
             up = K.layers.UpSampling3D(name="upE", size=(2, 2, 2))(encodeE)
         else:
             up = K.layers.Conv3DTranspose(name="transconvE",
-                                          filters=self.fms*8,
+                                          filters=self.filters*8,
                                           **params_trans)(encodeE)
         concatD = K.layers.concatenate(
             [up, encodeD], axis=self.concat_axis, name="concatD")
 
-        decodeC = self.ConvolutionBlock(concatD, "decodeC", self.fms*8, params)
+        decodeC = self.ConvolutionBlock(concatD,
+                                        "decodeC",
+                                        self.filters*8,
+                                        params)
 
         if self.use_upsampling:
             up = K.layers.UpSampling3D(name="upC", size=(2, 2, 2))(decodeC)
         else:
             up = K.layers.Conv3DTranspose(name="transconvC",
-                                          filters=self.fms*4,
+                                          filters=self.filters*4,
                                           **params_trans)(decodeC)
         concatC = K.layers.concatenate(
             [up, encodeC], axis=self.concat_axis, name="concatC")
 
-        decodeB = self.ConvolutionBlock(concatC, "decodeB", self.fms*4, params)
+        decodeB = self.ConvolutionBlock(concatC,
+                                        "decodeB",
+                                        self.filters*4,
+                                        params)
 
         if self.use_upsampling:
             up = K.layers.UpSampling3D(name="upB", size=(2, 2, 2))(decodeB)
         else:
             up = K.layers.Conv3DTranspose(name="transconvB",
-                                          filters=self.fms*2,
+                                          filters=self.filters*2,
                                           **params_trans)(decodeB)
         concatB = K.layers.concatenate(
             [up, encodeB], axis=self.concat_axis, name="concatB")
 
-        decodeA = self.ConvolutionBlock(concatB, "decodeA", self.fms*2, params)
+        decodeA = self.ConvolutionBlock(concatB,
+                                        "decodeA",
+                                        self.filters*2,
+                                        params)
 
         if self.use_upsampling:
             up = K.layers.UpSampling3D(name="upA", size=(2, 2, 2))(decodeA)
         else:
             up = K.layers.Conv3DTranspose(name="transconvA",
-                                          filters=self.fms,
+                                          filters=self.filters,
                                           **params_trans)(decodeA)
         concatA = K.layers.concatenate(
             [up, encodeA], axis=self.concat_axis, name="concatA")
 
         # END - Decoding path
 
-        convOut = self.ConvolutionBlock(concatA, "convOut", self.fms, params)
+        convOut = self.ConvolutionBlock(concatA,
+                                        "convOut",
+                                        self.filters,
+                                        params)
 
         prediction = K.layers.Conv3D(name="PredictionMask",
                                      filters=num_chan_out,
