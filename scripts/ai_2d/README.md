@@ -13,14 +13,14 @@ Because data from Dicom files were given without annotation, Viewer served as a 
 ## "Step 2 of 3: Use Dataloader Generator from TensorFlow and Train U-Net on dataset"
 
 ```
-python train_dataloader.py
+python train.py
 ```
 
 ## "Step 3 of 3: Run sample inference script"
 ```
-python plot_inference_examples.py 
+python plot_results.py 
 ```
 
 ## Results from Predictions
 
-![alt gui](../img/prediction_2D.png "Gui Render")
+![alt gui](../../img/prediction_2D.png "Gui Render")
