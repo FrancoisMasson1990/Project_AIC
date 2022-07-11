@@ -348,9 +348,8 @@ class unet(object):
             model_filename, custom_objects=self.custom_objects)
 
         print("Evaluating model on test dataset. Please wait...")
-        metrics = model.evaluate(
-            ds_test,
-            verbose=1)
+        metrics = model.evaluate(ds_test,
+                                 verbose=1)
 
         for idx, metric in enumerate(metrics):
             print("Test dataset {} = {:.4f}".format(

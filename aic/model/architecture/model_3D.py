@@ -327,7 +327,7 @@ class unet(object):
         else:
             tensorboard_filename = \
                 os.path.join(self.output_path,
-                             "keras_tensorboard_transposed/{}".format(
+                             "keras_tensorboard/{}".format(
                                  directoryName))
 
         tensorboard_checkpoint = K.callbacks.TensorBoard(
@@ -346,16 +346,14 @@ class unet(object):
             model_filename, custom_objects=self.custom_objects)
 
         print("Evaluating model on test dataset. Please wait...")
-        metrics = model.evaluate(
-            ds_test,
-            verbose=1)
+        metrics = model.evaluate(ds_test,
+                                 verbose=1)
 
         for idx, metric in enumerate(metrics):
             print("Test dataset {} = {:.4f}".format(
                 model.metrics_names[idx], metric))
 
     def create_model(self, imgs_shape, msks_shape,
-                     dropout=0.2,
                      final=False):
         """Create model.
 

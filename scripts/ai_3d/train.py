@@ -34,7 +34,7 @@ import aic.misc.files as fs
 import aic.misc.utils as ut
 from aic.model.architecture.model_3D import unet
 from aic.processing.dataloader import DatasetGenerator3D
-from aic.misc.setting_tf import requirements_2d as req2d
+from aic.misc.setting_tf import requirements_3d as req3d
 
 if __name__ == "__main__":
 
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     epochs = config.get("epochs", None)
     json_filename = config.get("json_filename", None)
     json_filename = os.path.join(data_path, json_filename)
-    blocktime, num_inter_threads, num_threads = req2d()
+    blocktime, num_inter_threads, num_threads = req3d()
 
     """
     Create a model, load the data, and train it.
@@ -111,7 +111,8 @@ if __name__ == "__main__":
                       inference_filename=inference_filename,
                       blocktime=blocktime,
                       num_threads=num_threads,
-                      num_inter_threads=num_inter_threads)
+                      num_inter_threads=num_inter_threads,
+                      print_model=print_model)
 
     model = unet_model.create_model(crop_dim,
                                     crop_dim)
@@ -123,6 +124,7 @@ if __name__ == "__main__":
     print("-" * 30)
     print("Fitting model with training data ...")
     print("-" * 30)
+
     steps_per_epoch = data.num_files // batch_size
     model.fit(data.get_train(),
               epochs=epochs,

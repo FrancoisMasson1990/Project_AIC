@@ -13,6 +13,7 @@ big dataset.
 """
 
 import tensorflow as tf
+from tensorflow.keras.utils import Sequence
 import numpy as np
 import matplotlib.pyplot as plt
 from aic.processing import preprocess as dp
@@ -20,7 +21,7 @@ import aic.misc.utils as ut
 import aic.processing.operations as op
 
 
-class DatasetGenerator2D:
+class DatasetGenerator2D(Sequence):
     """TensorFlow Dataset from Python/NumPy Iterator."""
 
     def __init__(self,
@@ -374,7 +375,7 @@ class DatasetGenerator3D:
 
     def z_normalize_img(self, img):
         """Normalize the image.
-        
+
         Normalize so that the mean value for each image
         is 0 and the standard deviation is 1.
         """
@@ -384,7 +385,6 @@ class DatasetGenerator3D:
             img_temp = (img_temp - np.mean(img_temp)) / np.std(img_temp)
 
             img[..., channel] = img_temp
-
         return img
 
     def crop(self, img, msk, randomize):
@@ -456,50 +456,48 @@ class DatasetGenerator3D:
         img = op.get_pixels_hu(img)
         img = np.moveaxis(img, 0, -1)
         img = np.expand_dims(img, -1)
-        
+
         label = ut.load_mask(label_filename)
         label = dp.preprocess_label(label)
         label = np.moveaxis(label, 0, -1)
-        breakpoint()
 
         # Combine all masks but background
         if self.number_output_classes == 1:
-            msk[msk > 0] = 1.0
-            msk = np.expand_dims(msk, -1)
+            label[label > 0] = 1.0
+            label = np.expand_dims(label, -1)
         else:
-            msk_temp = np.zeros(list(msk.shape) + [self.number_output_classes])
+            label_temp = \
+                np.zeros(list(label.shape) + [self.number_output_classes])
             for channel in range(self.number_output_classes):
-                msk_temp[msk == channel, channel] = 1.0
-            msk = msk_temp
+                label_temp[label == channel, channel] = 1.0
+            label = label_temp
         # Crop
-        img, msk = self.crop(img, msk, randomize)
+        img, label = self.crop(img, label, randomize)
         # Normalize
         img = self.z_normalize_img(img)
         # Randomly rotate
         if randomize:
-            img, msk = self.augment_data(img, msk)
-        return img, msk
+            img, label = self.augment_data(img, label)
+        return img, label
 
-    def plot_samples(self):
+    def plot_samples(self, ds, slice_num=1):
         """Plot some random samples."""
-        img, label = next(self.ds)
-        print(img.shape)
-        plt.figure(figsize=(10, 10))
-        slice_num = 2
-        plt.subplot(2, 2, 1)
-        plt.imshow(img[slice_num, :, :, 0])
-        plt.title("Image, Slice #{}".format(slice_num))
-        plt.subplot(2, 2, 2)
-        plt.imshow(label[slice_num, :, :, 0])
-        plt.title("Label, Slice #{}".format(slice_num))
-        slice_num = self.batch_size - 1
-        plt.subplot(2, 2, 3)
-        plt.imshow(img[slice_num, :, :, 0])
-        plt.title("Image, Slice #{}".format(slice_num))
-        plt.subplot(2, 2, 4)
-        plt.imshow(label[slice_num, :, :, 0])
-        plt.title("Label, Slice #{}".format(slice_num))
+        plt.figure(figsize=(20, 20))
+        num_cols = 2
+        msk_channel = 1
+        img_channel = 0
+        for img, msk in ds.take(1):
+            bs = img.shape[0]
+            for idx in range(bs):
+                plt.subplot(bs, num_cols, idx*num_cols + 1)
+                plt.imshow(img[idx, :, :, slice_num, img_channel], cmap="bone")
+                plt.title("MRI", fontsize=18)
+                plt.subplot(bs, num_cols, idx*num_cols + 2)
+                plt.imshow(msk[idx, :, :, slice_num, msk_channel], cmap="bone")
+                plt.title("Tumor", fontsize=18)
         plt.show()
+        print("Mean pixel value of image = {}".format(
+            np.mean(img[0, :, :, :, 0])))
 
     def get_train(self):
         """Return train dataset."""
@@ -516,7 +514,7 @@ class DatasetGenerator3D:
     def get_dataset(self):
         """Create a TensorFlow data loader."""
         self.num_train = int(self.num_files * self.train_test_split)
-        numValTest = self.num_files - self.num_train
+        num_val_test = self.num_files - self.num_train
 
         ds = tf.data.Dataset.range(self.num_files).shuffle(
             self.num_files, self.random_seed)  # Shuffle the dataset
@@ -531,8 +529,12 @@ class DatasetGenerator3D:
         ds_train = ds.take(self.num_train).shuffle(
             self.num_train, self.shard)  # Reshuffle based on shard
         ds_val_test = ds.skip(self.num_train)
-        self.num_val = int(numValTest * self.validate_test_split)
+        self.num_val = int(num_val_test * self.validate_test_split)
+        if self.num_val == 0:
+            self.num_val = self.num_train
         self.num_test = self.num_train - self.num_val
+        if self.num_test == 0:
+            self.num_test = self.num_test
         ds_val = ds_val_test.take(self.num_val)
         ds_test = ds_val_test.skip(self.num_val)
 
