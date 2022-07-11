@@ -1,0 +1,23 @@
+data_path: "/home/francoismasson/Project_AIC/data/valve_patient_folder/" #the path to the data
+output_path: "/home/francoismasson/Project_AIC/data/output_3d" #the folder to save the model and checkpoints
+json_filename: "dataset_3d.json"
+inference_filename: "unet_model_for_aic_"
+use_upsampling: False #use upsampling instead of transposed convolution
+num_inter_threads: 1 #the number of intraop threads
+batch_size: 1 #the batch size for training
+seed: 42 #random number generation
+crop_dim: 320 #-1 #Size to crop images (square, in pixels). If -1, then no cropping
+z_slice_min: 0.15 #ratio (%) of layers from bottom that can be removed based on the location of the valve on the dataset 
+z_slice_max: 0.73 #ratio (%) of layers from top that can be removed based on the location of the valve on the dataset 
+blocktime: 1000 #blocktime
+epochs: 40 #number of epochs to train
+learning_rate: 0.0001 #learning rate
+weight_dice_loss: 0.9 #Set to None if dice_loss used : Weight for the Dice loss compared to crossentropy
+featuremaps: 32 #How many feature maps in the model
+keras_api: False #use keras instead of tf.keras
+use_pconv: False #use partial convolution based padding
+channels_first: False #use channels first data format
+print_model: True #print the model
+use_dropout: False #add spatial dropout layers 3/4
+use_augmentation: True #use data augmentation on training images 
+intel_model: True # Use prebuild model if true

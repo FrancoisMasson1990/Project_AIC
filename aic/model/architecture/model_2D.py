@@ -26,7 +26,6 @@ You can try custom models by modifying the code here.
 """
 
 import os
-import tensorflow as tf
 from tensorflow import keras as K
 import aic.processing.metrics as mt
 

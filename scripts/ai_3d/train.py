@@ -1,236 +1,178 @@
-#!/usr/bin/env python
+#
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2019 Intel Corporation
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, version 3.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-# General Public License for more details.
+#    http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: EPL-2.0
 #
 
-#from dataloader import DataGenerator
-#from model import unet
+"""
+Training of a 3D Unet model.
+
+This script train a 3D Unet model from a TensorFlow/Keras model.
+using a DatasetGenerator architecture, and then saves the
+best model.
+"""
+
+
 import datetime
+import yaml
 import os
-import tensorflow as tf
-from argparser import args
-from tensorflow import keras as K
+import aic.misc.files as fs
+import aic.misc.utils as ut
+from aic.model.architecture.model_3D import unet
+from aic.processing.dataloader import DatasetGenerator3D
+from aic.misc.setting_tf import requirements_2d as req2d
 
-from tensorflow.python.framework import graph_util
-from tensorflow.python.framework import graph_io
-import shutil
+if __name__ == "__main__":
 
-print("Args = {}".format(args))
+    START_TIME = datetime.datetime.now()
+    print("Started script on {}".format(START_TIME))
 
-CHANNELS_LAST = True
-
-if CHANNELS_LAST:
-   print("Data format = channels_last")
-else:
-   print("Data format = channels_first")
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
-os.environ["OMP_NUM_THREADS"] = str(args.intraop_threads)
-os.environ["KMP_BLOCKTIME"] = str(args.blocktime)
-
-# If hyperthreading is enabled, then use
-os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
-
-# If hyperthreading is NOT enabled, then use
-#os.environ["KMP_AFFINITY"] = "granularity=thread,compact"
-
-# os.system("lscpu")
-start_time = datetime.datetime.now()
-print("Started script on {}".format(start_time))
-print("Keras API version: {}".format(K.__version__))
-
-def save_frozen_model(model_filename, input_shape):
     """
-    Save frozen TensorFlow formatted model protobuf
+    Load the config required for the model
     """
-    model = K.models.load_model(model_filename, compile=None)
+    config = str(fs.get_configs_root() / 'train_config_2d.yml')
+    with open(config) as f:
+        # The FullLoader parameter handles the conversion from YAML
+        # scalar values to Python the dictionary format
+        config = yaml.load(f, Loader=yaml.FullLoader)
 
-    # Change filename to protobuf extension
-    base = os.path.basename(model_filename)
-    output_model = os.path.splitext(base)[0] + ".pb"
+    data_path = config.get("data_path", None)
+    batch_size = config.get("batch_size", None)
+    crop_dim = config.get("crop_dim", None)
+    channels_first = config.get("channels_first", None)
+    featuremaps = config.get("featuremaps", None)
+    output_path = config.get("output_path", None)
+    inference_filename = config.get("inference_filename", None)
+    if inference_filename:
+        inference_filename += \
+            datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S') + \
+            '.hdf5'
+    use_dropout = config.get("use_dropout", None)
+    use_upsampling = config.get("use_upsampling", None)
+    learning_rate = config.get("learning_rate", None)
+    weight_dice_loss = config.get("weight_dice_loss", None)
+    print_model = config.get("print_model", None)
+    z_slice_min = config.get("z_slice_min", None)
+    z_slice_max = config.get("z_slice_max", None)
+    epochs = config.get("epochs", None)
+    json_filename = config.get("json_filename", None)
+    json_filename = os.path.join(data_path, json_filename)
+    blocktime, num_inter_threads, num_threads = req2d()
 
-    # Set Keras to inference
-    K.backend._LEARNING_PHASE = tf.constant(0)
-    K.backend.set_learning_phase(False)
-    K.backend.set_learning_phase(0)
-    K.backend.set_image_data_format("channels_last")
+    """
+    Create a model, load the data, and train it.
+    """
 
-    num_output = len(model.outputs)
-    predictions = [None] * num_output
-    prediction_node_names = [None] * num_output
+    """
+    Step 1: Define a data loader
+    """
+    print("-" * 30)
+    print("Loading the data from the Valve project directory" +
+          "to a TensorFlow data loader ...")
+    print("-" * 30)
 
-    for i in range(num_output):
-        prediction_node_names[i] = "output_node" + str(i)
-        predictions[i] = tf.identity(model.outputs[i],
-                name=prediction_node_names[i])
+    files = ut.get_file_list(data_path=data_path,
+                             json_filename=json_filename)
+    trainFiles = files[0]
+    trainLabels = files[1]
+    validateFiles = files[2]
+    validateLabels = files[3]
+    testFiles = files[4]
+    testLabels = files[5]
 
-    sess = K.backend.get_session()
+    # This is the maximum value one of the files haves.
+    # Required because model built with assumption all file same z slice.
+    # Imbalanced True --> reduce number of only 0 layers
+    num_slices_per_scan = ut.slice_file_list(data_path=data_path,
+                                             json_filename=json_filename)
+    ds_train = DatasetGenerator3D(trainFiles,
+                                  trainLabels,
+                                  num_slices_per_scan,
+                                  batch_size=batch_size,
+                                  crop_dim=[crop_dim, crop_dim],
+                                  augment=True,
+                                  imbalanced=True,
+                                  z_slice_min=-1,
+                                  z_slice_max=-1)
+    ds_validation = DatasetGenerator3D(validateFiles,
+                                       validateLabels,
+                                       num_slices_per_scan,
+                                       batch_size=batch_size,
+                                       crop_dim=[crop_dim, crop_dim],
+                                       augment=False,
+                                       imbalanced=False,
+                                       z_slice_min=z_slice_min,
+                                       z_slice_max=z_slice_max)
+    ds_test = DatasetGenerator3D(testFiles,
+                                 testLabels,
+                                 num_slices_per_scan,
+                                 batch_size=batch_size,
+                                 crop_dim=[crop_dim, crop_dim],
+                                 augment=False,
+                                 z_slice_min=z_slice_min,
+                                 z_slice_max=z_slice_max)
 
-    constant_graph = graph_util.convert_variables_to_constants(sess,
-                     sess.graph.as_graph_def(), prediction_node_names)
-    infer_graph = graph_util.remove_training_nodes(constant_graph)
+    print("-" * 30)
+    print("Creating and compiling model ...")
+    print("-" * 30)
 
-    # Write protobuf of frozen model
-    frozen_dir = "./tf_protobuf/"
-    shutil.rmtree(frozen_dir, ignore_errors=True) # Remove existing directory
-    graph_io.write_graph(infer_graph, frozen_dir, output_model, as_text=False)
+    """
+    Step 2: Define the model
+    """
 
-    pb_filename = os.path.join(frozen_dir, output_model)
-    print("\n\nFrozen TensorFlow model written to: {}".format(pb_filename))
-    print("Convert this to OpenVINO by running:\n")
-    print("source /opt/intel/openvino/bin/setupvars.sh")
-    print("python $INTEL_OPENVINO_DIR/deployment_tools/model_optimizer/mo_tf.py \\")
-    print("       --input_model {} \\".format(pb_filename))
+    unet_model = unet(channels_first=channels_first,
+                      fms=featuremaps,
+                      output_path=output_path,
+                      inference_filename=inference_filename,
+                      learning_rate=learning_rate,
+                      weight_dice_loss=weight_dice_loss,
+                      use_upsampling=use_upsampling,
+                      use_dropout=use_dropout,
+                      print_model=print_model,
+                      blocktime=blocktime,
+                      num_threads=num_threads,
+                      num_inter_threads=num_inter_threads)
 
-    shape_string = "[1"
-    for idx in range(len(input_shape[1:])):
-        shape_string += ",{}".format(input_shape[idx+1])
-    shape_string += "]"
+    model = unet_model.create_model(ds_train.get_input_shape(),
+                                    ds_train.get_output_shape())
+    model_filename, model_callbacks = unet_model.get_callbacks()
 
-    print("       --input_shape {} \\".format(shape_string))
-    print("       --output_dir openvino_models/FP32/ \\")
-    print("       --data_type FP32\n\n")
+    """
+    Step 3: Train the model on the data
+    """
+    print("-" * 30)
+    print("Fitting model with training data ...")
+    print("-" * 30)
 
+    model.fit(ds_train,
+              epochs=epochs,
+              validation_data=ds_validation,
+              verbose=1,
+              callbacks=model_callbacks)
 
+    """
+    Step 4: Evaluate the best model
+    """
+    print("-" * 30)
+    print("Loading the best trained model ...")
+    print("-" * 30)
 
-# Optimize CPU threads for TensorFlow
-CONFIG = tf.ConfigProto(
-    inter_op_parallelism_threads=args.interop_threads,
-    intra_op_parallelism_threads=args.intraop_threads)
+    unet_model.evaluate_model(model_filename, ds_test)
 
-SESS = tf.Session(config=CONFIG)
-
-K.backend.set_session(SESS)
-exit()
-unet_model = unet(use_upsampling=args.use_upsampling,
-                  learning_rate=args.lr,
-                  n_cl_in=args.number_input_channels,
-                  n_cl_out=1,  # single channel (greyscale)
-                  feature_maps = args.featuremaps,
-                  dropout=0.2,
-                  print_summary=args.print_model,
-                  channels_last = CHANNELS_LAST)  # channels first or last
-
-unet_model.model.compile(optimizer=unet_model.optimizer,
-              loss=unet_model.loss,
-              metrics=unet_model.metrics)
-
-# Save best model to hdf5 file
-saved_model_directory = os.path.dirname(args.saved_model)
-try:
-    os.stat(saved_model_directory)
-except:
-    os.mkdir(saved_model_directory)
-
-# If there is a current saved file, then load weights and start from
-# there.
-if os.path.isfile(args.saved_model):
-    unet_model.model.load_weights(args.saved_model)
-
-checkpoint = K.callbacks.ModelCheckpoint(args.saved_model,
-                                         verbose=1,
-                                         save_best_only=True)
-
-# TensorBoard
-currentDT = datetime.datetime.now()
-tb_logs = K.callbacks.TensorBoard(log_dir=os.path.join(
-    saved_model_directory, "tensorboard_logs", currentDT.strftime("%Y/%m/%d-%H:%M:%S")), update_freq="batch")
-
-# Keep reducing learning rate if we get to plateau
-reduce_lr = K.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.2,
-                                          patience=5, min_lr=0.0001)
-
-callbacks = [checkpoint, tb_logs, reduce_lr]
-
-training_data_params = {"dim": (args.patch_height, args.patch_width, args.patch_depth),
-                        "batch_size": args.bz,
-                        "n_in_channels": args.number_input_channels,
-                        "n_out_channels": 1,
-                        "train_test_split": args.train_test_split,
-                        "validate_test_split": args.validate_test_split,
-                        "augment": True,
-                        "shuffle": True,
-                        "seed": args.random_seed}
-
-training_generator = DataGenerator("train", args.data_path,
-                                   **training_data_params)
-training_generator.print_info()
-
-validation_data_params = {"dim": (args.patch_height, args.patch_width, args.patch_depth),
-                          "batch_size": 1,
-                          "n_in_channels": args.number_input_channels,
-                          "n_out_channels": 1,
-                          "train_test_split": args.train_test_split,
-                          "validate_test_split": args.validate_test_split,
-                          "augment": False,
-                          "shuffle": False,
-                          "seed": args.random_seed}
-validation_generator = DataGenerator("validate", args.data_path,
-                                     **validation_data_params)
-validation_generator.print_info()
-
-# Fit the model
-"""
-Keras Data Pipeline using Sequence generator
-https://www.tensorflow.org/api_docs/python/tf/keras/utils/Sequence
-
-The sequence generator allows for Keras to load batches at runtime.
-It's very useful in the case when your entire dataset won't fit into
-memory. The Keras sequence will load one batch at a time to
-feed to the model. You can specify pre-fetching of batches to
-make sure that an additional batch is in memory when the previous
-batch finishes processing.
-
-max_queue_size : Specifies how many batches will be prepared (pre-fetched)
-in the queue. Does not indicate multiple generator instances.
-
-workers, use_multiprocessing: Generates multiple generator instances.
-
-num_data_loaders is defined in argparser.py
-"""
-
-unet_model.model.fit_generator(training_generator,
-                    epochs=args.epochs, verbose=1,
-                    validation_data=validation_generator,
-                    callbacks=callbacks,
-                    max_queue_size=args.num_prefetched_batches,
-                    workers=args.num_data_loaders,
-                    use_multiprocessing=False)  #False)  # True seems to cause fork issue
-
-
-# Evaluate final model on test holdout set
-testing_generator = DataGenerator("test", args.data_path,
-                                     **validation_data_params)
-testing_generator.print_info()
-
-# Load the best model
-print("Loading the best model: {}".format(args.saved_model))
-unet_model.model.load_weights(args.saved_model)
-scores = unet_model.model.evaluate_generator(testing_generator, verbose=1)
-
-print("Final model metrics on test dataset:")
-for idx, name in enumerate(unet_model.model.metrics_names):
-    print("{} \t= {}".format(name, scores[idx]))
-
-# Save a frozen version of the model for use in OpenVINO
-save_frozen_model(args.saved_model,
-                 [1, args.patch_height, args.patch_width, args.patch_depth,
-                 args.number_input_channels])
-
-stop_time = datetime.datetime.now()
-print("Started script on {}".format(start_time))
-print("Stopped script on {}".format(stop_time))
-print("\nTotal time for training model = {}".format(stop_time - start_time))
+    print("Total time elapsed for program = {} seconds".format(
+          datetime.datetime.now() - START_TIME))
+    print("Stopped script on {}".format(datetime.datetime.now()))

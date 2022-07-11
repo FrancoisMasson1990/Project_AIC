@@ -322,3 +322,21 @@ class DatasetGenerator2D(Sequence):
         plt.imshow(label[slice_num, :, :, 0])
         plt.title("Label, Slice #{}".format(slice_num))
         plt.show()
+
+
+class DatasetGenerator3D(Sequence):
+    """TensorFlow Dataset from Python/NumPy Iterator."""
+
+    def __init__(self,
+                 filenames,
+                 labelnames,
+                 num_slices_per_scan,
+                 batch_size=8,
+                 crop_dim=[240, 240],
+                 augment=False,
+                 seed=816,
+                 imbalanced=False,
+                 z_slice_min=-1,
+                 z_slice_max=-1):
+        """Init function."""
+        pass

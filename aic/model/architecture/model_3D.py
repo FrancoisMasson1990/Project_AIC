@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2019 Intel Corporation
@@ -18,255 +18,264 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
+"""
+3D Unet Architecture.
+
+This module contains all of the model definition code.
+You can try custom models by modifying the code here.
+"""
+
 import os
-import tensorflow as tf
 from tensorflow import keras as K
+import aic.processing.metrics as mt
 
 
 class unet(object):
+    """3D U-Net model class."""
 
-    def __init__(self, use_upsampling=False, learning_rate=0.001,
-                 n_cl_in=1, n_cl_out=1, feature_maps = 16,
-                 dropout=0.2, print_summary=False,
-                 channels_last = True):
-
-        self.channels_last = channels_last
-        if channels_last:
-            self.concat_axis = -1
-            self.data_format = "channels_last"
-
-        else:
+    def __init__(self,
+                 channels_first=None,
+                 fms=None,
+                 output_path=None,
+                 inference_filename=None,
+                 blocktime=None,
+                 num_threads=None,
+                 learning_rate=None,
+                 weight_dice_loss=None,
+                 num_inter_threads=None,
+                 use_upsampling=None,
+                 use_dropout=None,
+                 print_model=None):
+        """Init class."""
+        self.channels_first = channels_first
+        if self.channels_first:
+            """
+            Use NCHW format for data
+            """
             self.concat_axis = 1
             self.data_format = "channels_first"
 
-        #print("Data format = " + self.data_format)
+        else:
+            """
+            Use NHWC format for data
+            """
+            self.concat_axis = -1
+            self.data_format = "channels_last"
+
+        self.fms = fms  # 32 or 16 depending on your memory size
+
+        self.learningrate = learning_rate
+        self.weight_dice_loss = weight_dice_loss
+
+        print("Data format = " + self.data_format)
         K.backend.set_image_data_format(self.data_format)
 
-        self.fms = feature_maps # 16 or 32 feature maps in the first convolutional layer
+        self.output_path = output_path
+        self.inference_filename = inference_filename
 
-        self.use_upsampling = use_upsampling
-        self.dropout = dropout
-        self.print_summary = print_summary
-        self.n_cl_in = n_cl_in
-        self.n_cl_out = n_cl_out
-
+        self.metrics = [self.dice_coef, self.soft_dice_coef]
         # self.loss = self.dice_coef_loss
-        self.loss = self.combined_dice_ce_loss
+        self.loss = self.combined_dice_coef_loss
 
-        self.learning_rate = learning_rate
-        self.optimizer = K.optimizers.Adam(learning_rate=self.learning_rate)
+        # Tversky method
+        # self.metrics = [self.tversky]
+        # self.loss = self.focal_tversky_loss
 
-        self.metrics= [self.dice_coef, self.soft_dice_coef, "accuracy",
-                       self.sensitivity, self.specificity]
+        self.optimizer = K.optimizers.Adam(learning_rate=self.learningrate)
 
         self.custom_objects = {
-            "combined_dice_ce_loss": self.combined_dice_ce_loss,
+            "combined_dice_ce_loss": self.combined_dice_coef_loss,
             "dice_coef_loss": self.dice_coef_loss,
             "dice_coef": self.dice_coef,
             "soft_dice_coef": self.soft_dice_coef,
-            "sensitivity": self.sensitivity,
-            "specificity": self.specificity}
-        
-    def dice_coef(self, target, prediction, axis=(1, 2, 3), smooth=0.01):
-        """
-        Sorenson Dice
-        \frac{  2 \times \left | T \right | \cap \left | P \right |}{ \left | T \right | +  \left | P \right |  }
-        where T is ground truth mask and P is the prediction mask
-        """
-        prediction = tf.round(prediction)  # Round to 0 or 1
+            "focal_tversky_loss": self.focal_tversky_loss,
+            "tversky": self.tversky}
 
-        intersection = tf.reduce_sum(target * prediction, axis=axis)
-        union = tf.reduce_sum(target + prediction, axis=axis)
-        numerator = tf.constant(2.) * intersection + smooth
-        denominator = union + smooth
-        coef = numerator / denominator
+        self.blocktime = blocktime
+        self.num_threads = num_threads
+        self.num_inter_threads = num_inter_threads
 
-        return tf.reduce_mean(coef)
+        self.use_upsampling = use_upsampling
+        self.use_dropout = use_dropout
+        self.print_model = print_model
 
-    def soft_dice_coef(self, target, prediction, axis=(1, 2, 3), smooth=0.01):
-        """
-        Sorenson (Soft) Dice - Don't round predictions
-        \frac{  2 \times \left | T \right | \cap \left | P \right |}{ \left | T \right | +  \left | P \right |  }
-        where T is ground truth mask and P is the prediction mask
-        """
-        intersection = tf.reduce_sum(target * prediction, axis=axis)
-        union = tf.reduce_sum(target + prediction, axis=axis)
-        numerator = tf.constant(2.) * intersection + smooth
-        denominator = union + smooth
-        coef = numerator / denominator
+    def dice_coef(self,
+                  target,
+                  prediction):
+        """Get the Sorenson Dice."""
+        return mt.dice_coef(target=target,
+                            prediction=prediction)
 
-        return tf.reduce_mean(coef)
+    def soft_dice_coef(self,
+                       target,
+                       prediction):
+        """Get the Sorenson (Soft) Dice."""
+        return mt.soft_dice_coef(target=target,
+                                 prediction=prediction)
 
+    def dice_coef_loss(self,
+                       target,
+                       prediction):
+        """Get the Sorenson (Soft) Dice loss.
 
-    def dice_coef_loss(self, target, prediction, axis=(1, 2, 3), smooth=0.1):
-        """
-        Sorenson (Soft) Dice loss
         Using -log(Dice) as the loss since it is better behaved.
         Also, the log allows avoidance of the division which
         can help prevent underflow when the numbers are very small.
         """
-        intersection = tf.reduce_sum(prediction * target, axis=axis)
-        p = tf.reduce_sum(prediction, axis=axis)
-        t = tf.reduce_sum(target, axis=axis)
-        numerator = tf.reduce_mean(intersection + smooth)
-        denominator = tf.reduce_mean(t + p + smooth)
-        dice_loss = -tf.log(2.*numerator) + tf.log(denominator)
+        return mt.dice_coef_loss(target=target,
+                                 prediction=prediction)
 
-        return dice_loss
+    def combined_dice_coef_loss(self,
+                                target,
+                                prediction):
+        """Combine Dice and Binary Cross Entropy Loss."""
+        return mt.combined_dice_coef_loss(
+            weight_dice_loss=self.weight_dice_loss,
+            target=target,
+            prediction=prediction)
 
+    def tversky(self,
+                target,
+                prediction):
+        """Get tversky loss."""
+        return mt.tversky(target=target,
+                          prediction=prediction,
+                          channels_first=self.channels_first
+                          )
 
-    def combined_dice_ce_loss(self, target, prediction, axis=(1, 2, 3),
-                              smooth=0.1, weight=0.7):
+    def focal_tversky_loss(self,
+                           target,
+                           prediction):
+        """Get focal tversky loss."""
+        return mt.focal_tversky_loss(target=target,
+                                     prediction=prediction)
+
+    def ConvolutionBlock(self, x, name, filters, params):
+        """Get Convolution Block.
+        
+        Convolutional block of layers
+        Per the original paper this is back to back 3D convs
+        with batch norm and then ReLU.
         """
-        Combined Dice and Binary Cross Entropy Loss
-        """
-        return weight*self.dice_coef_loss(target, prediction, axis, smooth) + \
-            (1-weight)*K.losses.binary_crossentropy(target, prediction)
+        x = K.layers.Conv3D(filters=filters, **params, name=name+"_conv0")(x)
+        x = K.layers.BatchNormalization(name=name+"_bn0")(x)
+        x = K.layers.Activation("relu", name=name+"_relu0")(x)
 
+        x = K.layers.Conv3D(filters=filters, **params, name=name+"_conv1")(x)
+        x = K.layers.BatchNormalization(name=name+"_bn1")(x)
+        x = K.layers.Activation("relu", name=name)(x)
+        return x
 
-    def sensitivity(self, target, prediction, axis=(1, 2, 3), smooth=0.0001):
-        """
-        Sensitivity
-        """
-        prediction = tf.round(prediction)
+    def unet_model(self, imgs_shape, msks_shape,
+                   final=False):
+        """Define the UNet model."""
+        num_chan_in = imgs_shape[self.concat_axis]
+        num_chan_out = msks_shape[self.concat_axis]
+        self.input_shape = imgs_shape
+        self.num_input_channels = num_chan_in
 
-        intersection = tf.reduce_sum(prediction * target, axis=axis)
-        coef = (intersection + smooth) / (tf.reduce_sum(target,
-                                                        axis=axis) + smooth)
-        return tf.reduce_mean(coef)
-
-
-    def specificity(self, target, prediction, axis=(1, 2, 3), smooth=0.0001):
-        """
-        Specificity
-        """
-        prediction = tf.round(prediction)
-
-        intersection = tf.reduce_sum(prediction * target, axis=axis)
-        coef = (intersection + smooth) / (tf.reduce_sum(prediction,
-                                                        axis=axis) + smooth)
-        return tf.reduce_mean(coef)
-    
-    
-    def unet_3d(self):
-        """
-        3D U-Net
-        """
-        def ConvolutionBlock(x, name, fms, params):
-            """
-            Convolutional block of layers
-            Per the original paper this is back to back 3D convs
-            with batch norm and then ReLU.
-            """
-
-            x = K.layers.Conv3D(filters=fms, **params, name=name+"_conv0")(x)
-            x = K.layers.BatchNormalization(name=name+"_bn0")(x)
-            x = K.layers.Activation("relu", name=name+"_relu0")(x)
-
-            x = K.layers.Conv3D(filters=fms, **params, name=name+"_conv1")(x)
-            x = K.layers.BatchNormalization(name=name+"_bn1")(x)
-            x = K.layers.Activation("relu", name=name)(x)
-
-            return x
-
-        if self.channels_last:
-            input_shape = [None, None, None, self.n_cl_in]
-        else:
-            input_shape = [self.n_cl_in, None, None, None]
-
-        inputs = K.layers.Input(shape=input_shape,
-                                name="DicomImages")
+        inputs = K.layers.Input(shape=self.input_shape, name="DicomImages")
 
         params = dict(kernel_size=(3, 3, 3), activation=None,
-                      padding="same", data_format=self.data_format,
+                      padding="same",
                       kernel_initializer="he_uniform")
 
         # Transposed convolution parameters
-        params_trans = dict(data_format=self.data_format,
-                            kernel_size=(2, 2, 2), strides=(2, 2, 2),
-                            padding="same")
-
+        params_trans = dict(kernel_size=(2, 2, 2), strides=(2, 2, 2),
+                            padding="same",
+                            kernel_initializer="he_uniform")
 
         # BEGIN - Encoding path
-        encodeA = ConvolutionBlock(inputs, "encodeA", self.fms, params)
-        poolA = K.layers.MaxPooling3D(name="poolA", pool_size=(2, 2, 2))(encodeA)
+        encodeA = self.ConvolutionBlock(inputs, "encodeA", self.fms, params)
+        poolA = K.layers.MaxPooling3D(name="poolA",
+                                      pool_size=(2, 2, 2))(encodeA)
 
-        encodeB = ConvolutionBlock(poolA, "encodeB", self.fms*2, params)
-        poolB = K.layers.MaxPooling3D(name="poolB", pool_size=(2, 2, 2))(encodeB)
+        encodeB = self.ConvolutionBlock(poolA, "encodeB", self.fms*2, params)
+        poolB = K.layers.MaxPooling3D(name="poolB",
+                                      pool_size=(2, 2, 2))(encodeB)
 
-        encodeC = ConvolutionBlock(poolB, "encodeC", self.fms*4, params)
-        poolC = K.layers.MaxPooling3D(name="poolC", pool_size=(2, 2, 2))(encodeC)
+        encodeC = self.ConvolutionBlock(poolB, "encodeC", self.fms*4, params)
+        poolC = K.layers.MaxPooling3D(name="poolC",
+                                      pool_size=(2, 2, 2))(encodeC)
 
-        encodeD = ConvolutionBlock(poolC, "encodeD", self.fms*8, params)
-        poolD = K.layers.MaxPooling3D(name="poolD", pool_size=(2, 2, 2))(encodeD)
+        encodeD = self.ConvolutionBlock(poolC, "encodeD", self.fms*8, params)
+        poolD = K.layers.MaxPooling3D(name="poolD",
+                                      pool_size=(2, 2, 2))(encodeD)
 
-        encodeE = ConvolutionBlock(poolD, "encodeE", self.fms*16, params)
+        encodeE = self.ConvolutionBlock(poolD, "encodeE", self.fms*16, params)
         # END - Encoding path
 
         # BEGIN - Decoding path
         if self.use_upsampling:
-            up = K.layers.UpSampling3D(name="upE", size=(2, 2, 2),
-                                       interpolation="bilinear")(encodeE)
+            up = K.layers.UpSampling3D(name="upE", size=(2, 2, 2))(encodeE)
         else:
-            up = K.layers.Conv3DTranspose(name="transconvE", filters=self.fms*8,
+            up = K.layers.Conv3DTranspose(name="transconvE",
+                                          filters=self.fms*8,
                                           **params_trans)(encodeE)
         concatD = K.layers.concatenate(
             [up, encodeD], axis=self.concat_axis, name="concatD")
 
-        decodeC = ConvolutionBlock(concatD, "decodeC", self.fms*8, params)
+        decodeC = self.ConvolutionBlock(concatD, "decodeC", self.fms*8, params)
 
         if self.use_upsampling:
-            up = K.layers.UpSampling3D(name="upC", size=(2, 2, 2),
-                                       interpolation="bilinear")(decodeC)
+            up = K.layers.UpSampling3D(name="upC", size=(2, 2, 2))(decodeC)
         else:
-            up = K.layers.Conv3DTranspose(name="transconvC", filters=self.fms*4,
+            up = K.layers.Conv3DTranspose(name="transconvC",
+                                          filters=self.fms*4,
                                           **params_trans)(decodeC)
         concatC = K.layers.concatenate(
             [up, encodeC], axis=self.concat_axis, name="concatC")
 
-        decodeB = ConvolutionBlock(concatC, "decodeB", self.fms*4, params)
+        decodeB = self.ConvolutionBlock(concatC, "decodeB", self.fms*4, params)
 
         if self.use_upsampling:
-            up = K.layers.UpSampling3D(name="upB", size=(2, 2, 2),
-                                       interpolation="bilinear")(decodeB)
+            up = K.layers.UpSampling3D(name="upB", size=(2, 2, 2))(decodeB)
         else:
-            up = K.layers.Conv3DTranspose(name="transconvB", filters=self.fms*2,
+            up = K.layers.Conv3DTranspose(name="transconvB",
+                                          filters=self.fms*2,
                                           **params_trans)(decodeB)
         concatB = K.layers.concatenate(
             [up, encodeB], axis=self.concat_axis, name="concatB")
 
-        decodeA = ConvolutionBlock(concatB, "decodeA", self.fms*2, params)
+        decodeA = self.ConvolutionBlock(concatB, "decodeA", self.fms*2, params)
 
         if self.use_upsampling:
-            up = K.layers.UpSampling3D(name="upA", size=(2, 2, 2),
-                                       interpolation="bilinear")(decodeA)
+            up = K.layers.UpSampling3D(name="upA", size=(2, 2, 2))(decodeA)
         else:
-            up = K.layers.Conv3DTranspose(name="transconvA", filters=self.fms,
+            up = K.layers.Conv3DTranspose(name="transconvA",
+                                          filters=self.fms,
                                           **params_trans)(decodeA)
         concatA = K.layers.concatenate(
             [up, encodeA], axis=self.concat_axis, name="concatA")
 
         # END - Decoding path
 
-        convOut = ConvolutionBlock(concatA, "convOut", self.fms, params)
+        convOut = self.ConvolutionBlock(concatA, "convOut", self.fms, params)
 
         prediction = K.layers.Conv3D(name="PredictionMask",
-                                     filters=self.n_cl_out, kernel_size=(1, 1, 1),
-                                     data_format=self.data_format,
+                                     filters=num_chan_out,
+                                     kernel_size=(1, 1, 1),
                                      activation="sigmoid")(convOut)
 
-        model = K.models.Model(inputs=[inputs], outputs=[prediction],name="3DUNet_Valve_Challenge")
+        model = K.models.Model(inputs=[inputs], outputs=[
+                               prediction], name="3DUNet_Valve_Challenge")
 
-        if self.print_summary:
-            model.summary()
+        optimizer = self.optimizer
+
+        if final:
+            model.trainable = False
+        else:
+            model.compile(optimizer=optimizer,
+                          loss=self.loss,
+                          metrics=self.metrics)
+
+            if self.print_model:
+                model.summary()
 
         return model
 
     def get_callbacks(self):
-        """
-        Define any callbacks for the training
-        """
-
+        """Define any callbacks for the training."""
         model_filename = os.path.join(
             self.output_path, self.inference_filename)
 
@@ -278,34 +287,35 @@ class unet(object):
                                                        monitor="val_loss",
                                                        save_best_only=True)
 
-        directoryName = "unet_block{}_inter{}_intra{}".format(self.blocktime,
-                                                              self.num_threads,
-                                                              self.num_inter_threads)
+        directoryName = \
+            "unet_block{}_inter{}_intra{}".format(self.blocktime,
+                                                  self.num_threads,
+                                                  self.num_inter_threads)
 
         # Tensorboard callbacks
         if (self.use_upsampling):
-            tensorboard_filename = os.path.join(self.output_path,
-                                                "keras_tensorboard_upsampling/{}".format(
-                                                    directoryName))
+            tensorboard_filename = \
+                os.path.join(self.output_path,
+                             "keras_tensorboard_upsampling/{}".format(
+                                 directoryName))
         else:
-            tensorboard_filename = os.path.join(self.output_path,
-                                                "keras_tensorboard_transposed/{}".format(
-                                                    directoryName))
+            tensorboard_filename = \
+                os.path.join(self.output_path,
+                             "keras_tensorboard_transposed/{}".format(
+                                 directoryName))
 
         tensorboard_checkpoint = K.callbacks.TensorBoard(
             log_dir=tensorboard_filename,
             write_graph=True, write_images=True)
 
-        early_stopping = K.callbacks.EarlyStopping(patience=5, restore_best_weights=True)
+        early_stopping = K.callbacks.EarlyStopping(patience=5,
+                                                   restore_best_weights=True)
 
-        return model_filename, [model_checkpoint, early_stopping, tensorboard_checkpoint]
-
+        return model_filename, [model_checkpoint, early_stopping,
+                                tensorboard_checkpoint]
 
     def evaluate_model(self, model_filename, ds_test):
-        """
-        Evaluate the best model on the validation dataset
-        """
-
+        """Evaluate the best model on the validation dataset."""
         model = K.models.load_model(
             model_filename, custom_objects=self.custom_objects)
 
@@ -318,18 +328,19 @@ class unet(object):
             print("Test dataset {} = {:.4f}".format(
                 model.metrics_names[idx], metric))
 
+    def create_model(self, imgs_shape, msks_shape,
+                     dropout=0.2,
+                     final=False):
+        """Create model.
 
-    def create_model(self):
-        """
         If you have other models, you can try them here
         """
-        return self.unet_3d()
-
+        return self.unet_model(imgs_shape,
+                               msks_shape,
+                               dropout=dropout,
+                               final=final)
 
     def load_model(self, model_filename):
-        """
-        Load a model from Keras file
-        """
-
-        return K.models.load_model(model_filename, custom_objects=self.custom_objects)
-
+        """Load a model from Keras file."""
+        return K.models.load_model(model_filename,
+                                   custom_objects=self.custom_objects)
