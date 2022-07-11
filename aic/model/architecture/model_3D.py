@@ -363,7 +363,6 @@ class unet(object):
         """
         return self.unet_model(imgs_shape,
                                msks_shape,
-                               dropout=dropout,
                                final=final)
 
     def load_model(self, model_filename):

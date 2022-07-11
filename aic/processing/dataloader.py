@@ -12,7 +12,7 @@ Library using dataloader mindset to load
 big dataset.
 """
 
-from tensorflow.keras.utils import Sequence
+import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from aic.processing import preprocess as dp
@@ -20,7 +20,7 @@ import aic.misc.utils as ut
 import aic.processing.operations as op
 
 
-class DatasetGenerator2D(Sequence):
+class DatasetGenerator2D:
     """TensorFlow Dataset from Python/NumPy Iterator."""
 
     def __init__(self,
@@ -324,19 +324,243 @@ class DatasetGenerator2D(Sequence):
         plt.show()
 
 
-class DatasetGenerator3D(Sequence):
+class DatasetGenerator3D:
     """TensorFlow Dataset from Python/NumPy Iterator."""
 
-    def __init__(self,
-                 filenames,
-                 labelnames,
-                 num_slices_per_scan,
-                 batch_size=8,
-                 crop_dim=[240, 240],
-                 augment=False,
-                 seed=816,
-                 imbalanced=False,
-                 z_slice_min=-1,
-                 z_slice_max=-1):
+    def __init__(self, crop_dim,
+                 data_path=None,
+                 json_filename=None,
+                 batch_size=None,
+                 train_test_split=0.8,
+                 validate_test_split=0.5,
+                 number_output_classes=1,
+                 random_seed=None,
+                 shard=0):
         """Init function."""
-        pass
+        self.data_path = data_path
+        self.json_filename = json_filename
+        self.batch_size = batch_size
+        self.crop_dim = crop_dim
+        self.train_test_split = train_test_split
+        self.validate_test_split = validate_test_split
+        self.number_output_classes = number_output_classes
+        self.random_seed = random_seed
+        self.shard = shard  # For Horovod, gives different shard per worker
+
+        self.create_file_list()
+        self.ds_train, self.ds_val, self.ds_test = self.get_dataset()
+
+    def create_file_list(self):
+        """Create file list."""
+        experiment_data = ut.json_export(self.json_filename)
+        # Print information about the Magna valve experiment data
+        print("*" * 30)
+        print("=" * 30)
+        print("Dataset name:        ", experiment_data["name"])
+        print("Dataset description: ", experiment_data["description"])
+        print("Tensor image size:   ", experiment_data["tensorImageSize"])
+        print("=" * 30)
+        print("*" * 30)
+        dataset_folder = self.data_path + experiment_data["dataset_folder"]
+        label_folder = self.data_path + experiment_data["label_folder"]
+        image_files = ut.expand_list(dataset_folder)
+        label_files = ut.expand_list(label_folder)
+        self.num_files = len(image_files)
+        assert len(image_files) == len(
+            label_files), "Files and labels don't have the same length"
+        self.filenames = {}
+        for idx in range(self.num_files):
+            self.filenames[idx] = [image_files[idx], label_files[idx]]
+
+    def z_normalize_img(self, img):
+        """Normalize the image.
+        
+        Normalize so that the mean value for each image
+        is 0 and the standard deviation is 1.
+        """
+        for channel in range(img.shape[-1]):
+
+            img_temp = img[..., channel]
+            img_temp = (img_temp - np.mean(img_temp)) / np.std(img_temp)
+
+            img[..., channel] = img_temp
+
+        return img
+
+    def crop(self, img, msk, randomize):
+        """Randomly crop the image and mask."""
+        slices = []
+        # Do we randomize?
+        is_random = randomize and np.random.rand() > 0.5
+
+        for idx in range(len(img.shape)-1):  # Go through each dimension
+
+            cropLen = self.crop_dim[idx]
+            imgLen = img.shape[idx]
+
+            start = (imgLen-cropLen)//2
+
+            ratio_crop = 0.20  # Crop up this this % of pixels for offset
+            # Number of pixels to offset crop in this dimension
+            offset = int(np.floor(start*ratio_crop))
+
+            if offset > 0:
+                if is_random:
+                    start += np.random.choice(range(-offset, offset))
+                    # Don't fall off the image
+                    if ((start + cropLen) > imgLen):
+                        start = (imgLen-cropLen)//2
+            else:
+                start = 0
+
+            slices.append(slice(start, start+cropLen))
+
+        return img[tuple(slices)], msk[tuple(slices)]
+
+    def augment_data(self, img, msk):
+        """Get Data augmentation.
+
+        Flip image and mask. Rotate image and mask.
+        """
+        # Determine if axes are equal and can be rotated
+        # If the axes aren't equal then we can't rotate them.
+        equal_dim_axis = []
+        for idx in range(0, len(self.crop_dim)):
+            for jdx in range(idx+1, len(self.crop_dim)):
+                if self.crop_dim[idx] == self.crop_dim[jdx]:
+                    equal_dim_axis.append([idx, jdx])  # Valid rotation axes
+        dim_to_rotate = equal_dim_axis
+
+        if np.random.rand() > 0.5:
+            # Random 0,1 (axes to flip)
+            ax = np.random.choice(np.arange(len(self.crop_dim)-1))
+            img = np.flip(img, ax)
+            msk = np.flip(msk, ax)
+
+        elif (len(dim_to_rotate) > 0) and (np.random.rand() > 0.5):
+            rot = np.random.choice([1, 2, 3])  # 90, 180, or 270 degrees
+            # This will choose the axes to rotate
+            # Axes must be equal in size
+            random_axis = dim_to_rotate[np.random.choice(len(dim_to_rotate))]
+            img = np.rot90(img, rot, axes=random_axis)  # Rotate axes 0 and 1
+            msk = np.rot90(msk, rot, axes=random_axis)  # Rotate axes 0 and 1
+        return img, msk
+
+    def read_files(self, idx, randomize=False):
+        """Read dicom and associated labels."""
+        idx = idx.numpy()
+        img_filename = self.filenames[idx][0]
+        label_filename = self.filenames[idx][1]
+
+        img = ut.load_scan(img_filename)
+        img = op.get_pixels_hu(img)
+        img = np.moveaxis(img, 0, -1)
+        img = np.expand_dims(img, -1)
+        
+        label = ut.load_mask(label_filename)
+        label = dp.preprocess_label(label)
+        label = np.moveaxis(label, 0, -1)
+        breakpoint()
+
+        # Combine all masks but background
+        if self.number_output_classes == 1:
+            msk[msk > 0] = 1.0
+            msk = np.expand_dims(msk, -1)
+        else:
+            msk_temp = np.zeros(list(msk.shape) + [self.number_output_classes])
+            for channel in range(self.number_output_classes):
+                msk_temp[msk == channel, channel] = 1.0
+            msk = msk_temp
+        # Crop
+        img, msk = self.crop(img, msk, randomize)
+        # Normalize
+        img = self.z_normalize_img(img)
+        # Randomly rotate
+        if randomize:
+            img, msk = self.augment_data(img, msk)
+        return img, msk
+
+    def plot_samples(self):
+        """Plot some random samples."""
+        img, label = next(self.ds)
+        print(img.shape)
+        plt.figure(figsize=(10, 10))
+        slice_num = 2
+        plt.subplot(2, 2, 1)
+        plt.imshow(img[slice_num, :, :, 0])
+        plt.title("Image, Slice #{}".format(slice_num))
+        plt.subplot(2, 2, 2)
+        plt.imshow(label[slice_num, :, :, 0])
+        plt.title("Label, Slice #{}".format(slice_num))
+        slice_num = self.batch_size - 1
+        plt.subplot(2, 2, 3)
+        plt.imshow(img[slice_num, :, :, 0])
+        plt.title("Image, Slice #{}".format(slice_num))
+        plt.subplot(2, 2, 4)
+        plt.imshow(label[slice_num, :, :, 0])
+        plt.title("Label, Slice #{}".format(slice_num))
+        plt.show()
+
+    def get_train(self):
+        """Return train dataset."""
+        return self.ds_train
+
+    def get_test(self):
+        """Return test dataset."""
+        return self.ds_test
+
+    def get_validate(self):
+        """Return validation dataset."""
+        return self.ds_val
+
+    def get_dataset(self):
+        """Create a TensorFlow data loader."""
+        self.num_train = int(self.num_files * self.train_test_split)
+        numValTest = self.num_files - self.num_train
+
+        ds = tf.data.Dataset.range(self.num_files).shuffle(
+            self.num_files, self.random_seed)  # Shuffle the dataset
+
+        """
+        Horovod Sharding
+        Here we are not actually dividing the dataset into shards
+        but instead just reshuffling the training dataset for every
+        shard. Then in the training loop we just go through the training
+        dataset but the number of steps is divided by the number of shards.
+        """
+        ds_train = ds.take(self.num_train).shuffle(
+            self.num_train, self.shard)  # Reshuffle based on shard
+        ds_val_test = ds.skip(self.num_train)
+        self.num_val = int(numValTest * self.validate_test_split)
+        self.num_test = self.num_train - self.num_val
+        ds_val = ds_val_test.take(self.num_val)
+        ds_test = ds_val_test.skip(self.num_val)
+
+        ds_train = ds_train.map(
+            lambda x: tf.py_function(self.read_files,
+                                     [x, True],
+                                     [tf.float32,
+                                      tf.float32]),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        ds_val = ds_val.map(
+            lambda x: tf.py_function(self.read_files,
+                                     [x, False],
+                                     [tf.float32, tf.float32]),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        ds_test = ds_test.map(
+            lambda x: tf.py_function(self.read_files,
+                                     [x, False],
+                                     [tf.float32, tf.float32]),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+        ds_train = ds_train.repeat()
+        ds_train = ds_train.batch(self.batch_size)
+        ds_train = ds_train.prefetch(tf.data.experimental.AUTOTUNE)
+
+        ds_val = ds_val.batch(self.batch_size)
+        ds_val = ds_val.prefetch(tf.data.experimental.AUTOTUNE)
+
+        ds_test = ds_test.batch(self.batch_size)
+        ds_test = ds_test.prefetch(tf.data.experimental.AUTOTUNE)
+
+        return ds_train, ds_val, ds_test

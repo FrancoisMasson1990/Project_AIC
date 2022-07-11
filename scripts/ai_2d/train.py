@@ -146,7 +146,7 @@ if __name__ == "__main__":
                       blocktime=blocktime,
                       num_threads=num_threads,
                       num_inter_threads=num_inter_threads)
-
+    breakpoint()
     model = unet_model.create_model(ds_train.get_input_shape(),
                                     ds_train.get_output_shape())
     model_filename, model_callbacks = unet_model.get_callbacks()

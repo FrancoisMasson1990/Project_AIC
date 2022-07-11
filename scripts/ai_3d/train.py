@@ -44,7 +44,7 @@ if __name__ == "__main__":
     """
     Load the config required for the model
     """
-    config = str(fs.get_configs_root() / 'train_config_2d.yml')
+    config = str(fs.get_configs_root() / 'train_config_3d.yml')
     with open(config) as f:
         # The FullLoader parameter handles the conversion from YAML
         # scalar values to Python the dictionary format
@@ -53,6 +53,8 @@ if __name__ == "__main__":
     data_path = config.get("data_path", None)
     batch_size = config.get("batch_size", None)
     crop_dim = config.get("crop_dim", None)
+    if crop_dim:
+        crop_dim = tuple(crop_dim)
     channels_first = config.get("channels_first", None)
     filters = config.get("filters", None)
     learning_rate = config.get("learning_rate", None)
@@ -84,46 +86,13 @@ if __name__ == "__main__":
           "to a TensorFlow data loader ...")
     print("-" * 30)
 
-    files = ut.get_file_list(data_path=data_path,
-                             json_filename=json_filename)
-    trainFiles = files[0]
-    trainLabels = files[1]
-    validateFiles = files[2]
-    validateLabels = files[3]
-    testFiles = files[4]
-    testLabels = files[5]
-
-    # This is the maximum value one of the files haves.
-    # Required because model built with assumption all file same z slice.
-    # Imbalanced True --> reduce number of only 0 layers
-    num_slices_per_scan = ut.slice_file_list(data_path=data_path,
-                                             json_filename=json_filename)
-    ds_train = DatasetGenerator3D(trainFiles,
-                                  trainLabels,
-                                  num_slices_per_scan,
-                                  batch_size=batch_size,
-                                  crop_dim=[crop_dim, crop_dim],
-                                  augment=True,
-                                  imbalanced=True,
-                                  z_slice_min=-1,
-                                  z_slice_max=-1)
-    ds_validation = DatasetGenerator3D(validateFiles,
-                                       validateLabels,
-                                       num_slices_per_scan,
-                                       batch_size=batch_size,
-                                       crop_dim=[crop_dim, crop_dim],
-                                       augment=False,
-                                       imbalanced=False,
-                                       z_slice_min=z_slice_min,
-                                       z_slice_max=z_slice_max)
-    ds_test = DatasetGenerator3D(testFiles,
-                                 testLabels,
-                                 num_slices_per_scan,
-                                 batch_size=batch_size,
-                                 crop_dim=[crop_dim, crop_dim],
-                                 augment=False,
-                                 z_slice_min=z_slice_min,
-                                 z_slice_max=z_slice_max)
+    data = DatasetGenerator3D(crop_dim=crop_dim,
+                              data_path=data_path,
+                              json_filename=json_filename,
+                              batch_size=batch_size,
+                              number_output_classes=1,
+                              random_seed=816
+                              )
 
     print("-" * 30)
     print("Creating and compiling model ...")
@@ -144,8 +113,8 @@ if __name__ == "__main__":
                       num_threads=num_threads,
                       num_inter_threads=num_inter_threads)
 
-    model = unet_model.create_model(ds_train.get_input_shape(),
-                                    ds_train.get_output_shape())
+    model = unet_model.create_model(crop_dim,
+                                    crop_dim)
     model_filename, model_callbacks = unet_model.get_callbacks()
 
     """
@@ -154,10 +123,11 @@ if __name__ == "__main__":
     print("-" * 30)
     print("Fitting model with training data ...")
     print("-" * 30)
-
-    model.fit(ds_train,
+    steps_per_epoch = data.num_files // batch_size
+    model.fit(data.get_train(),
               epochs=epochs,
-              validation_data=ds_validation,
+              steps_per_epoch=steps_per_epoch,
+              validation_data=data.get_validate(),
               verbose=1,
               callbacks=model_callbacks)
 
@@ -168,7 +138,7 @@ if __name__ == "__main__":
     print("Loading the best trained model ...")
     print("-" * 30)
 
-    unet_model.evaluate_model(model_filename, ds_test)
+    unet_model.evaluate_model(model_filename, data.get_test())
 
     print("Total time elapsed for program = {} seconds".format(
           datetime.datetime.now() - START_TIME))
