@@ -143,7 +143,7 @@ class DatasetGenerator2D(Sequence):
             NUM_QUEUED_IMAGES = 1 + \
                 self.batch_size // self.num_slices_per_scan
             # Get enough for full batch + 1
-
+            # print(NUM_QUEUED_IMAGES)
             for idz in range(NUM_QUEUED_IMAGES):
 
                 image_filename = self.filenames[idx]
@@ -202,9 +202,7 @@ class DatasetGenerator2D(Sequence):
                 if idz == 0:
                     img_stack = img
                     label_stack = label
-
                 else:
-
                     img_stack = np.concatenate(
                         (img_stack, img), axis=self.slice_dim)
                     label_stack = np.concatenate(
@@ -249,10 +247,9 @@ class DatasetGenerator2D(Sequence):
                 # We have enough slices for batch
                 img_batch = img[:, :, idy:idy + self.batch_size]
                 label_batch = label[:, :, idy:idy+self.batch_size]
-
             else:  # We need to pad the batch with slices
                 # Get remaining slices
-                img_batch = img[:, :, -self.batch_size:],
+                img_batch = img[:, :, -self.batch_size:]
                 label_batch = label[:, :, -self.batch_size:]
 
             if self.augment:
@@ -263,7 +260,6 @@ class DatasetGenerator2D(Sequence):
                 img_batch = np.expand_dims(img_batch, axis=-1)
             if len(np.shape(label_batch)) == 3:
                 label_batch = np.expand_dims(label_batch, axis=-1)
-
             yield np.transpose(img_batch, [2, 0, 1, 3]).astype(np.float32), \
                 np.transpose(label_batch, [2, 0, 1, 3]).astype(np.float32)
 
