@@ -12,12 +12,15 @@ In order to reproduce results, these following steps need to be done
 Because data from Dicom files were given without annotation, Viewer served as a platform for manually defined area for valve detection
 ## "Step 2 of 3: Use Dataloader Generator from TensorFlow and Train U-Net on dataset"
 
-TODO
+```
+python train.py
+```
 
 ## "Step 3 of 3: Run sample inference script"
-
-TODO
+```
+python plot_results.py 
+```
 
 ## Results from Predictions
 
-TODO
+![alt gui](../../img/prediction_2D.png "Gui Render")

@@ -31,7 +31,6 @@ import datetime
 import yaml
 import os
 import aic.misc.files as fs
-import aic.misc.utils as ut
 from aic.model.architecture.model_3D import unet
 from aic.processing.dataloader import DatasetGenerator3D
 from aic.misc.setting_tf import requirements_3d as req3d

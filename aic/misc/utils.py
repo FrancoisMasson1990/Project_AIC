@@ -68,9 +68,10 @@ def get_file_list(data_path, json_filename, seed=816, split=0.7):
     validateList = otherList[:otherIdx]
     testList = otherList[otherIdx:]
 
-    trainList = [0]
-    validateList = [1]
-    testList = [2]
+    if len(validateList) == 0:
+        validateList = testList
+    if len(trainList) == 0:
+        trainList = testList
     # trainList = validateList = testList
 
     trainFiles = []

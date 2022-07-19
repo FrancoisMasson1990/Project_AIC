@@ -26,6 +26,7 @@ You can try custom models by modifying the code here.
 """
 
 import os
+import tensorflow as tf
 from tensorflow import keras as K
 import aic.processing.metrics as mt
 
@@ -83,7 +84,7 @@ class unet(object):
         self.optimizer = K.optimizers.Adam(learning_rate=self.learningrate)
 
         self.custom_objects = {
-            "combined_dice_ce_loss": self.combined_dice_coef_loss,
+            "combined_dice_coef_loss": self.combined_dice_coef_loss,
             "dice_coef_loss": self.dice_coef_loss,
             "dice_coef": self.dice_coef,
             "soft_dice_coef": self.soft_dice_coef,
@@ -148,7 +149,7 @@ class unet(object):
         return mt.focal_tversky_loss(target=target,
                                      prediction=prediction)
 
-    def ConvolutionBlock(self, x, name, filters, params):
+    def convolution_block(self, x, name, filters, params):
         """Get Convolution Block.
 
         Convolutional block of layers
@@ -185,38 +186,38 @@ class unet(object):
                             kernel_initializer="he_uniform")
 
         # BEGIN - Encoding path
-        encodeA = self.ConvolutionBlock(inputs,
-                                        "encodeA",
-                                        self.filters,
-                                        params)
+        encodeA = self.convolution_block(inputs,
+                                         "encodeA",
+                                         self.filters,
+                                         params)
         poolA = K.layers.MaxPooling3D(name="poolA",
                                       pool_size=(2, 2, 2))(encodeA)
 
-        encodeB = self.ConvolutionBlock(poolA,
-                                        "encodeB",
-                                        self.filters*2,
-                                        params)
+        encodeB = self.convolution_block(poolA,
+                                         "encodeB",
+                                         self.filters*2,
+                                         params)
         poolB = K.layers.MaxPooling3D(name="poolB",
                                       pool_size=(2, 2, 2))(encodeB)
 
-        encodeC = self.ConvolutionBlock(poolB,
-                                        "encodeC",
-                                        self.filters*4,
-                                        params)
+        encodeC = self.convolution_block(poolB,
+                                         "encodeC",
+                                         self.filters*4,
+                                         params)
         poolC = K.layers.MaxPooling3D(name="poolC",
                                       pool_size=(2, 2, 2))(encodeC)
 
-        encodeD = self.ConvolutionBlock(poolC,
-                                        "encodeD",
-                                        self.filters*8,
-                                        params)
+        encodeD = self.convolution_block(poolC,
+                                         "encodeD",
+                                         self.filters*8,
+                                         params)
         poolD = K.layers.MaxPooling3D(name="poolD",
                                       pool_size=(2, 2, 2))(encodeD)
 
-        encodeE = self.ConvolutionBlock(poolD,
-                                        "encodeE",
-                                        self.filters*16,
-                                        params)
+        encodeE = self.convolution_block(poolD,
+                                         "encodeE",
+                                         self.filters*16,
+                                         params)
         # END - Encoding path
 
         # BEGIN - Decoding path
@@ -229,10 +230,10 @@ class unet(object):
         concatD = K.layers.concatenate(
             [up, encodeD], axis=self.concat_axis, name="concatD")
 
-        decodeC = self.ConvolutionBlock(concatD,
-                                        "decodeC",
-                                        self.filters*8,
-                                        params)
+        decodeC = self.convolution_block(concatD,
+                                         "decodeC",
+                                         self.filters*8,
+                                         params)
 
         if self.use_upsampling:
             up = K.layers.UpSampling3D(name="upC", size=(2, 2, 2))(decodeC)
@@ -243,10 +244,10 @@ class unet(object):
         concatC = K.layers.concatenate(
             [up, encodeC], axis=self.concat_axis, name="concatC")
 
-        decodeB = self.ConvolutionBlock(concatC,
-                                        "decodeB",
-                                        self.filters*4,
-                                        params)
+        decodeB = self.convolution_block(concatC,
+                                         "decodeB",
+                                         self.filters*4,
+                                         params)
 
         if self.use_upsampling:
             up = K.layers.UpSampling3D(name="upB", size=(2, 2, 2))(decodeB)
@@ -257,10 +258,10 @@ class unet(object):
         concatB = K.layers.concatenate(
             [up, encodeB], axis=self.concat_axis, name="concatB")
 
-        decodeA = self.ConvolutionBlock(concatB,
-                                        "decodeA",
-                                        self.filters*2,
-                                        params)
+        decodeA = self.convolution_block(concatB,
+                                         "decodeA",
+                                         self.filters*2,
+                                         params)
 
         if self.use_upsampling:
             up = K.layers.UpSampling3D(name="upA", size=(2, 2, 2))(decodeA)
@@ -273,10 +274,10 @@ class unet(object):
 
         # END - Decoding path
 
-        convOut = self.ConvolutionBlock(concatA,
-                                        "convOut",
-                                        self.filters,
-                                        params)
+        convOut = self.convolution_block(concatA,
+                                         "convOut",
+                                         self.filters,
+                                         params)
 
         prediction = K.layers.Conv3D(name="PredictionMask",
                                      filters=num_chan_out,

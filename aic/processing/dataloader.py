@@ -369,79 +369,6 @@ class DatasetGenerator3D:
         for idx in range(self.num_files):
             self.filenames[idx] = [image_files[idx], label_files[idx]]
 
-    def z_normalize_img(self, img):
-        """Normalize the image.
-
-        Normalize so that the mean value for each image
-        is 0 and the standard deviation is 1.
-        """
-        for channel in range(img.shape[-1]):
-
-            img_temp = img[..., channel]
-            img_temp = (img_temp - np.mean(img_temp)) / np.std(img_temp)
-
-            img[..., channel] = img_temp
-        return img
-
-    def crop(self, img, msk, randomize):
-        """Randomly crop the image and mask."""
-        slices = []
-        # Do we randomize?
-        is_random = randomize and np.random.rand() > 0.5
-
-        for idx in range(len(img.shape)-1):  # Go through each dimension
-
-            cropLen = self.crop_dim[idx]
-            imgLen = img.shape[idx]
-
-            start = (imgLen-cropLen)//2
-
-            ratio_crop = 0.20  # Crop up this this % of pixels for offset
-            # Number of pixels to offset crop in this dimension
-            offset = int(np.floor(start*ratio_crop))
-
-            if offset > 0:
-                if is_random:
-                    start += np.random.choice(range(-offset, offset))
-                    # Don't fall off the image
-                    if ((start + cropLen) > imgLen):
-                        start = (imgLen-cropLen)//2
-            else:
-                start = 0
-
-            slices.append(slice(start, start+cropLen))
-
-        return img[tuple(slices)], msk[tuple(slices)]
-
-    def augment_data(self, img, msk):
-        """Get Data augmentation.
-
-        Flip image and mask. Rotate image and mask.
-        """
-        # Determine if axes are equal and can be rotated
-        # If the axes aren't equal then we can't rotate them.
-        equal_dim_axis = []
-        for idx in range(0, len(self.crop_dim)):
-            for jdx in range(idx+1, len(self.crop_dim)):
-                if self.crop_dim[idx] == self.crop_dim[jdx]:
-                    equal_dim_axis.append([idx, jdx])  # Valid rotation axes
-        dim_to_rotate = equal_dim_axis
-
-        if np.random.rand() > 0.5:
-            # Random 0,1 (axes to flip)
-            ax = np.random.choice(np.arange(len(self.crop_dim)-1))
-            img = np.flip(img, ax)
-            msk = np.flip(msk, ax)
-
-        elif (len(dim_to_rotate) > 0) and (np.random.rand() > 0.5):
-            rot = np.random.choice([1, 2, 3])  # 90, 180, or 270 degrees
-            # This will choose the axes to rotate
-            # Axes must be equal in size
-            random_axis = dim_to_rotate[np.random.choice(len(dim_to_rotate))]
-            img = np.rot90(img, rot, axes=random_axis)  # Rotate axes 0 and 1
-            msk = np.rot90(msk, rot, axes=random_axis)  # Rotate axes 0 and 1
-        return img, msk
-
     def read_files(self, idx, randomize=False):
         """Read dicom and associated labels."""
         idx = idx.numpy()
@@ -468,12 +395,17 @@ class DatasetGenerator3D:
                 label_temp[label == channel, channel] = 1.0
             label = label_temp
         # Crop
-        img, label = self.crop(img, label, randomize)
+        img, label = dp.crop_dim_3d(img,
+                                    label,
+                                    self.crop_dim,
+                                    randomize)
         # Normalize
-        img = self.z_normalize_img(img)
+        img = dp.normalize_img_3d(img)
         # Randomly rotate
         if randomize:
-            img, label = self.augment_data(img, label)
+            img, label = dp.augment_data_3d(img,
+                                            label,
+                                            self.crop_dim)
         return img, label
 
     def plot_samples(self, ds, slice_num=1):
@@ -509,12 +441,8 @@ class DatasetGenerator3D:
 
     def get_dataset(self):
         """Create a TensorFlow data loader."""
-        self.num_train = int(self.num_files * self.train_test_split)
-        num_val_test = self.num_files - self.num_train
-
         ds = tf.data.Dataset.range(self.num_files).shuffle(
             self.num_files, self.random_seed)  # Shuffle the dataset
-
         """
         Horovod Sharding
         Here we are not actually dividing the dataset into shards
@@ -522,17 +450,24 @@ class DatasetGenerator3D:
         shard. Then in the training loop we just go through the training
         dataset but the number of steps is divided by the number of shards.
         """
+        self.num_train = int(self.num_files * self.train_test_split)
+        if self.num_train == 0:
+            self.num_train = self.num_files
         ds_train = ds.take(self.num_train).shuffle(
             self.num_train, self.shard)  # Reshuffle based on shard
-        ds_val_test = ds.skip(self.num_train)
+
+        num_val_test = self.num_files - self.num_train
         self.num_val = int(num_val_test * self.validate_test_split)
-        if self.num_val == 0:
-            self.num_val = self.num_train
         self.num_test = self.num_train - self.num_val
-        if self.num_test == 0:
+        if self.num_val == 0 or self.num_test == 0:
+            self.num_val = self.num_train
             self.num_test = self.num_test
-        ds_val = ds_val_test.take(self.num_val)
-        ds_test = ds_val_test.skip(self.num_val)
+            ds_val = ds.take(self.num_train)
+            ds_test = ds.take(self.num_train)
+        else:
+            ds_val_test = ds.skip(self.num_train)
+            ds_val = ds_val_test.take(self.num_val)
+            ds_test = ds_val_test.skip(self.num_val)
 
         ds_train = ds_train.map(
             lambda x: tf.py_function(self.read_files,

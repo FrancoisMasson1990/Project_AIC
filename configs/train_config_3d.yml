@@ -1,7 +1,7 @@
 data_path: "/home/francoismasson/Project_AIC/data/valve_patient_folder/" #the path to the data
 output_path: "/home/francoismasson/Project_AIC/data/output_3d" #the folder to save the model and checkpoints
 json_filename: "dataset_3d.json"
-inference_filename: "unet_model_for_aic_"
+inference_filename: "unet_3d_model_for_aic_"
 use_upsampling: False #use upsampling instead of transposed convolution
 num_inter_threads: 1 #the number of intraop threads
 batch_size: 1 #the batch size for training

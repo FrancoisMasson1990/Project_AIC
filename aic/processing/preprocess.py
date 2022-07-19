@@ -22,7 +22,7 @@ LABEL_CHANNELS = {"labels": {
 }}
 
 
-def normalize_img(img):
+def normalize_img_2d(img):
     """Normalize the pixel values.
 
     This is one of the most important preprocessing steps.
@@ -35,6 +35,21 @@ def normalize_img(img):
             img[:, :, :, channel] - np.mean(img[:, :, :, channel])) \
             / np.std(img[:, :, :, channel])
 
+    return img
+
+
+def normalize_img_3d(img):
+    """Normalize the image.
+
+    Normalize so that the mean value for each image
+    is 0 and the standard deviation is 1.
+    """
+    for channel in range(img.shape[-1]):
+
+        img_temp = img[..., channel]
+        img_temp = (img_temp - np.mean(img_temp)) / np.std(img_temp)
+
+        img[..., channel] = img_temp
     return img
 
 
@@ -73,7 +88,7 @@ def preprocess_inputs(img, resize=-1):
     if (resize != -1):
         img = crop_center(img, resize, resize, -1)
 
-    img = normalize_img(img)
+    img = normalize_img_2d(img)
 
     return img
 
@@ -142,7 +157,7 @@ def preprocess_img(img):
     return (img - img.mean()) / img.std()
 
 
-def crop_dim(img, crop_dim):
+def crop_dim_2d(img, crop_dim):
     """Crop images.
 
     Crop around the center of the images based on size provided
@@ -166,3 +181,68 @@ def crop_dim(img, crop_dim):
         return img[:, startx:endx, starty:endy]
     elif img.ndim == 4:
         return img[:, startx:endx, starty:endy, :]
+
+
+def crop_dim_3d(img,
+                msk,
+                crop_dim,
+                randomize):
+    """Randomly crop the image and mask."""
+    slices = []
+    # Do we randomize?
+    is_random = randomize and np.random.rand() > 0.5
+    for idx in range(len(img.shape)-1):  # Go through each dimension
+
+        cropLen = crop_dim[idx]
+        imgLen = img.shape[idx]
+
+        start = (imgLen-cropLen)//2
+
+        ratio_crop = 0.20  # Crop up this this % of pixels for offset
+        # Number of pixels to offset crop in this dimension
+        offset = int(np.floor(start*ratio_crop))
+
+        if offset > 0:
+            if is_random:
+                start += np.random.choice(range(-offset, offset))
+                # Don't fall off the image
+                if ((start + cropLen) > imgLen):
+                    start = (imgLen-cropLen)//2
+        else:
+            start = 0
+
+        slices.append(slice(start, start+cropLen))
+
+    return img[tuple(slices)], msk[tuple(slices)]
+
+
+def augment_data_3d(img,
+                    msk,
+                    crop_dim):
+    """Get Data augmentation.
+
+    Flip image and mask. Rotate image and mask.
+    """
+    # Determine if axes are equal and can be rotated
+    # If the axes aren't equal then we can't rotate them.
+    equal_dim_axis = []
+    for idx in range(0, len(crop_dim)):
+        for jdx in range(idx+1, len(crop_dim)):
+            if crop_dim[idx] == crop_dim[jdx]:
+                equal_dim_axis.append([idx, jdx])  # Valid rotation axes
+    dim_to_rotate = equal_dim_axis
+
+    if np.random.rand() > 0.5:
+        # Random 0,1 (axes to flip)
+        ax = np.random.choice(np.arange(len(crop_dim)-1))
+        img = np.flip(img, ax)
+        msk = np.flip(msk, ax)
+
+    elif (len(dim_to_rotate) > 0) and (np.random.rand() > 0.5):
+        rot = np.random.choice([1, 2, 3])  # 90, 180, or 270 degrees
+        # This will choose the axes to rotate
+        # Axes must be equal in size
+        random_axis = dim_to_rotate[np.random.choice(len(dim_to_rotate))]
+        img = np.rot90(img, rot, axes=random_axis)  # Rotate axes 0 and 1
+        msk = np.rot90(msk, rot, axes=random_axis)  # Rotate axes 0 and 1
+    return img, msk
