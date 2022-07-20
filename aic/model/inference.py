@@ -192,8 +192,8 @@ def get_predictions(model,
         # Need for the mesh reconstruct
         padding = np.zeros(img.shape) - 2
         if crop_dim != -1:
-            img = dp.crop_dim(img,
-                              crop_dim=crop_dim)
+            img = dp.crop_dim_2d(img,
+                                 crop_dim=crop_dim)
         if (z_slice_min is not None) \
                 and (z_slice_max is not None):
             min_ = int(z_slice_min*img.shape[0])
@@ -224,7 +224,11 @@ def get_predictions(model,
             prediction = prediction[0, :, :, 0]
             prediction = np.rot90(prediction, axes=(1, 0))
             prediction = np.expand_dims(prediction, 0)
-            prediction[prediction != 1.0] = -2
+            # Binary Classification
+            prediction[prediction > 0.5] = 1
+            prediction[prediction < 0.5] = 0
+            # Set -2 to allow marching cube algo reconstruction of prediction
+            prediction[prediction != 1] = -2
         else:
             print("Unknown/Unsupported version")
             exit()

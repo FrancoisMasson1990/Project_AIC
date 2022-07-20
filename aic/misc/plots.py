@@ -35,7 +35,7 @@ def plot_results_2d(imgs,
     imgs = op.get_pixels_hu(imgs)
 
     if crop_dim != -1:
-        imgs = dp.crop_dim(imgs, crop_dim=crop_dim)
+        imgs = dp.crop_dim_2d(imgs, crop_dim=crop_dim)
 
     min_ = int(z_slice_min*imgs.shape[0])
     max_ = int(z_slice_max*imgs.shape[0])
@@ -54,7 +54,7 @@ def plot_results_2d(imgs,
     labels = ut.load_mask(labels)
     labels = dp.preprocess_label(labels)
     if crop_dim != -1:
-        labels = dp.crop_dim(labels, crop_dim=crop_dim)
+        labels = dp.crop_dim_2d(labels, crop_dim=crop_dim)
 
     labels = labels[index_z_crop]
 
@@ -108,12 +108,12 @@ def plot_results_2d(imgs,
                               mt.dice_coef(
                                   np.expand_dims(
                                       labels[i, :, :],
-                                      (0, -1)),
+                                      (0, -1)).astype(np.float32),
                                   prediction),
                               mt.soft_dice_coef(
                                   np.expand_dims(
                                          labels[i, :, :],
-                                         (0, -1)),
+                                         (0, -1)).astype(np.float32),
                                   prediction)))
             ax2.axis("off")
 
