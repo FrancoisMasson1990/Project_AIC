@@ -26,7 +26,6 @@ You can try custom models by modifying the code here.
 """
 
 import os
-import tensorflow as tf
 from tensorflow import keras as K
 import aic.processing.metrics as mt
 
@@ -100,21 +99,26 @@ class unet(object):
 
     def dice_coef(self,
                   target,
-                  prediction):
+                  prediction,
+                  axis=(1, 2, 3)):
         """Get the Sorenson Dice."""
         return mt.dice_coef(target=target,
-                            prediction=prediction)
+                            prediction=prediction,
+                            axis=axis)
 
     def soft_dice_coef(self,
                        target,
-                       prediction):
+                       prediction,
+                       axis=(1, 2, 3)):
         """Get the Sorenson (Soft) Dice."""
         return mt.soft_dice_coef(target=target,
-                                 prediction=prediction)
+                                 prediction=prediction,
+                                 axis=axis)
 
     def dice_coef_loss(self,
                        target,
-                       prediction):
+                       prediction,
+                       axis=(1, 2, 3)):
         """Get the Sorenson (Soft) Dice loss.
 
         Using -log(Dice) as the loss since it is better behaved.
@@ -122,16 +126,19 @@ class unet(object):
         can help prevent underflow when the numbers are very small.
         """
         return mt.dice_coef_loss(target=target,
-                                 prediction=prediction)
+                                 prediction=prediction,
+                                 axis=axis)
 
     def combined_dice_coef_loss(self,
                                 target,
-                                prediction):
+                                prediction,
+                                axis=(1, 2, 3)):
         """Combine Dice and Binary Cross Entropy Loss."""
         return mt.combined_dice_coef_loss(
             weight_dice_loss=self.weight_dice_loss,
             target=target,
-            prediction=prediction)
+            prediction=prediction,
+            axis=axis)
 
     def tversky(self,
                 target,

@@ -170,10 +170,13 @@ def plot_results_3d(imgs,
 
     # Prediction
     if model is not None:
+        import tensorflow as tf
         # Normalize
         imgs_norm = dp.normalize_img_3d(imgs)
         prediction = np.expand_dims(imgs_norm[:, :, :], 0)
         prediction = model.predict(prediction)
+        prediction[-1][prediction[-1] >= 0.5] = 1
+        prediction[-1][prediction[-1] < 0.5] = 0
 
     for i in range(imgs.shape[2]):
         # Image
@@ -202,19 +205,19 @@ def plot_results_3d(imgs,
                     prediction[0, :, :, i, 0], origin="lower", vmin=0, vmax=1)
             else:
                 ax2_object.set_data(prediction[0, :, :, 0])
-
             ax2.set_title("Predictions\n(Dice {:.4f}, Soft Dice {:.4f})".
                           format(
                                 mt.dice_coef(
-                                    np.expand_dims(
-                                        labels[:, :, :],
-                                        0),
+                                    tf.cast(
+                                        tf.expand_dims(labels, 0),
+                                        dtype=np.float32),
                                     prediction),
                                 mt.soft_dice_coef(
-                                    np.expand_dims(
-                                            labels[:, :, :],
-                                            0),
-                                    prediction)))
+                                    tf.cast(
+                                        tf.expand_dims(labels, 0),
+                                        dtype=np.float32),
+                                    prediction)
+                                ))
             ax2.axis("off")
 
         png_filename = os.path.join(folder, "pred_{}_{}.png".format(name, i))
