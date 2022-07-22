@@ -51,10 +51,11 @@ if __name__ == "__main__":
 
     data_path = config.get("data_path", None)
     batch_size = config.get("batch_size", None)
-    crop_dim = config.get("crop_dim", None)
-    if crop_dim:
+    crop_dim = config.get("crop_dim", -1)
+    if isinstance(crop_dim, list):
         crop_dim = tuple(crop_dim)
     channels_first = config.get("channels_first", None)
+    resize_dim = config.get("resize_dim", -1)
     filters = config.get("filters", None)
     learning_rate = config.get("learning_rate", None)
     weight_dice_loss = config.get("weight_dice_loss", None)
@@ -85,10 +86,11 @@ if __name__ == "__main__":
           "to a TensorFlow data loader ...")
     print("-" * 30)
 
-    data = DatasetGenerator3D(crop_dim=crop_dim,
-                              data_path=data_path,
+    data = DatasetGenerator3D(data_path=data_path,
                               json_filename=json_filename,
                               batch_size=batch_size,
+                              crop_dim=crop_dim,
+                              resize_dim=resize_dim,
                               number_output_classes=1,
                               random_seed=816
                               )
@@ -113,8 +115,9 @@ if __name__ == "__main__":
                       num_inter_threads=num_inter_threads,
                       print_model=print_model)
 
-    model = unet_model.create_model(crop_dim,
-                                    crop_dim)
+    imgs_shape, label_shape = data.get_input_shape()
+    model = unet_model.create_model(imgs_shape=imgs_shape,
+                                    msks_shape=label_shape)
     model_filename, model_callbacks = unet_model.get_callbacks()
 
     """

@@ -125,6 +125,7 @@ def plot_results_3d(imgs,
                     labels,
                     model,
                     crop_dim,
+                    resize_dim,
                     folder,
                     name,
                     number_output_classes=1,
@@ -133,12 +134,12 @@ def plot_results_3d(imgs,
     # Image processing
     imgs = ut.load_scan(imgs)
     imgs = op.get_pixels_hu(imgs)
-    imgs = np.moveaxis(imgs, 0, -1)
+    imgs = dp.preprocess_img_3d(imgs,
+                                resize_dim)
     imgs = np.expand_dims(imgs, -1)
-
     labels = ut.load_mask(labels)
-    labels = dp.preprocess_label(labels)
-    labels = np.moveaxis(labels, 0, -1)
+    labels = dp.preprocess_label_3d(labels,
+                                    resize_dim)
 
     # Combine all masks but background
     if number_output_classes == 1:
@@ -150,11 +151,13 @@ def plot_results_3d(imgs,
         for channel in range(number_output_classes):
             label_temp[labels == channel, channel] = 1.0
         labels = label_temp
+
     # Crop
-    imgs, labels = dp.crop_dim_3d(imgs,
-                                  labels,
-                                  crop_dim,
-                                  randomize)
+    if crop_dim != -1:
+        imgs, labels = dp.crop_dim_3d(imgs,
+                                      labels,
+                                      crop_dim,
+                                      randomize)
 
     # Init Figure
     if model is None:
@@ -171,9 +174,7 @@ def plot_results_3d(imgs,
     # Prediction
     if model is not None:
         import tensorflow as tf
-        # Normalize
-        imgs_norm = dp.normalize_img_3d(imgs)
-        prediction = np.expand_dims(imgs_norm[:, :, :], 0)
+        prediction = np.expand_dims(imgs[:, :, :], 0)
         prediction = model.predict(prediction)
         prediction[-1][prediction[-1] >= 0.5] = 1
         prediction[-1][prediction[-1] < 0.5] = 0
@@ -184,7 +185,7 @@ def plot_results_3d(imgs,
             ax0_object = ax0.imshow(
                 imgs[:, :, i, 0], cmap="bone", origin="lower")
         else:
-            ax0_object.set_data(imgs[i, :, :, 0])
+            ax0_object.set_data(imgs[:, :, i, 0])
 
         ax0.set_title("MRI")
         ax0.axis("off")

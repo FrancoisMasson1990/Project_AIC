@@ -324,24 +324,29 @@ class DatasetGenerator2D(Sequence):
 class DatasetGenerator3D:
     """TensorFlow Dataset from Python/NumPy Iterator."""
 
-    def __init__(self, crop_dim,
+    def __init__(self,
                  data_path=None,
                  json_filename=None,
                  batch_size=None,
+                 crop_dim=-1,
+                 resize_dim=-1,
                  train_test_split=0.8,
                  validate_test_split=0.5,
                  number_output_classes=1,
                  random_seed=None,
+                 randomize=False,
                  shard=0):
         """Init function."""
         self.data_path = data_path
         self.json_filename = json_filename
         self.batch_size = batch_size
         self.crop_dim = crop_dim
+        self.resize_dim = resize_dim
         self.train_test_split = train_test_split
         self.validate_test_split = validate_test_split
         self.number_output_classes = number_output_classes
         self.random_seed = random_seed
+        self.randomize = randomize
         self.shard = shard  # For Horovod, gives different shard per worker
 
         self.create_file_list()
@@ -369,20 +374,22 @@ class DatasetGenerator3D:
         for idx in range(self.num_files):
             self.filenames[idx] = [image_files[idx], label_files[idx]]
 
-    def read_files(self, idx, randomize=False):
+    def read_files(self, idx):
         """Read dicom and associated labels."""
-        idx = idx.numpy()
+        if not isinstance(idx, np.int64):
+            idx = idx.numpy()
         img_filename = self.filenames[idx][0]
         label_filename = self.filenames[idx][1]
 
         img = ut.load_scan(img_filename)
         img = op.get_pixels_hu(img)
-        img = np.moveaxis(img, 0, -1)
+        img = dp.preprocess_img_3d(img,
+                                   self.resize_dim)
         img = np.expand_dims(img, -1)
 
         label = ut.load_mask(label_filename)
-        label = dp.preprocess_label(label)
-        label = np.moveaxis(label, 0, -1)
+        label = dp.preprocess_label_3d(label,
+                                       self.resize_dim)
 
         # Combine all masks but background
         if self.number_output_classes == 1:
@@ -395,18 +402,22 @@ class DatasetGenerator3D:
                 label_temp[label == channel, channel] = 1.0
             label = label_temp
         # Crop
-        img, label = dp.crop_dim_3d(img,
-                                    label,
-                                    self.crop_dim,
-                                    randomize)
-        # Normalize
-        img = dp.normalize_img_3d(img)
+        if self.crop_dim != -1:
+            img, label = dp.crop_dim_3d(img,
+                                        label,
+                                        self.crop_dim,
+                                        self.randomize)
         # Randomly rotate
-        if randomize:
+        if self.randomize:
             img, label = dp.augment_data_3d(img,
                                             label,
                                             self.crop_dim)
         return img, label
+
+    def get_input_shape(self):
+        """Get image shape."""
+        img, label = self.read_files(idx=np.int64(0))
+        return img.shape, label.shape
 
     def plot_samples(self, ds, slice_num=1):
         """Plot some random samples."""
@@ -471,18 +482,18 @@ class DatasetGenerator3D:
 
         ds_train = ds_train.map(
             lambda x: tf.py_function(self.read_files,
-                                     [x, True],
+                                     [x],
                                      [tf.float32,
                                       tf.float32]),
             num_parallel_calls=tf.data.experimental.AUTOTUNE)
         ds_val = ds_val.map(
             lambda x: tf.py_function(self.read_files,
-                                     [x, False],
+                                     [x],
                                      [tf.float32, tf.float32]),
             num_parallel_calls=tf.data.experimental.AUTOTUNE)
         ds_test = ds_test.map(
             lambda x: tf.py_function(self.read_files,
-                                     [x, False],
+                                     [x],
                                      [tf.float32, tf.float32]),
             num_parallel_calls=tf.data.experimental.AUTOTUNE)
 

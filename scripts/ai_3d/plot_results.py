@@ -48,7 +48,10 @@ if __name__ == "__main__":
         config = yaml.load(f, Loader=yaml.FullLoader)
 
     data_path = config.get("data_path", None)
-    crop_dim = config.get("crop_dim", None)
+    crop_dim = config.get("crop_dim", -1)
+    if isinstance(crop_dim, list):
+        crop_dim = tuple(crop_dim)
+    resize_dim = config.get("resize_dim", -1)
     batch_size = config.get("batch_size", None)
     json_filename = config.get("json_filename", None)
     json_filename = os.path.join(data_path, json_filename)
@@ -56,7 +59,7 @@ if __name__ == "__main__":
 
     # model_version = 1
     model_filename = str(fs.get_models_root() /
-                         "unet_3d_model_for_aic_2022_07_19_16_04_59.hdf5")
+                         "unet_3d_model_for_aic_2022_07_22_14_02_52.hdf5")
 
     """
     Load a model, load the data, and see inference.
@@ -103,5 +106,7 @@ if __name__ == "__main__":
                             labels=label,
                             model=model,
                             crop_dim=crop_dim,
+                            resize_dim=resize_dim,
                             folder=png_folder,
-                            name=valve_name)
+                            name=valve_name,
+                            randomize=False)

@@ -13,6 +13,7 @@ and data for training/infering.
 """
 
 import numpy as np
+from scipy import ndimage
 from skimage.transform import resize
 
 LABEL_CHANNELS = {"labels": {
@@ -139,6 +140,27 @@ def preprocess_label(label):
     return label
 
 
+def preprocess_label_3d(label,
+                        resize_dim):
+    """Set label attribution.
+
+    Please refer LABEL_CHANNEL for the mask attribution.
+    """
+    # Stack the loaded npy files
+    label = [np.load(label[i]) for i in range(len(label))]
+    label = np.stack(label, axis=0)
+    # Took the decision to set to 0 other labels and to 1 magna valve
+    # label[label == 1] = 0.0
+    # label[label == 2] = 1.0
+    label = np.moveaxis(label, 0, -1)
+    if resize_dim != -1:
+        label = resize_input(label,
+                             width=resize_dim[0],
+                             height=resize_dim[1],
+                             depth=resize_dim[2])
+    return label
+
+
 def preprocess_img(img):
     """Preprocess images.
 
@@ -155,6 +177,28 @@ def preprocess_img(img):
     # Scale applied plays a crucial role in training
     img[img > 1000] = 1000
     return (img - img.mean()) / img.std()
+
+
+def preprocess_img_3d(img,
+                      resize_dim):
+    """Preprocess images.
+
+    Preprocessing for the image
+    z-score normalize
+    """
+    img[img < 0] = 0
+    # Read Intensity normalization in medical images from
+    # https://theaisummer.com/medical-image-processing/
+    # Scale applied plays a crucial role in training
+    img[img > 1000] = 1000
+    img = np.moveaxis(img, 0, -1)
+    img = normalize_img_3d(img)
+    if resize_dim != -1:
+        img = resize_input(img,
+                           width=resize_dim[0],
+                           height=resize_dim[1],
+                           depth=resize_dim[2])
+    return img
 
 
 def crop_dim_2d(img, crop_dim):
@@ -198,7 +242,7 @@ def crop_dim_3d(img,
 
         start = (imgLen-cropLen)//2
 
-        ratio_crop = 0.20  # Crop up this this % of pixels for offset
+        ratio_crop = 0.20  # Crop up this % of pixels for offset
         # Number of pixels to offset crop in this dimension
         offset = int(np.floor(start*ratio_crop))
 
@@ -246,3 +290,31 @@ def augment_data_3d(img,
         img = np.rot90(img, rot, axes=random_axis)  # Rotate axes 0 and 1
         msk = np.rot90(msk, rot, axes=random_axis)  # Rotate axes 0 and 1
     return img, msk
+
+
+def resize_input(input_,
+                 width=128,
+                 height=128,
+                 depth=64):
+    """Resize across z-axis"""
+    # Set the desired depth
+    desired_depth = depth
+    desired_width = width
+    desired_height = height
+
+    # Get current depth
+    current_depth = input_.shape[-1]
+    current_width = input_.shape[0]
+    current_height = input_.shape[1]
+    # Compute depth factor
+    depth = current_depth / desired_depth
+    width = current_width / desired_width
+    height = current_height / desired_height
+    depth_factor = 1 / depth
+    width_factor = 1 / width
+    height_factor = 1 / height
+    # Resize across z-axis
+    input_ = ndimage.zoom(input_,
+                          (width_factor, height_factor, depth_factor),
+                          order=1)
+    return input_
