@@ -23,7 +23,7 @@ LABEL_CHANNELS = {"labels": {
 }}
 
 
-def normalize_img_2d(img):
+def normalize_img(img):
     """Normalize the pixel values.
 
     This is one of the most important preprocessing steps.
@@ -31,26 +31,11 @@ def normalize_img_2d(img):
     and a standard deviation of 1 to help the model to train
     faster and more accurately.
     """
-    for channel in range(img.shape[3]):
+    for channel in range(img.shape[-1]):
         img[:, :, :, channel] = (
             img[:, :, :, channel] - np.mean(img[:, :, :, channel])) \
             / np.std(img[:, :, :, channel])
 
-    return img
-
-
-def normalize_img_3d(img):
-    """Normalize the image.
-
-    Normalize so that the mean value for each image
-    is 0 and the standard deviation is 1.
-    """
-    for channel in range(img.shape[-1]):
-
-        img_temp = img[..., channel]
-        img_temp = (img_temp - np.mean(img_temp)) / np.std(img_temp)
-
-        img[..., channel] = img_temp
     return img
 
 
@@ -89,7 +74,7 @@ def preprocess_inputs(img, resize=-1):
     if (resize != -1):
         img = crop_center(img, resize, resize, -1)
 
-    img = normalize_img_2d(img)
+    img = normalize_img(img)
 
     return img
 
@@ -141,7 +126,8 @@ def preprocess_label(label):
 
 
 def preprocess_label_3d(label,
-                        resize_dim):
+                        resize_dim,
+                        number_output_classes=1):
     """Set label attribution.
 
     Please refer LABEL_CHANNEL for the mask attribution.
@@ -158,6 +144,16 @@ def preprocess_label_3d(label,
                              width=resize_dim[0],
                              height=resize_dim[1],
                              depth=resize_dim[2])
+    # Combine all masks but background
+    if number_output_classes == 1:
+        label[label > 0] = 1.0
+        label = np.expand_dims(label, -1)
+    else:
+        label_temp = \
+            np.zeros(list(label.shape) + [number_output_classes])
+        for channel in range(number_output_classes):
+            label_temp[label == channel, channel] = 1.0
+        label = label_temp
     return label
 
 
@@ -192,12 +188,14 @@ def preprocess_img_3d(img,
     # Scale applied plays a crucial role in training
     img[img > 1000] = 1000
     img = np.moveaxis(img, 0, -1)
-    img = normalize_img_3d(img)
     if resize_dim != -1:
         img = resize_input(img,
                            width=resize_dim[0],
                            height=resize_dim[1],
                            depth=resize_dim[2])
+    img = np.expand_dims(img, -1)
+    img = normalize_img(img)
+
     return img
 
 

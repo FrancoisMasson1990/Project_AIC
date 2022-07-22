@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     # model_version = 1
     model_filename = str(fs.get_models_root() /
-                         "unet_3d_model_for_aic_2022_07_22_14_02_52.hdf5")
+                         "unet_3d_model_for_aic_2022_07_22_14_38_35.hdf5")
 
     """
     Load a model, load the data, and see inference.

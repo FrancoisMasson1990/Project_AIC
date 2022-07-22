@@ -136,22 +136,10 @@ def plot_results_3d(imgs,
     imgs = op.get_pixels_hu(imgs)
     imgs = dp.preprocess_img_3d(imgs,
                                 resize_dim)
-    imgs = np.expand_dims(imgs, -1)
     labels = ut.load_mask(labels)
     labels = dp.preprocess_label_3d(labels,
-                                    resize_dim)
-
-    # Combine all masks but background
-    if number_output_classes == 1:
-        labels[labels > 0] = 1.0
-        labels = np.expand_dims(labels, -1)
-    else:
-        label_temp = \
-            np.zeros(list(labels.shape) + [number_output_classes])
-        for channel in range(number_output_classes):
-            label_temp[labels == channel, channel] = 1.0
-        labels = label_temp
-
+                                    resize_dim,
+                                    number_output_classes)
     # Crop
     if crop_dim != -1:
         imgs, labels = dp.crop_dim_3d(imgs,

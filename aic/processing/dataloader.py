@@ -385,22 +385,9 @@ class DatasetGenerator3D:
         img = op.get_pixels_hu(img)
         img = dp.preprocess_img_3d(img,
                                    self.resize_dim)
-        img = np.expand_dims(img, -1)
-
         label = ut.load_mask(label_filename)
         label = dp.preprocess_label_3d(label,
                                        self.resize_dim)
-
-        # Combine all masks but background
-        if self.number_output_classes == 1:
-            label[label > 0] = 1.0
-            label = np.expand_dims(label, -1)
-        else:
-            label_temp = \
-                np.zeros(list(label.shape) + [self.number_output_classes])
-            for channel in range(self.number_output_classes):
-                label_temp[label == channel, channel] = 1.0
-            label = label_temp
         # Crop
         if self.crop_dim != -1:
             img, label = dp.crop_dim_3d(img,
@@ -430,10 +417,10 @@ class DatasetGenerator3D:
             for idx in range(bs):
                 plt.subplot(bs, num_cols, idx*num_cols + 1)
                 plt.imshow(img[idx, :, :, slice_num, img_channel], cmap="bone")
-                plt.title("MRI", fontsize=18)
+                plt.title("CT Scan", fontsize=18)
                 plt.subplot(bs, num_cols, idx*num_cols + 2)
                 plt.imshow(msk[idx, :, :, slice_num, msk_channel], cmap="bone")
-                plt.title("Tumor", fontsize=18)
+                plt.title("Label", fontsize=18)
         plt.show()
         print("Mean pixel value of image = {}".format(
             np.mean(img[0, :, :, :, 0])))
