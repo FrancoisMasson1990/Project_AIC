@@ -73,8 +73,8 @@ class unet(object):
         self.inference_filename = inference_filename
 
         self.metrics = [self.dice_coef, self.soft_dice_coef]
-        # self.loss = self.dice_coef_loss
-        self.loss = self.combined_dice_coef_loss
+        self.loss = self.dice_coef_loss
+        # self.loss = self.combined_dice_coef_loss
 
         # Tversky method
         # self.metrics = [self.tversky]
@@ -321,28 +321,19 @@ class unet(object):
                                                        monitor="val_loss",
                                                        save_best_only=True)
 
-        directoryName = \
-            "unet_block{}_inter{}_intra{}".format(self.blocktime,
-                                                  self.num_threads,
-                                                  self.num_inter_threads)
+        directoryName = "unet_3D"
 
         # Tensorboard callbacks
-        if (self.use_upsampling):
-            tensorboard_filename = \
-                os.path.join(self.output_path,
-                             "keras_tensorboard_upsampling/{}".format(
-                                 directoryName))
-        else:
-            tensorboard_filename = \
-                os.path.join(self.output_path,
-                             "keras_tensorboard/{}".format(
-                                 directoryName))
+        tensorboard_filename = \
+            os.path.join(self.output_path,
+                         "tensorboard/{}".format(
+                             directoryName))
 
         tensorboard_checkpoint = K.callbacks.TensorBoard(
             log_dir=tensorboard_filename,
             write_graph=True, write_images=True)
 
-        early_stopping = K.callbacks.EarlyStopping(patience=5,
+        early_stopping = K.callbacks.EarlyStopping(patience=10,
                                                    restore_best_weights=True)
 
         return model_filename, [model_checkpoint, early_stopping,

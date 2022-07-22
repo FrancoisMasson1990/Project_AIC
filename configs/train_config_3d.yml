@@ -6,7 +6,7 @@ use_upsampling: False #use upsampling instead of transposed convolution
 num_inter_threads: 1 #the number of intraop threads
 batch_size: 1 #the batch size for training
 seed: 42 #random number generation
-#crop_dim: [128, 128, 64, 1]
+#crop_dim: [64, 64, 64, 1]
 crop_dim: -1
 resize_dim: [128, 128, 64]
 #resize_dim: -1
