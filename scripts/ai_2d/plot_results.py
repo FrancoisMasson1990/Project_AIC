@@ -80,7 +80,7 @@ if __name__ == "__main__":
     testFiles = files[4]
     testLabels = files[5]
 
-    unet_model = model_2D.unet()
+    unet_model = model_2D.Unet()
     # model_filename = None
     if model_filename is not None:
         if model_version == 0:

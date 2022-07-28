@@ -30,7 +30,7 @@ from tensorflow import keras as K
 import aic.processing.metrics as mt
 
 
-class unet(object):
+class Unet(object):
     """2D U-Net model class."""
 
     def __init__(self,

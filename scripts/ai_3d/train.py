@@ -31,7 +31,7 @@ import datetime
 import yaml
 import os
 import aic.misc.files as fs
-from aic.model.architecture.model_3D import unet
+from aic.model.architecture.model_3D import Unet
 from aic.processing.dataloader import DatasetGenerator3D
 from aic.misc.setting_tf import requirements_3d as req3d
 
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     Step 2: Define the model
     """
 
-    unet_model = unet(channels_first=channels_first,
+    unet_model = Unet(channels_first=channels_first,
                       filters=filters,
                       use_upsampling=use_upsampling,
                       learning_rate=learning_rate,

@@ -82,7 +82,7 @@ if __name__ == "__main__":
     testFiles = files[4]
     testLabels = files[5]
 
-    unet_model = model_3D.unet()
+    unet_model = model_3D.Unet()
     # model_filename = None
     if model_filename is not None:
         model = unet_model.load_model(model_filename)

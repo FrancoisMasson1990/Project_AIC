@@ -314,7 +314,9 @@ def resize_input(input_,
     width_factor = 1 / width
     height_factor = 1 / height
     # Resize across z-axis
-    input_ = ndimage.zoom(input_,
-                          (width_factor, height_factor, depth_factor),
-                          order=1)
+    input_ = ndimage.interpolation.zoom(input_,
+                                        (width_factor,
+                                         height_factor,
+                                         depth_factor),
+                                        order=1)
     return input_

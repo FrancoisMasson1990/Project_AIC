@@ -32,7 +32,7 @@ import yaml
 import os
 import aic.misc.files as fs
 import aic.misc.utils as ut
-from aic.model.architecture.model_2D import unet
+from aic.model.architecture.model_2D import Unet
 from aic.processing.dataloader import DatasetGenerator2D
 from aic.misc.setting_tf import requirements_2d as req2d
 
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     Step 2: Define the model
     """
 
-    unet_model = unet(channels_first=channels_first,
+    unet_model = Unet(channels_first=channels_first,
                       fms=featuremaps,
                       output_path=output_path,
                       inference_filename=inference_filename,
