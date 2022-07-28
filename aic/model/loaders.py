@@ -30,12 +30,12 @@ def load_model(model_name,
         if model_name:
             if model_version == 0:
                 from aic.model.architecture import model_2D_old
-                unet_model = model_2D_old.unet()
+                unet_model = model_2D_old.Unet()
                 model = unet_model.load_model(model_name,
                                               False)
             elif model_version == 1:
                 from aic.model.architecture import model_2D
-                unet_model = model_2D.unet()
+                unet_model = model_2D.Unet()
                 model = unet_model.load_model(model_name)
             print("-" * 30)
             print("Model load successfully")
