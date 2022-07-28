@@ -164,8 +164,8 @@ def plot_results_3d(imgs,
         import tensorflow as tf
         prediction = np.expand_dims(imgs[:, :, :], 0)
         prediction = model.predict(prediction)
-        prediction[-1][prediction[-1] >= 0.5] = 1
-        prediction[-1][prediction[-1] < 0.5] = 0
+        # prediction[-1][prediction[-1] >= 0.5] = 1
+        # prediction[-1][prediction[-1] < 0.5] = 0
 
     for i in range(imgs.shape[2]):
         # Image
@@ -193,7 +193,7 @@ def plot_results_3d(imgs,
                 ax2_object = ax2.imshow(
                     prediction[0, :, :, i, 0], origin="lower", vmin=0, vmax=1)
             else:
-                ax2_object.set_data(prediction[0, :, :, 0])
+                ax2_object.set_data(prediction[0, :, :,  i, 0])
             ax2.set_title("Predictions\n(Dice {:.4f}, Soft Dice {:.4f})".
                           format(
                                 mt.dice_coef(

@@ -176,17 +176,21 @@ def preprocess_img(img):
 
 
 def preprocess_img_3d(img,
-                      resize_dim):
+                      resize_dim,
+                      min_=0,
+                      max_=1000):
     """Preprocess images.
 
     Preprocessing for the image
     z-score normalize
     """
-    img[img < 0] = 0
+    img[img < min_] = min_
     # Read Intensity normalization in medical images from
     # https://theaisummer.com/medical-image-processing/
     # Scale applied plays a crucial role in training
-    img[img > 1000] = 1000
+    img[img > max_] = max_
+    img = (img - min_) / (max_ - min_)
+    img = img.astype("float32")
     img = np.moveaxis(img, 0, -1)
     if resize_dim != -1:
         img = resize_input(img,
@@ -194,8 +198,6 @@ def preprocess_img_3d(img,
                            height=resize_dim[1],
                            depth=resize_dim[2])
     img = np.expand_dims(img, -1)
-    img = normalize_img(img)
-
     return img
 
 
