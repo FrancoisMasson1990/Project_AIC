@@ -103,18 +103,15 @@ def plot_results_2d(imgs,
             else:
                 ax2_object.set_data(prediction[0, :, :, 0])
 
-            ax2.set_title("Predictions\n(Dice {:.4f}, Soft Dice {:.4f})".
+            ax2.set_title("Predictions\n(Dice {:.4f}".
                           format(
-                              mt.dice_coef(
+                              mt.dice_coefficient(
                                   np.expand_dims(
                                       labels[i, :, :],
                                       (0, -1)).astype(np.float32),
-                                  prediction),
-                              mt.soft_dice_coef(
-                                  np.expand_dims(
-                                         labels[i, :, :],
-                                         (0, -1)).astype(np.float32),
-                                  prediction)))
+                                  prediction,
+                                  axis=(1, 2)),
+                              ))
             ax2.axis("off")
 
         png_filename = os.path.join(folder, "pred_{}_{}.png".format(name, i))
@@ -194,18 +191,14 @@ def plot_results_3d(imgs,
                     prediction[0, :, :, i, 0], origin="lower", vmin=0, vmax=1)
             else:
                 ax2_object.set_data(prediction[0, :, :,  i, 0])
-            ax2.set_title("Predictions\n(Dice {:.4f}, Soft Dice {:.4f})".
+            ax2.set_title("Predictions\n(Dice {:.4f}".
                           format(
-                                mt.dice_coef(
+                                mt.dice_coefficient(
                                     tf.cast(
                                         tf.expand_dims(labels, 0),
                                         dtype=np.float32),
-                                    prediction),
-                                mt.soft_dice_coef(
-                                    tf.cast(
-                                        tf.expand_dims(labels, 0),
-                                        dtype=np.float32),
-                                    prediction)
+                                    prediction,
+                                    axis=(1, 2, 3)),
                                 ))
             ax2.axis("off")
 
