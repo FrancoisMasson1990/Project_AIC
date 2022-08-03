@@ -19,3 +19,5 @@ plotly
 tqdm
 numpy
 PyYAML
+nibabel
+miscnn
