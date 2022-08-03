@@ -53,6 +53,11 @@ def get_dataset_root() -> Path:
     return get_valve_root() / "datasets_dcm"
 
 
+def get_label_2d_root() -> Path:
+    """Get label 2d folder."""
+    return get_valve_root() / "labels_2d_npy"
+
+
 def get_prediction_root() -> Path:
     """Get prediction folder."""
     return get_valve_root() / "predictions"
