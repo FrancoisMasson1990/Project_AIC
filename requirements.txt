@@ -20,4 +20,5 @@ tqdm
 numpy
 PyYAML
 nibabel
-miscnn
+batchgenerators
+SimpleITK

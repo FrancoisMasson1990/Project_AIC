@@ -10,6 +10,8 @@ This score is a score based on the extent of coronary artery calcification detec
 ```
 git clone https://github.com/FrancoisMasson1990/Project_AIC.git
 cd Project_AIC
+pip install -r requirements.txt
+pip install -r requirements.txt --no-deps
 pip install aic
 ```
 

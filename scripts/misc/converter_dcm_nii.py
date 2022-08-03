@@ -11,7 +11,6 @@ Note
 Main script to convert dcm file into a nibabel object.
 """
 
-import numpy as np
 import aic.misc.files as fs
 import aic.misc.utils as ut
 import aic.processing.operations as op

@@ -1,3 +1,4 @@
+# Ignored
 __pycache__/
 *.py[cod]
 *$py.class
@@ -41,3 +42,6 @@ dataset_3d.json
 res/credentials/
 sandbox/
 inference_examples
+
+# Not ignored
+!requirements-no-deps.txt
