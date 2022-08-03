@@ -134,6 +134,8 @@ def expand_list(data_path, format=None):
         root = os.path.join(data_path, sub_folder)
         sub_ = os.listdir(root)
         for i, sub in enumerate(sub_):
+            if os.path.isfile(os.path.join(root, sub)):
+                continue
             if format is not None:
                 data.append(glob.glob(os.path.join(root, sub) + format))
             else:
