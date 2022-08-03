@@ -34,6 +34,7 @@ MANIFEST
 *.mp4
 *.tflite
 *.db
+*.nii.gz
 *events.out*
 dataset_2d.json
 dataset_3d.json
