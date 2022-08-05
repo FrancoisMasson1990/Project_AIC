@@ -41,7 +41,7 @@ if __name__ == "__main__":
     """
     Load the config required for the model
     """
-    config = str(fs.get_configs_root() / 'train_config_2d.yml')
+    config = str(fs.get_configs_root() / "train_config_2d.yml")
     with open(config) as f:
         # The FullLoader parameter handles the conversion from YAML
         # scalar values to Python the dictionary format
@@ -58,13 +58,15 @@ if __name__ == "__main__":
     """
 
     print("-" * 30)
-    print("Loading the data from the Valve project directory" +
-          "to a TensorFlow data loader ...")
+    print(
+        "Loading the data from the Valve project directory"
+        + "to a TensorFlow data loader ..."
+    )
     print("-" * 30)
 
-    files = ut.get_file_list(data_path=data_path,
-                             json_filename=json_filename,
-                             split=1.0)
+    files = ut.get_file_list(
+        data_path=data_path, json_filename=json_filename, split=1.0
+    )
     imgs = files[0]
     labels = files[1]
 
@@ -86,8 +88,8 @@ if __name__ == "__main__":
                 index.append(z)
         index = np.array(index)
         ratio_label[label_filename] = index
-        ratio_min.append(index[0]/label.shape[0])
-        ratio_max.append(index[-1]/label.shape[0])
+        ratio_min.append(index[0] / label.shape[0])
+        ratio_max.append(index[-1] / label.shape[0])
 
     print(min(ratio_min))
     print(max(ratio_max))

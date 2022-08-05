@@ -20,15 +20,9 @@ from aic.processing import operations as op
 import matplotlib.pyplot as plt
 
 
-def plot_results_2d(imgs,
-                    labels,
-                    model,
-                    crop_dim,
-                    z_slice_min,
-                    z_slice_max,
-                    folder,
-                    name,
-                    model_version):
+def plot_results_2d(
+    imgs, labels, model, crop_dim, z_slice_min, z_slice_max, folder, name, model_version
+):
     """Plot the predicted masks for image."""
     # Image processing
     imgs = ut.load_scan(imgs)
@@ -37,8 +31,8 @@ def plot_results_2d(imgs,
     if crop_dim != -1:
         imgs = dp.crop_dim_2d(imgs, crop_dim=crop_dim)
 
-    min_ = int(z_slice_min*imgs.shape[0])
-    max_ = int(z_slice_max*imgs.shape[0])
+    min_ = int(z_slice_min * imgs.shape[0])
+    max_ = int(z_slice_max * imgs.shape[0])
     index_z_crop = np.arange(min_, max_)
     imgs = imgs[index_z_crop]
 
@@ -78,8 +72,7 @@ def plot_results_2d(imgs,
 
         # Image
         if ax0_object is None:
-            ax0_object = ax0.imshow(
-                imgs[i, :, :, 0], cmap="bone", origin="lower")
+            ax0_object = ax0.imshow(imgs[i, :, :, 0], cmap="bone", origin="lower")
         else:
             ax0_object.set_data(imgs[i, :, :, 0])
 
@@ -88,8 +81,7 @@ def plot_results_2d(imgs,
 
         # Label
         if ax1_object is None:
-            ax1_object = ax1.imshow(
-                labels[i, :, :], origin="lower", vmin=0, vmax=1)
+            ax1_object = ax1.imshow(labels[i, :, :], origin="lower", vmin=0, vmax=1)
         else:
             ax1_object.set_data(labels[i, :, :])
 
@@ -99,50 +91,47 @@ def plot_results_2d(imgs,
         if model is not None:
             if ax2_object is None:
                 ax2_object = ax2.imshow(
-                    prediction[0, :, :, 0], origin="lower", vmin=0, vmax=1)
+                    prediction[0, :, :, 0], origin="lower", vmin=0, vmax=1
+                )
             else:
                 ax2_object.set_data(prediction[0, :, :, 0])
 
-            ax2.set_title("Predictions\n(Dice {:.4f}".
-                          format(
-                              mt.dice_coefficient(
-                                  np.expand_dims(
-                                      labels[i, :, :],
-                                      (0, -1)).astype(np.float32),
-                                  prediction,
-                                  axis=(1, 2)),
-                              ))
+            ax2.set_title(
+                "Predictions\n(Dice {:.4f}".format(
+                    mt.dice_coefficient(
+                        np.expand_dims(labels[i, :, :], (0, -1)).astype(np.float32),
+                        prediction,
+                        axis=(1, 2),
+                    ),
+                )
+            )
             ax2.axis("off")
 
         png_filename = os.path.join(folder, "pred_{}_{}.png".format(name, i))
         plt.savefig(png_filename, bbox_inches="tight", pad_inches=0)
 
 
-def plot_results_3d(imgs,
-                    labels,
-                    model,
-                    crop_dim,
-                    resize_dim,
-                    folder,
-                    name,
-                    number_output_classes=1,
-                    randomize=False):
+def plot_results_3d(
+    imgs,
+    labels,
+    model,
+    crop_dim,
+    resize_dim,
+    folder,
+    name,
+    number_output_classes=1,
+    randomize=False,
+):
     """Plot the predicted masks for image."""
     # Image processing
     imgs = ut.load_scan(imgs)
     imgs = op.get_pixels_hu(imgs)
-    imgs = dp.preprocess_img_3d(imgs,
-                                resize_dim)
+    imgs = dp.preprocess_img_3d(imgs, resize_dim)
     labels = ut.load_mask(labels)
-    labels = dp.preprocess_label_3d(labels,
-                                    resize_dim,
-                                    number_output_classes)
+    labels = dp.preprocess_label_3d(labels, resize_dim, number_output_classes)
     # Crop
     if crop_dim != -1:
-        imgs, labels = dp.crop_dim_3d(imgs,
-                                      labels,
-                                      crop_dim,
-                                      randomize)
+        imgs, labels = dp.crop_dim_3d(imgs, labels, crop_dim, randomize)
 
     # Init Figure
     if model is None:
@@ -159,6 +148,7 @@ def plot_results_3d(imgs,
     # Prediction
     if model is not None:
         import tensorflow as tf
+
         prediction = np.expand_dims(imgs[:, :, :], 0)
         prediction = model.predict(prediction)
         prediction[-1][prediction[-1] >= 0.5] = 1
@@ -167,8 +157,7 @@ def plot_results_3d(imgs,
     for i in range(imgs.shape[2]):
         # Image
         if ax0_object is None:
-            ax0_object = ax0.imshow(
-                imgs[:, :, i, 0], cmap="bone", origin="lower")
+            ax0_object = ax0.imshow(imgs[:, :, i, 0], cmap="bone", origin="lower")
         else:
             ax0_object.set_data(imgs[:, :, i, 0])
 
@@ -177,8 +166,7 @@ def plot_results_3d(imgs,
 
         # Label
         if ax1_object is None:
-            ax1_object = ax1.imshow(
-                labels[:, :, i], origin="lower", vmin=0, vmax=1)
+            ax1_object = ax1.imshow(labels[:, :, i], origin="lower", vmin=0, vmax=1)
         else:
             ax1_object.set_data(labels[:, :, i])
 
@@ -188,18 +176,19 @@ def plot_results_3d(imgs,
         if model is not None:
             if ax2_object is None:
                 ax2_object = ax2.imshow(
-                    prediction[0, :, :, i, 0], origin="lower", vmin=0, vmax=1)
+                    prediction[0, :, :, i, 0], origin="lower", vmin=0, vmax=1
+                )
             else:
-                ax2_object.set_data(prediction[0, :, :,  i, 0])
-            ax2.set_title("Predictions\n(Dice {:.4f}".
-                          format(
-                                mt.dice_coefficient(
-                                    tf.cast(
-                                        tf.expand_dims(labels, 0),
-                                        dtype=np.float32),
-                                    prediction,
-                                    axis=(1, 2, 3)),
-                                ))
+                ax2_object.set_data(prediction[0, :, :, i, 0])
+            ax2.set_title(
+                "Predictions\n(Dice {:.4f}".format(
+                    mt.dice_coefficient(
+                        tf.cast(tf.expand_dims(labels, 0), dtype=np.float32),
+                        prediction,
+                        axis=(1, 2, 3),
+                    ),
+                )
+            )
             ax2.axis("off")
 
         png_filename = os.path.join(folder, "pred_{}_{}.png".format(name, i))

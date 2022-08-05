@@ -49,7 +49,8 @@ def get_file_list(data_path, json_filename, seed=816, split=0.7):
     label_files = expand_list(label_folder)
 
     assert len(image_files) == len(
-        label_files), "Files and labels don't have the same length"
+        label_files
+    ), "Files and labels don't have the same length"
 
     # Set the random seed so that always get same random mix
     np.random.seed(seed)
@@ -59,12 +60,12 @@ def get_file_list(data_path, json_filename, seed=816, split=0.7):
     np.random.shuffle(idxList)
 
     # index for the end of the training files
-    trainIdx = int(np.floor(numFiles*split))
+    trainIdx = int(np.floor(numFiles * split))
     trainList = idxList[:trainIdx]
 
     otherList = idxList[trainIdx:]
     numOther = len(otherList)
-    otherIdx = numOther//2  # index for the end of the testing files
+    otherIdx = numOther // 2  # index for the end of the testing files
     validateList = otherList[:otherIdx]
     testList = otherList[otherIdx:]
 
@@ -96,8 +97,14 @@ def get_file_list(data_path, json_filename, seed=816, split=0.7):
     print("Number of validation files = {}".format(len(validateList)))
     print("Number of testing files    = {}".format(len(testList)))
 
-    return (trainFiles, trainLabels, validateFiles,
-            validateLabels, testFiles, testLabels)
+    return (
+        trainFiles,
+        trainLabels,
+        validateFiles,
+        validateLabels,
+        testFiles,
+        testLabels,
+    )
 
 
 def slice_file_list(data_path, json_filename):
@@ -107,8 +114,7 @@ def slice_file_list(data_path, json_filename):
     """
     experiment_data = json_export(json_filename)
     dataset_folder = data_path + experiment_data["dataset_folder"]
-    num_slice_max = expand_list(
-        dataset_folder, format='/*.dcm')
+    num_slice_max = expand_list(dataset_folder, format="/*.dcm")
     num_slice_max = max(len(x) for x in num_slice_max)
 
     return num_slice_max
@@ -120,8 +126,10 @@ def json_export(json_filename):
         with open(json_filename, "r") as fp:
             experiment_data = json.load(fp)
     except IOError as e:
-        raise Exception("File {} doesn't exist. It should be part of the "
-                        "Magna valve directory".format(json_filename))
+        raise Exception(
+            "File {} doesn't exist. It should be part of the "
+            "Magna valve directory".format(json_filename)
+        )
 
     return experiment_data
 
@@ -149,27 +157,25 @@ def load_scan(path):
     files = os.listdir(path)
     file_dcm = []
     for f in files:
-        if f.endswith('.dcm'):
+        if f.endswith(".dcm"):
             file_dcm.append(f)
     return get_slices(file_dcm, path)
 
 
-def get_slices(file_dcm,
-               path=None):
+def get_slices(file_dcm, path=None):
     """Get Slice metadata."""
     if path:
-        slices = [pydicom.read_file(path + '/' + s) for s in file_dcm]
+        slices = [pydicom.read_file(path + "/" + s) for s in file_dcm]
     else:
         slices = [pydicom.read_file(s) for s in file_dcm]
     slices.sort(key=lambda x: int(x.InstanceNumber))
 
     try:
         slice_thickness = np.abs(
-            slices[0].ImagePositionPatient[2] -
-            slices[1].ImagePositionPatient[2])
+            slices[0].ImagePositionPatient[2] - slices[1].ImagePositionPatient[2]
+        )
     except Exception as e:
-        slice_thickness = np.abs(
-            slices[0].SliceLocation - slices[1].SliceLocation)
+        slice_thickness = np.abs(slices[0].SliceLocation - slices[1].SliceLocation)
 
     for s in slices:
         s.SliceThickness = slice_thickness
@@ -178,14 +184,13 @@ def get_slices(file_dcm,
 
 def load_mask(path):
     """Load mask."""
-    mask = glob.glob(path + '/*.npy')
+    mask = glob.glob(path + "/*.npy")
     mask = natsorted(mask)
 
     return mask
 
 
-def save_dicom(files_dcm,
-               path="./cache/tmp"):
+def save_dicom(files_dcm, path="./cache/tmp"):
     """Save to pydicom object to dcm format."""
     if not isinstance(files_dcm, list):
         files_dcm = [files_dcm]

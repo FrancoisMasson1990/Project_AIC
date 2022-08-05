@@ -30,20 +30,15 @@ from tqdm import tqdm
 from copy import deepcopy
 
 
-def get_inference(data,
-                  file_types,
-                  config="./model_info.yml"
-                  ):
+def get_inference(data, file_types, config="./model_info.yml"):
     """Get inference results."""
     slices = []
     for f, d in zip(file_types, data):
-        content_type, content_string = d.split(',')
-        if f.endswith('.txt'):
-            patient_info = \
-                content_string.encode("utf8")
-            patient_info = \
-                base64.decodebytes(patient_info).decode('UTF-8')
-        elif f.endswith('.dcm'):
+        content_type, content_string = d.split(",")
+        if f.endswith(".txt"):
+            patient_info = content_string.encode("utf8")
+            patient_info = base64.decodebytes(patient_info).decode("UTF-8")
+        elif f.endswith(".dcm"):
             decoded = base64.b64decode(content_string)
             slices.append(io.BytesIO(decoded))
 
@@ -64,11 +59,10 @@ def get_inference(data,
         data = deepcopy(slices)
         data = ut.get_slices(data)
         image = op.get_pixels_hu(data)
-        ut.save_dicom(slices,
-                      path=path)
+        ut.save_dicom(slices, path=path)
         img = vedo_load(path)
         spacing = img.imagedata().GetSpacing()
-        area = spacing[0]*spacing[1]
+        area = spacing[0] * spacing[1]
         dimensions = img.imagedata().GetDimensions()
         # Get a vtk volume object
         predictions_agatston = Volume(img.imagedata())
@@ -78,103 +72,97 @@ def get_inference(data,
         all_array = points.GetPoints()
         all_numpy_nodes = vtk_to_numpy(all_array.GetData())
         # x y z center from isovolume
-        center = \
-            np.array(
-                [(np.min(all_numpy_nodes[:, 0]) +
-                    np.max(all_numpy_nodes[:, 0]))/2,
-                 (np.min(all_numpy_nodes[:, 1]) +
-                     np.max(all_numpy_nodes[:, 1]))/2,
-                 (np.min(all_numpy_nodes[:, 2]) +
-                     np.max(all_numpy_nodes[:, 2]))/2])
+        center = np.array(
+            [
+                (np.min(all_numpy_nodes[:, 0]) + np.max(all_numpy_nodes[:, 0])) / 2,
+                (np.min(all_numpy_nodes[:, 1]) + np.max(all_numpy_nodes[:, 1])) / 2,
+                (np.min(all_numpy_nodes[:, 2]) + np.max(all_numpy_nodes[:, 2])) / 2,
+            ]
+        )
         # Get predictions
         std_err_backup = sys.stderr
-        file_prog = open('./cache/progress.txt', 'w')
+        file_prog = open("./cache/progress.txt", "w")
         sys.stderr = file_prog
-        predictions, crop_values = \
-            get_predictions(model,
-                            model_version,
-                            data=data,
-                            crop_dim=crop_dim,
-                            z_slice_max=z_slice_max,
-                            z_slice_min=z_slice_min,
-                            spacing=spacing,
-                            dimensions=dimensions,
-                            lite=True)
+        predictions, crop_values = get_predictions(
+            model,
+            model_version,
+            data=data,
+            crop_dim=crop_dim,
+            z_slice_max=z_slice_max,
+            z_slice_min=z_slice_min,
+            spacing=spacing,
+            dimensions=dimensions,
+            lite=True,
+        )
         file_prog.close()
         sys.stderr = std_err_backup
         vertices, _ = op.make_mesh(predictions, -1)
         # Clustering
-        vertices_predictions = \
-            op.clustering(vertices,
-                          model_version,
-                          center,
-                          all_numpy_nodes,
-                          ratio=0.4,
-                          threshold=4000,
-                          max_=None,
-                          dimensions=dimensions,
-                          spacings=spacing,
-                          crop_values=crop_values)
+        vertices_predictions = op.clustering(
+            vertices,
+            model_version,
+            center,
+            all_numpy_nodes,
+            ratio=0.4,
+            threshold=4000,
+            max_=None,
+            dimensions=dimensions,
+            spacings=spacing,
+            crop_values=crop_values,
+        )
         # Get encapsulated Volume
-        predictions_agatston_points = \
-            op.boxe_3d(predictions_agatston,
-                       vertices_predictions)
+        predictions_agatston_points = op.boxe_3d(
+            predictions_agatston, vertices_predictions
+        )
         # Get the all points in isosurface Mesh/Volume
-        predictions_agatston_points = \
-            op.to_points(predictions_agatston)
-        predictions_final_points_threshold = \
-            predictions_agatston_points[
-                predictions_agatston_points[:, 3] >
-                threshold]
+        predictions_agatston_points = op.to_points(predictions_agatston)
+        predictions_final_points_threshold = predictions_agatston_points[
+            predictions_agatston_points[:, 3] > threshold
+        ]
         # Convex-Hull estimation
-        hull = \
-            ft.convex_hull(predictions_final_points_threshold[:, :3])
-        mask = \
-            op.isInHull(predictions_agatston_points[:, :3],
-                        hull)
-        predictions_agatston_points = \
-            predictions_agatston_points[mask]
-        w_fit, C_fit, r_fit, fit_err = \
-            ft.fitting_cylinder(
-                predictions_final_points_threshold[:, :3],
-                guess_angles=None)
-        mask_agatston, valve, candidate = \
-            op.get_candidates(predictions_agatston_points,
-                              w_fit=w_fit,
-                              r_fit=r_fit,
-                              threshold=threshold,
-                              spacing=spacing,
-                              dimensions=dimensions)
-        score = \
-            sc.agatston_score(
-                image,
-                mask_agatston,
-                area,
-                threshold_min=130,
-                threshold_max=None)
-        results = sc.save_prediction(image,
-                                     mask_agatston,
-                                     path='./cache',
-                                     score=score,
-                                     area=area,
-                                     threshold_min=130,
-                                     threshold_max=None,
-                                     valve=valve,
-                                     candidate=candidate,
-                                     online=True)
+        hull = ft.convex_hull(predictions_final_points_threshold[:, :3])
+        mask = op.isInHull(predictions_agatston_points[:, :3], hull)
+        predictions_agatston_points = predictions_agatston_points[mask]
+        w_fit, C_fit, r_fit, fit_err = ft.fitting_cylinder(
+            predictions_final_points_threshold[:, :3], guess_angles=None
+        )
+        mask_agatston, valve, candidate = op.get_candidates(
+            predictions_agatston_points,
+            w_fit=w_fit,
+            r_fit=r_fit,
+            threshold=threshold,
+            spacing=spacing,
+            dimensions=dimensions,
+        )
+        score = sc.agatston_score(
+            image, mask_agatston, area, threshold_min=130, threshold_max=None
+        )
+        results = sc.save_prediction(
+            image,
+            mask_agatston,
+            path="./cache",
+            score=score,
+            area=area,
+            threshold_min=130,
+            threshold_max=None,
+            valve=valve,
+            candidate=candidate,
+            online=True,
+        )
         return results
 
 
-def get_predictions(model,
-                    model_version=1,
-                    data=None,
-                    crop_dim=-1,
-                    z_slice_max=None,
-                    z_slice_min=None,
-                    spacing=None,
-                    dimensions=None,
-                    lite=False,
-                    ):
+def get_predictions(
+    model,
+    model_version=1,
+    data=None,
+    crop_dim=-1,
+    z_slice_max=None,
+    z_slice_min=None,
+    spacing=None,
+    dimensions=None,
+    lite=False,
+):
     """Get model predictions."""
     if isinstance(data, str):
         idx = os.path.join(data)
@@ -192,12 +180,10 @@ def get_predictions(model,
         # Need for the mesh reconstruct
         padding = np.zeros(img.shape) - 2
         if crop_dim != -1:
-            img = dp.crop_dim_2d(img,
-                                 crop_dim=crop_dim)
-        if (z_slice_min is not None) \
-                and (z_slice_max is not None):
-            min_ = int(z_slice_min*img.shape[0])
-            max_ = int(z_slice_max*img.shape[0])
+            img = dp.crop_dim_2d(img, crop_dim=crop_dim)
+        if (z_slice_min is not None) and (z_slice_max is not None):
+            min_ = int(z_slice_min * img.shape[0])
+            max_ = int(z_slice_max * img.shape[0])
             index_z_crop = np.arange(min_, max_)
             img = img[index_z_crop]
         img = dp.preprocess_img(img)
@@ -213,8 +199,7 @@ def get_predictions(model,
         if not lite:
             prediction = model.predict(pred)
         else:
-            prediction = tfl.get_interpreter(model,
-                                             input=pred)
+            prediction = tfl.get_interpreter(model, input=pred)
         if model_version == 0:
             prediction = np.argmax(prediction.squeeze(), axis=-1)
             prediction = np.rot90(prediction, axes=(1, 0))
@@ -243,24 +228,21 @@ def get_predictions(model,
         else:
             xc = 0
             yc = 0
-        if (z_slice_min is not None) \
-                and (z_slice_max is not None):
-            padding[index_z_crop,
-                    xc:xc+img.shape[1],
-                    yc:yc+img.shape[2]] = predictions
+        if (z_slice_min is not None) and (z_slice_max is not None):
+            padding[
+                index_z_crop, xc : xc + img.shape[1], yc : yc + img.shape[2]
+            ] = predictions
         else:
-            padding[:,
-                    xc:xc+img.shape[1],
-                    yc:yc+img.shape[2]] = predictions
+            padding[:, xc : xc + img.shape[1], yc : yc + img.shape[2]] = predictions
         predictions = padding
-        crop_values = [xc*spacing[0],
-                       xc+img.shape[1]*spacing[0],
-                       yc*spacing[1],
-                       yc+img.shape[2]*spacing[1]]
+        crop_values = [
+            xc * spacing[0],
+            xc + img.shape[1] * spacing[0],
+            yc * spacing[1],
+            yc + img.shape[2] * spacing[1],
+        ]
 
-    predictions, _ = op.resample(predictions,
-                                 [spacing[0],
-                                  spacing[1]],
-                                 spacing[2],
-                                 [1, 1, 1])
+    predictions, _ = op.resample(
+        predictions, [spacing[0], spacing[1]], spacing[2], [1, 1, 1]
+    )
     return predictions, crop_values

@@ -18,12 +18,9 @@ import os
 from scipy.ndimage import measurements, morphology
 
 
-def agatston_score_slice(image,
-                         mask_agatston,
-                         index,
-                         area,
-                         threshold_min=None,
-                         threshold_max=None):
+def agatston_score_slice(
+    image, mask_agatston, index, area, threshold_min=None, threshold_max=None
+):
     """Get Agatston score by slide."""
     prediction = image[index].copy()
     prediction[mask_agatston[index] == 0] = 0
@@ -36,11 +33,9 @@ def agatston_score_slice(image,
     for j, number_of_pix in enumerate(area_):
         if j != 0:
             # density higher than 1mm2
-            if number_of_pix*area <= 1:
+            if number_of_pix * area <= 1:
                 prediction[lw == j] = 0
-    prediction = \
-        np.ma.masked_where(prediction == 0,
-                           prediction)
+    prediction = np.ma.masked_where(prediction == 0, prediction)
     return prediction
 
 
@@ -54,11 +49,7 @@ def area_measurements(slice_):
     return area_, lw
 
 
-def agatston_score(image,
-                   mask_agatston,
-                   area,
-                   threshold_min=None,
-                   threshold_max=None):
+def agatston_score(image, mask_agatston, area, threshold_min=None, threshold_max=None):
     """Get Agatston score."""
     score = 0.0
     for i in range(len(image)):
@@ -82,20 +73,22 @@ def agatston_score(image,
         prediction[prediction >= 300] = 3
         prediction[prediction >= 200] = 2
         prediction[prediction >= 130] = 1
-        score += area*np.sum(prediction)
+        score += area * np.sum(prediction)
     return score
 
 
-def save_prediction(image,
-                    mask_agatston,
-                    path,
-                    score,
-                    area,
-                    threshold_min,
-                    threshold_max,
-                    valve,
-                    candidate,
-                    online=False):
+def save_prediction(
+    image,
+    mask_agatston,
+    path,
+    score,
+    area,
+    threshold_min,
+    threshold_max,
+    valve,
+    candidate,
+    online=False,
+):
     """Save prediction in dictionnary."""
     save_predict = {}
     save_predict["score"] = score
@@ -107,16 +100,11 @@ def save_prediction(image,
     save_predict["valve"] = valve
     save_predict["candidate"] = candidate
     if not online:
-        save_predict["data_path"] =\
-            "/".join(
-                [path.split("/")[-2],
-                 path.split("/")[-1]])
-        folder = \
-            path.replace("datasets_dcm",
-                         "predictions")
+        save_predict["data_path"] = "/".join([path.split("/")[-2], path.split("/")[-1]])
+        folder = path.replace("datasets_dcm", "predictions")
     else:
         folder = path
     os.makedirs(folder, exist_ok=True)
-    with bz2.BZ2File(folder + "/prediction.pbz2", 'wb') as f:
+    with bz2.BZ2File(folder + "/prediction.pbz2", "wb") as f:
         pickle.dump(save_predict, f)
     return save_predict

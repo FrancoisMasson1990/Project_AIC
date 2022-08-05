@@ -43,7 +43,7 @@ if __name__ == "__main__":
     """
     Load the config required for the model
     """
-    config = str(fs.get_configs_root() / 'train_config_3d.yml')
+    config = str(fs.get_configs_root() / "train_config_3d.yml")
     with open(config) as f:
         # The FullLoader parameter handles the conversion from YAML
         # scalar values to Python the dictionary format
@@ -62,9 +62,9 @@ if __name__ == "__main__":
     output_path = config.get("output_path", None)
     inference_filename = config.get("inference_filename", None)
     if inference_filename:
-        inference_filename += \
-            datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S') + \
-            '.hdf5'
+        inference_filename += (
+            datetime.datetime.today().strftime("%Y_%m_%d_%H_%M_%S") + ".hdf5"
+        )
     use_upsampling = config.get("use_upsampling", None)
     print_model = config.get("print_model", None)
     z_slice_min = config.get("z_slice_min", None)
@@ -82,18 +82,21 @@ if __name__ == "__main__":
     Step 1: Define a data loader
     """
     print("-" * 30)
-    print("Loading the data from the Valve project directory" +
-          "to a TensorFlow data loader ...")
+    print(
+        "Loading the data from the Valve project directory"
+        + "to a TensorFlow data loader ..."
+    )
     print("-" * 30)
 
-    data = DatasetGenerator3D(data_path=data_path,
-                              json_filename=json_filename,
-                              batch_size=batch_size,
-                              crop_dim=crop_dim,
-                              resize_dim=resize_dim,
-                              number_output_classes=1,
-                              random_seed=816
-                              )
+    data = DatasetGenerator3D(
+        data_path=data_path,
+        json_filename=json_filename,
+        batch_size=batch_size,
+        crop_dim=crop_dim,
+        resize_dim=resize_dim,
+        number_output_classes=1,
+        random_seed=816,
+    )
 
     print("-" * 30)
     print("Creating and compiling model ...")
@@ -103,21 +106,22 @@ if __name__ == "__main__":
     Step 2: Define the model
     """
 
-    unet_model = Unet(channels_first=channels_first,
-                      filters=filters,
-                      use_upsampling=use_upsampling,
-                      learning_rate=learning_rate,
-                      weight_dice_loss=weight_dice_loss,
-                      output_path=output_path,
-                      inference_filename=inference_filename,
-                      blocktime=blocktime,
-                      num_threads=num_threads,
-                      num_inter_threads=num_inter_threads,
-                      print_model=print_model)
+    unet_model = Unet(
+        channels_first=channels_first,
+        filters=filters,
+        use_upsampling=use_upsampling,
+        learning_rate=learning_rate,
+        weight_dice_loss=weight_dice_loss,
+        output_path=output_path,
+        inference_filename=inference_filename,
+        blocktime=blocktime,
+        num_threads=num_threads,
+        num_inter_threads=num_inter_threads,
+        print_model=print_model,
+    )
 
     imgs_shape, label_shape = data.get_input_shape()
-    model = unet_model.create_model(imgs_shape=imgs_shape,
-                                    msks_shape=label_shape)
+    model = unet_model.create_model(imgs_shape=imgs_shape, msks_shape=label_shape)
     model_filename, model_callbacks = unet_model.get_callbacks()
 
     """
@@ -128,12 +132,14 @@ if __name__ == "__main__":
     print("-" * 30)
 
     steps_per_epoch = data.num_files // batch_size
-    model.fit(data.get_train(),
-              epochs=epochs,
-              steps_per_epoch=steps_per_epoch,
-              validation_data=data.get_validate(),
-              verbose=1,
-              callbacks=model_callbacks)
+    model.fit(
+        data.get_train(),
+        epochs=epochs,
+        steps_per_epoch=steps_per_epoch,
+        validation_data=data.get_validate(),
+        verbose=1,
+        callbacks=model_callbacks,
+    )
 
     """
     Step 4: Evaluate the best model
@@ -144,6 +150,9 @@ if __name__ == "__main__":
 
     unet_model.evaluate_model(model_filename, data.get_test())
 
-    print("Total time elapsed for program = {} seconds".format(
-          datetime.datetime.now() - START_TIME))
+    print(
+        "Total time elapsed for program = {} seconds".format(
+            datetime.datetime.now() - START_TIME
+        )
+    )
     print("Stopped script on {}".format(datetime.datetime.now()))

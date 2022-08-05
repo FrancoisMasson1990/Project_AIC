@@ -15,14 +15,11 @@ from cylinder_fitting import fit
 from scipy.spatial import ConvexHull as cvxh
 
 
-def fitting_cylinder(points,
-                     guess_angles=None):
+def fitting_cylinder(points, guess_angles=None):
     """Fit a cylinder between 3D points."""
     if points.shape[1] == 4:
         points = points[:, :3]
-    w_fit, C_fit, r_fit, fit_err = \
-        fit(points,
-            guess_angles=guess_angles)
+    w_fit, C_fit, r_fit, fit_err = fit(points, guess_angles=guess_angles)
     return w_fit, C_fit, r_fit, fit_err
 
 

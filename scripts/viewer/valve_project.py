@@ -20,41 +20,35 @@ from aic.misc.setting_tf import requirements_2d as req2d
 import aic.model.loaders as ld
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Set TensorFlow requirements
     req2d()
 
-    config = fs.get_configs_root() / 'viewer_config.yml'
+    config = fs.get_configs_root() / "viewer_config.yml"
     config = ld.load_config(str(config))
 
     data_path = config.get("data_path", fs.get_valve_root())
     labels_2D = config.get("labels_2D", None)
     config.pop("data_path", None)
     config.pop("labels_2D", None)
-    surface_label_path = os.path.join(data_path,
-                                      "labels_2d_npy")
-    volume_label_path = os.path.join(data_path,
-                                     "labels_3d_npy")
-    data_path = os.path.join(data_path,
-                             "datasets_dcm")
+    surface_label_path = os.path.join(data_path, "labels_2d_npy")
+    volume_label_path = os.path.join(data_path, "labels_3d_npy")
+    data_path = os.path.join(data_path, "datasets_dcm")
     sub_folders = os.listdir(data_path)
     data = []
     for sub_folder in sub_folders:
-        root = os.path.join(data_path,
-                            sub_folder)
+        root = os.path.join(data_path, sub_folder)
         sub_ = os.listdir(root)
         for sub in sub_:
-            data.append(os.path.join(root,
-                                     sub))
+            data.append(os.path.join(root, sub))
     if labels_2D:
-        v2d.Viewer2D(data_path=data,
-                     folder_mask=surface_label_path)
+        v2d.Viewer2D(data_path=data, folder_mask=surface_label_path)
     else:
-        viewer = \
-            v3d.Viewer3D(data_path=data,
-                         mode=4,
-                         label=surface_label_path,
-                         npy=volume_label_path,
-                         **config,
-                         )
+        viewer = v3d.Viewer3D(
+            data_path=data,
+            mode=4,
+            label=surface_label_path,
+            npy=volume_label_path,
+            **config,
+        )
         viewer.show()

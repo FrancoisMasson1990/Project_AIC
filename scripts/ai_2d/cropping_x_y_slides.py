@@ -41,7 +41,7 @@ if __name__ == "__main__":
     """
     Load the config required for the model
     """
-    config = str(fs.get_configs_root() / 'train_config_2d.yml')
+    config = str(fs.get_configs_root() / "train_config_2d.yml")
     with open(config) as f:
         # The FullLoader parameter handles the conversion from YAML
         # scalar values to Python the dictionary format
@@ -58,12 +58,13 @@ if __name__ == "__main__":
     """
 
     print("-" * 30)
-    print("Loading the data from the Valve project directory" +
-          "to a TensorFlow data loader ...")
+    print(
+        "Loading the data from the Valve project directory"
+        + "to a TensorFlow data loader ..."
+    )
     print("-" * 30)
 
-    files = ut.get_file_list(data_path=data_path,
-                             json_filename=json_filename)
+    files = ut.get_file_list(data_path=data_path, json_filename=json_filename)
     imgs = files[0]
     labels = files[1]
 

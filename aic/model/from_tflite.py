@@ -14,15 +14,14 @@ Perform TFlite opertation such inference.
 import numpy as np
 
 
-def get_interpreter(interpreter,
-                    input):
+def get_interpreter(interpreter, input):
     """Load and run a model with tflite."""
     # https://www.tensorflow.org/lite/guide/inference
     interpreter.allocate_tensors()
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
-    input_data = np.array(input, dtype='float32')
-    interpreter.set_tensor(input_details[0]['index'], input_data)
+    input_data = np.array(input, dtype="float32")
+    interpreter.set_tensor(input_details[0]["index"], input_data)
     interpreter.invoke()
-    output_data = interpreter.get_tensor(output_details[0]['index'])
+    output_data = interpreter.get_tensor(output_details[0]["index"])
     return output_data

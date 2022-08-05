@@ -44,7 +44,7 @@ if __name__ == "__main__":
     """
     Load the config required for the model
     """
-    config = str(fs.get_configs_root() / 'train_config_2d.yml')
+    config = str(fs.get_configs_root() / "train_config_2d.yml")
     with open(config) as f:
         # The FullLoader parameter handles the conversion from YAML
         # scalar values to Python the dictionary format
@@ -58,9 +58,9 @@ if __name__ == "__main__":
     output_path = config.get("output_path", None)
     inference_filename = config.get("inference_filename", None)
     if inference_filename:
-        inference_filename += \
-            datetime.datetime.today().strftime('%Y_%m_%d_%H_%M_%S') + \
-            '.hdf5'
+        inference_filename += (
+            datetime.datetime.today().strftime("%Y_%m_%d_%H_%M_%S") + ".hdf5"
+        )
     use_dropout = config.get("use_dropout", None)
     use_upsampling = config.get("use_upsampling", None)
     learning_rate = config.get("learning_rate", None)
@@ -81,12 +81,13 @@ if __name__ == "__main__":
     Step 1: Define a data loader
     """
     print("-" * 30)
-    print("Loading the data from the Valve project directory" +
-          "to a TensorFlow data loader ...")
+    print(
+        "Loading the data from the Valve project directory"
+        + "to a TensorFlow data loader ..."
+    )
     print("-" * 30)
 
-    files = ut.get_file_list(data_path=data_path,
-                             json_filename=json_filename)
+    files = ut.get_file_list(data_path=data_path, json_filename=json_filename)
     trainFiles = files[0]
     trainLabels = files[1]
     validateFiles = files[2]
@@ -97,34 +98,41 @@ if __name__ == "__main__":
     # This is the maximum value one of the files haves.
     # Required because model built with assumption all file same z slice.
     # Imbalanced True --> reduce number of only 0 layers
-    num_slices_per_scan = ut.slice_file_list(data_path=data_path,
-                                             json_filename=json_filename)
-    ds_train = DatasetGenerator2D(trainFiles,
-                                  trainLabels,
-                                  num_slices_per_scan,
-                                  batch_size=batch_size,
-                                  crop_dim=[crop_dim, crop_dim],
-                                  augment=True,
-                                  imbalanced=True,
-                                  z_slice_min=-1,
-                                  z_slice_max=-1)
-    ds_validation = DatasetGenerator2D(validateFiles,
-                                       validateLabels,
-                                       num_slices_per_scan,
-                                       batch_size=batch_size,
-                                       crop_dim=[crop_dim, crop_dim],
-                                       augment=False,
-                                       imbalanced=False,
-                                       z_slice_min=z_slice_min,
-                                       z_slice_max=z_slice_max)
-    ds_test = DatasetGenerator2D(testFiles,
-                                 testLabels,
-                                 num_slices_per_scan,
-                                 batch_size=batch_size,
-                                 crop_dim=[crop_dim, crop_dim],
-                                 augment=False,
-                                 z_slice_min=z_slice_min,
-                                 z_slice_max=z_slice_max)
+    num_slices_per_scan = ut.slice_file_list(
+        data_path=data_path, json_filename=json_filename
+    )
+    ds_train = DatasetGenerator2D(
+        trainFiles,
+        trainLabels,
+        num_slices_per_scan,
+        batch_size=batch_size,
+        crop_dim=[crop_dim, crop_dim],
+        augment=True,
+        imbalanced=True,
+        z_slice_min=-1,
+        z_slice_max=-1,
+    )
+    ds_validation = DatasetGenerator2D(
+        validateFiles,
+        validateLabels,
+        num_slices_per_scan,
+        batch_size=batch_size,
+        crop_dim=[crop_dim, crop_dim],
+        augment=False,
+        imbalanced=False,
+        z_slice_min=z_slice_min,
+        z_slice_max=z_slice_max,
+    )
+    ds_test = DatasetGenerator2D(
+        testFiles,
+        testLabels,
+        num_slices_per_scan,
+        batch_size=batch_size,
+        crop_dim=[crop_dim, crop_dim],
+        augment=False,
+        z_slice_min=z_slice_min,
+        z_slice_max=z_slice_max,
+    )
 
     print("-" * 30)
     print("Creating and compiling model ...")
@@ -134,21 +142,24 @@ if __name__ == "__main__":
     Step 2: Define the model
     """
 
-    unet_model = Unet(channels_first=channels_first,
-                      fms=featuremaps,
-                      output_path=output_path,
-                      inference_filename=inference_filename,
-                      learning_rate=learning_rate,
-                      weight_dice_loss=weight_dice_loss,
-                      use_upsampling=use_upsampling,
-                      use_dropout=use_dropout,
-                      print_model=print_model,
-                      blocktime=blocktime,
-                      num_threads=num_threads,
-                      num_inter_threads=num_inter_threads)
+    unet_model = Unet(
+        channels_first=channels_first,
+        fms=featuremaps,
+        output_path=output_path,
+        inference_filename=inference_filename,
+        learning_rate=learning_rate,
+        weight_dice_loss=weight_dice_loss,
+        use_upsampling=use_upsampling,
+        use_dropout=use_dropout,
+        print_model=print_model,
+        blocktime=blocktime,
+        num_threads=num_threads,
+        num_inter_threads=num_inter_threads,
+    )
 
-    model = unet_model.create_model(ds_train.get_input_shape(),
-                                    ds_train.get_output_shape())
+    model = unet_model.create_model(
+        ds_train.get_input_shape(), ds_train.get_output_shape()
+    )
     model_filename, model_callbacks = unet_model.get_callbacks()
 
     """
@@ -158,11 +169,13 @@ if __name__ == "__main__":
     print("Fitting model with training data ...")
     print("-" * 30)
 
-    model.fit(ds_train,
-              epochs=epochs,
-              validation_data=ds_validation,
-              verbose=1,
-              callbacks=model_callbacks)
+    model.fit(
+        ds_train,
+        epochs=epochs,
+        validation_data=ds_validation,
+        verbose=1,
+        callbacks=model_callbacks,
+    )
 
     """
     Step 4: Evaluate the best model
@@ -173,6 +186,9 @@ if __name__ == "__main__":
 
     unet_model.evaluate_model(model_filename, ds_test)
 
-    print("Total time elapsed for program = {} seconds".format(
-          datetime.datetime.now() - START_TIME))
+    print(
+        "Total time elapsed for program = {} seconds".format(
+            datetime.datetime.now() - START_TIME
+        )
+    )
     print("Stopped script on {}".format(datetime.datetime.now()))

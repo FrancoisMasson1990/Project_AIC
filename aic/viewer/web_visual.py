@@ -32,16 +32,13 @@ def generate_imgs(data, index, fig):
     # Update Image
     for i in tqdm(range(imgs.shape[0])):
         img = imgs[i]
-        fig.add_trace(px.imshow(img,
-                                color_continuous_scale='gray').data[0])
+        fig.add_trace(px.imshow(img, color_continuous_scale="gray").data[0])
         fig.data[i].visible = False
 
     fig.update_xaxes(showticklabels=False)
     fig.update_yaxes(showticklabels=False)
-    fig.update_layout(px.imshow(imgs[0],
-                                color_continuous_scale='gray').layout)
-    fig.update_traces(
-        hovertemplate="x: %{x} <br> y: %{y} <br> Hounsfield unit: %{z}")
+    fig.update_layout(px.imshow(imgs[0], color_continuous_scale="gray").layout)
+    fig.update_traces(hovertemplate="x: %{x} <br> y: %{y} <br> Hounsfield unit: %{z}")
     fig.update_coloraxes(showscale=False)
 
     return fig
@@ -68,17 +65,21 @@ def generate_mask(data, index, fig):
         for j, number_of_pix in enumerate(area_):
             if j != 0:
                 # (density higher than 1mm2)
-                if number_of_pix*area <= 1:
+                if number_of_pix * area <= 1:
                     prediction[lw == j] = 0
-        prediction = prediction.astype('float')
+        prediction = prediction.astype("float")
         prediction[prediction < 1] = np.nan
         prediction[prediction >= 1] = 1
-        fig.add_trace(go.Heatmap(z=prediction,
-                                 hoverongaps=False,
-                                 colorscale="Reds",
-                                 hoverinfo="skip",
-                                 showscale=False))
-        fig.data[i+masks.shape[0]].visible = False
+        fig.add_trace(
+            go.Heatmap(
+                z=prediction,
+                hoverongaps=False,
+                colorscale="Reds",
+                hoverinfo="skip",
+                showscale=False,
+            )
+        )
+        fig.data[i + masks.shape[0]].visible = False
     return fig
 
 
@@ -97,11 +98,10 @@ def update_graph_2d(data):
                 index.append(z)
         index = np.array(index)
         extra_index = 5
-        index = np.arange(index[0]-extra_index,
-                          index[-1]+extra_index)
+        index = np.arange(index[0] - extra_index, index[-1] + extra_index)
 
         std_err_backup = sys.stderr
-        file_prog = open('./cache/progress.txt', 'w')
+        file_prog = open("./cache/progress.txt", "w")
         sys.stderr = file_prog
         fig = generate_imgs(data, index, fig)
         fig = generate_mask(data, index, fig)
@@ -110,10 +110,10 @@ def update_graph_2d(data):
 
         # Visibility
         fig.data[0].visible = True
-        fig.data[len(fig.data)//2].visible = True
+        fig.data[len(fig.data) // 2].visible = True
 
         steps = []
-        for i in range(len(fig.data)//2):
+        for i in range(len(fig.data) // 2):
             step = dict(
                 method="restyle",
                 args=[{"visible": [False] * len(fig.data)}],
@@ -121,22 +121,17 @@ def update_graph_2d(data):
             # Toggle i'th trace to "visible"
             step["args"][0]["visible"][i] = True
             # Toggle i'th trace to "visible"
-            step["args"][0]["visible"][i+len(fig.data)//2] = True
+            step["args"][0]["visible"][i + len(fig.data) // 2] = True
             steps.append(step)
 
-        sliders = [dict(
-            active=0,
-            currentvalue={"prefix": "Dicom file: "},
-            steps=steps
-        )]
+        sliders = [dict(active=0, currentvalue={"prefix": "Dicom file: "}, steps=steps)]
 
         fig.update_layout(
             sliders=sliders,
         )
 
     fig.update_layout(template="plotly_dark")
-    fig.update_layout(paper_bgcolor='#1e1e1e',
-                      plot_bgcolor='#1e1e1e')
+    fig.update_layout(paper_bgcolor="#1e1e1e", plot_bgcolor="#1e1e1e")
     return fig
 
 
@@ -152,37 +147,32 @@ def update_graph_3d(data):
             y = data["valve"][:, 1]
             z = data["valve"][:, 2]
 
-            fig.add_trace(go.Scatter3d(
-                x=x,
-                y=y,
-                z=z,
-                mode='markers',
-                marker=dict(
-                    size=5,
-                    color='white',
-                    opacity=0.8
-                )))
+            fig.add_trace(
+                go.Scatter3d(
+                    x=x,
+                    y=y,
+                    z=z,
+                    mode="markers",
+                    marker=dict(size=5, color="white", opacity=0.8),
+                )
+            )
         if "candidate" in data.keys():
             x = data["candidate"][:, 0]
             y = data["candidate"][:, 1]
             z = data["candidate"][:, 2]
 
-            fig.add_trace(go.Scatter3d(
-                x=x,
-                y=y,
-                z=z,
-                mode='markers',
-                marker=dict(
-                    size=3,
-                    color='red',
-                    opacity=0.8
-                )))
-        fig.update_scenes(xaxis_visible=False,
-                          yaxis_visible=False,
-                          zaxis_visible=False)
+            fig.add_trace(
+                go.Scatter3d(
+                    x=x,
+                    y=y,
+                    z=z,
+                    mode="markers",
+                    marker=dict(size=3, color="red", opacity=0.8),
+                )
+            )
+        fig.update_scenes(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False)
     fig.update_layout(template="plotly_dark")
-    fig.update_layout(paper_bgcolor='#1e1e1e',
-                      plot_bgcolor='#1e1e1e')
+    fig.update_layout(paper_bgcolor="#1e1e1e", plot_bgcolor="#1e1e1e")
     return fig
 
 
@@ -196,24 +186,22 @@ def parse_contents(contents, filenames, dates):
         data = []
         files_types = []
         for f, c in zip(filenames, contents):
-            if f.endswith('.dcm') or f.endswith('.txt'):
+            if f.endswith(".dcm") or f.endswith(".txt"):
                 data.append(c)
                 files_types.append(f)
         if data:
             # Should send back dict with same element has the
             # predictions.pbz2
-            config = fs.get_configs_root() / 'web_config.yml'
-            response = infer.get_inference(data,
-                                           files_types,
-                                           str(config))
+            config = fs.get_configs_root() / "web_config.yml"
+            response = infer.get_inference(data, files_types, str(config))
     else:
         contents = contents[0]
         filenames = filenames[0]
-        content_type, content_string = contents.split(',')
-        if filenames.endswith('.pbz2'):
+        content_type, content_string = contents.split(",")
+        if filenames.endswith(".pbz2"):
             decoded = base64.b64decode(content_string)
             decoded = io.BytesIO(decoded)
-            with bz2.BZ2File(decoded, 'rb') as f:
+            with bz2.BZ2File(decoded, "rb") as f:
                 response = pickle.load(f)
     return response
 
@@ -234,25 +222,25 @@ def two_years_model(coefficient):
         elif val == "Woman":
             val = 0
         if key == "age":
-            out += float(val)*0
+            out += float(val) * 0
         elif key == "sex":
-            out += -float(val)*(0.1)
+            out += -float(val) * (0.1)
         elif key == "hypertension":
-            out += float(val)*(0)
+            out += float(val) * (0)
         elif key == "renal":
-            out += float(val)*(0.5)
+            out += float(val) * (0.5)
         elif key == "implantation":
-            out += float(val)*(0.25)
+            out += float(val) * (0.25)
         elif key == "cholesterol":
-            out += float(val)*(0.04)
+            out += float(val) * (0.04)
         elif key == "ldl":
-            out += float(val)*(0.07)
+            out += float(val) * (0.07)
         elif key == "gradient":
-            out += float(val)*(0.002)
+            out += float(val) * (0.002)
         elif key == "size":
-            out += -float(val)*(0.01)
+            out += -float(val) * (0.01)
         elif key == "score":
-            out += float(val)*(0.08)
+            out += float(val) * (0.08)
 
     return int(np.round(out, 0))
 
@@ -273,25 +261,25 @@ def five_years_model(coefficient):
         elif val == "Woman":
             val = 0
         if key == "age":
-            out += float(val)*0
+            out += float(val) * 0
         elif key == "sex":
-            out += -float(val)*(0.2)
+            out += -float(val) * (0.2)
         elif key == "hypertension":
-            out += float(val)*(0)
+            out += float(val) * (0)
         elif key == "renal":
-            out += float(val)*(0.5)
+            out += float(val) * (0.5)
         elif key == "implantation":
-            out += float(val)*(0.28)
+            out += float(val) * (0.28)
         elif key == "cholesterol":
-            out += float(val)*(0.03)
+            out += float(val) * (0.03)
         elif key == "ldl":
-            out += float(val)*(0.02)
+            out += float(val) * (0.02)
         elif key == "gradient":
-            out += float(val)*(0.5)
+            out += float(val) * (0.5)
         elif key == "size":
-            out += -float(val)*(0.01)
+            out += -float(val) * (0.01)
         elif key == "score":
-            out += float(val)*(0.15)
+            out += float(val) * (0.15)
 
     return int(np.round(out, 0))
 
@@ -300,9 +288,8 @@ def operations(coeff_dict):
     """Estimate operation score."""
     output_1 = two_years_model(coeff_dict)
     output_2 = five_years_model(coeff_dict)
-    if isinstance(output_1, int) \
-       and isinstance(output_2, int):
+    if isinstance(output_1, int) and isinstance(output_2, int):
         return [output_1, output_2]
     else:
-        message = 'Missing informations for Clinical Outcomes'
+        message = "Missing informations for Clinical Outcomes"
         return message

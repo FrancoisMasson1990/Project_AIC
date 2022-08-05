@@ -18,18 +18,15 @@ import aic.misc.converter as co
 import os
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     path = str(fs.get_dataset_root())
     folders = os.listdir(path)
     for folder in folders:
-        files_ = os.path.join(path,
-                              folder)
+        files_ = os.path.join(path, folder)
         file = os.listdir(files_)
         for f in file:
             f = os.path.join(files_, f)
             imgs = ut.load_scan(f)
             imgs = op.get_pixels_hu(imgs)
-            co.npy_to_nii(imgs,
-                          name='imaging.nii.gz',
-                          directory=files_)
+            co.npy_to_nii(imgs, name="imaging.nii.gz", directory=files_)

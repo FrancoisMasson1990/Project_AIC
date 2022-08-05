@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+Project_Dir=$HOME/Project_AIC/
+black "${Project_Dir}/aic"
+black "${Project_Dir}/scripts"

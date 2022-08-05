@@ -48,7 +48,8 @@ def make_mesh(image, threshold=-300, step_size=1):
     """Make mesh."""
     p = image.transpose(1, 2, 0)
     verts, faces, norm, val = measure.marching_cubes(
-        p, threshold, step_size=step_size, allow_degenerate=True)
+        p, threshold, step_size=step_size, allow_degenerate=True
+    )
     return verts, faces
 
 
@@ -69,34 +70,55 @@ def resample(image, pixelspacing, slicethickness, new_spacing=[1, 1, 1]):
     return image, new_spacing
 
 
-def clustering(data, model_version, center_volume, gt_data, ratio,
-               threshold=3800, eps=2.5, min_samples=2, max_=None,
-               spacings=None, dimensions=None, crop_values=None):
+def clustering(
+    data,
+    model_version,
+    center_volume,
+    gt_data,
+    ratio,
+    threshold=3800,
+    eps=2.5,
+    min_samples=2,
+    max_=None,
+    spacings=None,
+    dimensions=None,
+    crop_values=None,
+):
     """Use clustering techniques."""
     index = []
     if max_ is None:
         if model_version == 0:
             # Crop border of images
-            x_min = float(center_volume[0]-0.8*center_volume[0])
-            x_max = float(center_volume[0]+0.8*center_volume[0])
-            y_min = float(center_volume[1]-ratio*center_volume[1])
-            y_max = float(center_volume[1]+ratio*center_volume[1])
-            z_min = float(center_volume[2]-ratio*center_volume[2])
-            z_max = float(center_volume[2]+ratio*center_volume[2])
+            x_min = float(center_volume[0] - 0.8 * center_volume[0])
+            x_max = float(center_volume[0] + 0.8 * center_volume[0])
+            y_min = float(center_volume[1] - ratio * center_volume[1])
+            y_max = float(center_volume[1] + ratio * center_volume[1])
+            z_min = float(center_volume[2] - ratio * center_volume[2])
+            z_max = float(center_volume[2] + ratio * center_volume[2])
 
-            index = np.where((data[:, 0] > x_min) & (data[:, 0] < x_max)
-                             & (data[:, 1] > y_min) & (data[:, 1] < y_max)
-                             & (data[:, 2] > z_min) & (data[:, 2] < z_max))
+            index = np.where(
+                (data[:, 0] > x_min)
+                & (data[:, 0] < x_max)
+                & (data[:, 1] > y_min)
+                & (data[:, 1] < y_max)
+                & (data[:, 2] > z_min)
+                & (data[:, 2] < z_max)
+            )
             if data[index].shape[0] < 1500:
                 # Bad prediction : Border detection most of the time
                 data = gt_data
-                z_min = float(center_volume[2]-0.3*center_volume[2])
-                z_max = float(center_volume[2]+0.3*center_volume[2])
-                y_min = float(center_volume[1]-0.3*center_volume[1])
-                y_max = float(center_volume[1]+0.3*center_volume[1])
-                index = np.where((data[:, 0] > x_min) & (data[:, 0] < x_max)
-                                 & (data[:, 1] > y_min) & (data[:, 1] < y_max)
-                                 & (data[:, 2] > z_min) & (data[:, 2] < z_max))
+                z_min = float(center_volume[2] - 0.3 * center_volume[2])
+                z_max = float(center_volume[2] + 0.3 * center_volume[2])
+                y_min = float(center_volume[1] - 0.3 * center_volume[1])
+                y_max = float(center_volume[1] + 0.3 * center_volume[1])
+                index = np.where(
+                    (data[:, 0] > x_min)
+                    & (data[:, 0] < x_max)
+                    & (data[:, 1] > y_min)
+                    & (data[:, 1] < y_max)
+                    & (data[:, 2] > z_min)
+                    & (data[:, 2] < z_max)
+                )
         elif model_version == 1:
             # Crop border of images
             if crop_values is not None:
@@ -106,19 +128,28 @@ def clustering(data, model_version, center_volume, gt_data, ratio,
                 y_max = crop_values[3]
             else:
                 x_min = float(spacings[0])
-                x_max = float(0.95*spacings[0]*dimensions[0])
+                x_max = float(0.95 * spacings[0] * dimensions[0])
                 y_min = float(spacings[1])
-                y_max = float(0.95*spacings[1]*dimensions[1])
+                y_max = float(0.95 * spacings[1] * dimensions[1])
             z_min = float(spacings[2])
-            z_max = float(0.95*spacings[2]*dimensions[2])
-            index = np.where((data[:, 0] > x_min) & (data[:, 0] < x_max)
-                             & (data[:, 1] > y_min) & (data[:, 1] < y_max)
-                             & (data[:, 2] > z_min) & (data[:, 2] < z_max))
+            z_max = float(0.95 * spacings[2] * dimensions[2])
+            index = np.where(
+                (data[:, 0] > x_min)
+                & (data[:, 0] < x_max)
+                & (data[:, 1] > y_min)
+                & (data[:, 1] < y_max)
+                & (data[:, 2] > z_min)
+                & (data[:, 2] < z_max)
+            )
     else:
-        index = \
-            np.where((data[:, 0] > max_[0]-25) & (data[:, 0] < max_[0]+25)
-                     & (data[:, 1] > max_[1]-25) & (data[:, 1] < max_[1]+25)
-                     & (data[:, 2] > max_[2]-25) & (data[:, 2] < max_[2]+25))
+        index = np.where(
+            (data[:, 0] > max_[0] - 25)
+            & (data[:, 0] < max_[0] + 25)
+            & (data[:, 1] > max_[1] - 25)
+            & (data[:, 1] < max_[1] + 25)
+            & (data[:, 2] > max_[2] - 25)
+            & (data[:, 2] < max_[2] + 25)
+        )
     if (index) and (data[index].shape[0] != 0):
         data = data[index]
 
@@ -145,42 +176,44 @@ def boxe_3d(volume_array, predict, max_=None):
         z_min = np.min(predict[:, 2])
         z_max = np.max(predict[:, 2])
     else:
-        x_min = max_[0]-25
-        x_max = max_[0]+25
-        y_min = max_[1]-25
-        y_max = max_[1]+25
-        z_min = max_[2]-25
-        z_max = max_[2]+25
+        x_min = max_[0] - 25
+        x_max = max_[0] + 25
+        y_min = max_[1] - 25
+        y_max = max_[1] + 25
+        z_min = max_[2] - 25
+        z_max = max_[2] + 25
 
     if isinstance(volume_array, volume.Volume):
         dimensions = volume_array.dimensions()
         spacing = volume_array.spacing()
-        volume_array = \
-            volume_array.crop(
-                # z_max
-                top=1-(z_max/(dimensions[2]*spacing[2])),
-                # z_min
-                bottom=(z_min/(dimensions[2]*spacing[2])),
-                # y_max
-                front=1 - (y_max/(dimensions[1]*spacing[1])),
-                # y_min
-                back=(y_min/(dimensions[1]*spacing[1])),
-                # x_max
-                right=1 - (x_max/(dimensions[0]*spacing[0])),
-                # x_min
-                left=(x_min/(dimensions[1]*spacing[1])),)
+        volume_array = volume_array.crop(
+            # z_max
+            top=1 - (z_max / (dimensions[2] * spacing[2])),
+            # z_min
+            bottom=(z_min / (dimensions[2] * spacing[2])),
+            # y_max
+            front=1 - (y_max / (dimensions[1] * spacing[1])),
+            # y_min
+            back=(y_min / (dimensions[1] * spacing[1])),
+            # x_max
+            right=1 - (x_max / (dimensions[0] * spacing[0])),
+            # x_min
+            left=(x_min / (dimensions[1] * spacing[1])),
+        )
     elif isinstance(volume_array, mesh.Mesh):
         volume_array = volume_array.crop(
-            bounds=[x_min, x_max, y_min, y_max, z_min, z_max])
+            bounds=[x_min, x_max, y_min, y_max, z_min, z_max]
+        )
     elif isinstance(volume_array, np.ndarray):
-        print('here')
-        index = \
-            np.where((volume_array[:, 0] > x_min)
-                     & (volume_array[:, 0] < x_max)
-                     & (volume_array[:, 1] > y_min)
-                     & (volume_array[:, 1] < y_max)
-                     & (volume_array[:, 2] > z_min)
-                     & (volume_array[:, 2] < z_max))
+        print("here")
+        index = np.where(
+            (volume_array[:, 0] > x_min)
+            & (volume_array[:, 0] < x_max)
+            & (volume_array[:, 1] > y_min)
+            & (volume_array[:, 1] < y_max)
+            & (volume_array[:, 2] > z_min)
+            & (volume_array[:, 2] < z_max)
+        )
         volume_array = volume_array[index]
     return volume_array
 
@@ -207,10 +240,12 @@ def to_points(data, threshold=None, template=False):
     """Extract point from Volume/Mesh polydata."""
     if isinstance(data, volume.Volume):
         points = vtk_to_numpy(
-            data.topoints().GetMapper().GetInput().GetPoints().GetData())
+            data.topoints().GetMapper().GetInput().GetPoints().GetData()
+        )
         # Pixel value intensity
-        scalar = np.expand_dims(vtk_to_numpy(
-            data.imagedata().GetPointData().GetScalars()), axis=1)
+        scalar = np.expand_dims(
+            vtk_to_numpy(data.imagedata().GetPointData().GetScalars()), axis=1
+        )
         points = np.concatenate((points, scalar), axis=1)
         # Minimal value of interest for Agatston score
         points = points[points[:, 3] > 130]
@@ -218,30 +253,26 @@ def to_points(data, threshold=None, template=False):
             if threshold is not None:
                 points = points[points[:, 3] < threshold]
     if isinstance(data, mesh.Mesh):
-        points = vtk_to_numpy(
-            data.GetMapper().GetInput().GetPoints().GetData())
+        points = vtk_to_numpy(data.GetMapper().GetInput().GetPoints().GetData())
 
     return points
 
 
-def z_projection(points, w_fit, save=False, name='projection_array.npy'):
+def z_projection(points, w_fit, save=False, name="projection_array.npy"):
     """Project along z.
 
     Projection of the points along z_axis using
     vector of direction of the cylinder axis
     """
     matrix_array = matrix_transformation(w_fit)
-    rot_x = np.array([[1, 0, 0, 0],
-                      [0, 0, -1, 0],
-                      [0, 1, 0, 0],
-                      [0, 0, 0, 1]])
+    rot_x = np.array([[1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
 
     intensity = None
     if points.shape[1] == 4:
         intensity = points[:, 3]
 
-    matrix = rot_x@matrix_array
-    points = (matrix[:3, :3]@(points[:, :3].T)).T
+    matrix = rot_x @ matrix_array
+    points = (matrix[:3, :3] @ (points[:, :3].T)).T
 
     if intensity is not None:
         xyz = points
@@ -250,9 +281,9 @@ def z_projection(points, w_fit, save=False, name='projection_array.npy'):
         points[:, 3] = intensity
 
     if save:
-        if not name.endswith('.npy'):
-            name += '.npy'
-        with open(name, 'wb') as f:
+        if not name.endswith(".npy"):
+            name += ".npy"
+        with open(name, "wb") as f:
             np.save(f, points)
     return points, matrix
 
@@ -270,23 +301,21 @@ def matrix_transformation(w_fit):
     t.RotateX(90)  # put it along Z
     t.RotateY(np.rad2deg(theta))
     t.RotateZ(np.rad2deg(phi))
-    matrix_array = np.array([
-        [t.GetInverse().GetMatrix().GetElement(
-            r, c) for c in range(4)] for r in range(4)])
+    matrix_array = np.array(
+        [
+            [t.GetInverse().GetMatrix().GetElement(r, c) for c in range(4)]
+            for r in range(4)
+        ]
+    )
     return matrix_array
 
 
 def affine_projection(points, affine):
     """Apply Affine transformation."""
     if points.shape[1] == 4:
-        points = \
-            (np.linalg.inv(
-                affine)@(points.T)).T
+        points = (np.linalg.inv(affine) @ (points.T)).T
     else:
-        points = \
-            (np.linalg.inv(
-                affine[:3, :3])
-                @ (points[:, :3].T)).T
+        points = (np.linalg.inv(affine[:3, :3]) @ (points[:, :3].T)).T
     return points
 
 
@@ -297,8 +326,7 @@ def isInHull(P, hull):
     """
     A = hull.equations[:, 0:-1]
     b = np.transpose(np.array([hull.equations[:, -1]]))
-    isInHullBool = np.all((A @ np.transpose(P)) <=
-                          np.tile(-b, (1, len(P))), axis=0)
+    isInHullBool = np.all((A @ np.transpose(P)) <= np.tile(-b, (1, len(P))), axis=0)
     return isInHullBool
 
 
@@ -319,34 +347,29 @@ def closest_element(value, upper=True):
     return closest_element
 
 
-def icp(source,
-        target,
-        transformation=np.eye(4),
-        verbose=False,
-        show=False):
+def icp(source, target, transformation=np.eye(4), verbose=False, show=False):
     """Apply ICP.
 
     Apply Iterative Closest Point to match point cloud valve with template
     """
     # Pass source to Open3D.o3d.geometry.PointCloud and visualize
     pcd_source = o3d.geometry.PointCloud()
-    pcd_source.points = o3d.utility.Vector3dVector(
-        source[:, :3])
+    pcd_source.points = o3d.utility.Vector3dVector(source[:, :3])
 
     # Pass source to Open3D.o3d.geometry.PointCloud and visualize
     pcd_target = o3d.geometry.PointCloud()
-    pcd_target.points = o3d.utility.Vector3dVector(
-        target[:, :3])
+    pcd_target.points = o3d.utility.Vector3dVector(target[:, :3])
 
     threshold = 10.0
     print("Apply point-to-point ICP")
-    reg_p2p = \
-        o3d.pipelines.registration.registration_icp(
-            pcd_source, pcd_target,
-            threshold, transformation,
-            o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-            o3d.pipelines.registration.ICPConvergenceCriteria(
-                max_iteration=2000))
+    reg_p2p = o3d.pipelines.registration.registration_icp(
+        pcd_source,
+        pcd_target,
+        threshold,
+        transformation,
+        o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+        o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000),
+    )
 
     if verbose:
         print(reg_p2p)
@@ -359,20 +382,18 @@ def icp(source,
         pcd_source.paint_uniform_color([1, 0, 0])
         pcd_target.paint_uniform_color([0, 0, 1])
         pcd_source.transform(reg_p2p.transformation)
-        mesh_frame = \
-            o3d.geometry.TriangleMesh.create_coordinate_frame(
-                size=0.6,
-                origin=[0, 0, 0])
-        o3d.visualization.draw_geometries([
-            mesh_frame,
-            pcd_source,
-            pcd_target])
+        mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
+            size=0.6, origin=[0, 0, 0]
+        )
+        o3d.visualization.draw_geometries([mesh_frame, pcd_source, pcd_target])
 
     pcd_source = o3d.geometry.PointCloud()
     pcd_source.points = o3d.utility.Vector3dVector(source[:, :3])
 
-    return np.asarray(pcd_source.transform(reg_p2p.transformation).points), \
-        reg_p2p.transformation
+    return (
+        np.asarray(pcd_source.transform(reg_p2p.transformation).points),
+        reg_p2p.transformation,
+    )
 
 
 def calc_R(x, y, xc, yc):
@@ -381,7 +402,7 @@ def calc_R(x, y, xc, yc):
     Calculate the distance of each 2D points
     from the center (xc, yc)
     """
-    return np.sqrt((x-xc)**2 + (y-yc)**2)
+    return np.sqrt((x - xc) ** 2 + (y - yc) ** 2)
 
 
 def f(c, x, y):
@@ -403,7 +424,7 @@ def leastsq_circle(x, y):
     xc, yc = center
     Ri = calc_R(x, y, *center)
     R = Ri.mean()
-    residu = np.sum((Ri - R)**2)
+    residu = np.sum((Ri - R) ** 2)
     return xc, yc, R, residu
 
 
@@ -416,21 +437,18 @@ def euclidean(point1, point2):
     return dist
 
 
-def get_mask_2D(data,
-                dimensions,
-                spacing):
+def get_mask_2D(data, dimensions, spacing):
     """Generate mask."""
     print("Generating mask...")
-    mask_agatston = np.zeros([dimensions[2],
-                              dimensions[0],
-                              dimensions[1]],
-                             dtype=np.uint8)
+    mask_agatston = np.zeros(
+        [dimensions[2], dimensions[0], dimensions[1]], dtype=np.uint8
+    )
 
     # all voxels have value zero except ones predicted:
     for d in tqdm(data):
-        x = int(d[0]/spacing[0])
-        y = int(d[1]/spacing[1])
-        z = int(d[2]/spacing[2])
+        x = int(d[0] / spacing[0])
+        y = int(d[1] / spacing[1])
+        z = int(d[2] / spacing[2])
         mask_agatston[z, x, y] = 1
 
     for k in range(dimensions[2]):
@@ -440,156 +458,116 @@ def get_mask_2D(data,
 
 def centered_point(points):
     """Put points centered in (0,0,0)."""
-    x_mean = \
-        (np.min(points[:, 0]) + np.max(points[:, 0]))/2
-    y_mean = \
-        (np.min(points[:, 1]) + np.max(points[:, 1]))/2
-    z_mean = \
-        (np.min(points[:, 2]) + np.max(points[:, 2]))/2
+    x_mean = (np.min(points[:, 0]) + np.max(points[:, 0])) / 2
+    y_mean = (np.min(points[:, 1]) + np.max(points[:, 1])) / 2
+    z_mean = (np.min(points[:, 2]) + np.max(points[:, 2])) / 2
 
     if points.shape[1] == 4:
         # 4 dimension due to intensity value
-        points -= np.array([x_mean,
-                            y_mean,
-                            z_mean,
-                            0])
-        translation = np.array([x_mean,
-                                y_mean,
-                                z_mean,
-                                0])
+        points -= np.array([x_mean, y_mean, z_mean, 0])
+        translation = np.array([x_mean, y_mean, z_mean, 0])
     else:
-        points -= np.array([x_mean,
-                            y_mean,
-                            z_mean])
-        translation = np.array([x_mean,
-                                y_mean,
-                                z_mean])
+        points -= np.array([x_mean, y_mean, z_mean])
+        translation = np.array([x_mean, y_mean, z_mean])
     return points, translation
 
 
 def get_native_valve(radius, typ="Magna"):
     """Load native valve based on radius."""
-    path = \
-        fs.get_native_root() / typ / 'projected' / \
-        ('_').join([typ, str(radius)]) / 'projected.npy'
-    with open(str(path), 'rb') as f:
+    path = (
+        fs.get_native_root()
+        / typ
+        / "projected"
+        / ("_").join([typ, str(radius)])
+        / "projected.npy"
+    )
+    with open(str(path), "rb") as f:
         native = np.load(f)
     return native
 
 
-def get_thickness_infos(size,
-                        layer,
-                        database=str(fs.get_native_root()
-                                     / "Magna"
-                                     / "thickness_info.db"),
-                        columns=["thickness"]):
+def get_thickness_infos(
+    size,
+    layer,
+    database=str(fs.get_native_root() / "Magna" / "thickness_info.db"),
+    columns=["thickness"],
+):
     """Get thickness infos of native valve."""
-    conditions = [f'size = "{size}"',
-                  f'layer = "{layer}"']
-    args = {"conditions": conditions,
-            "columns": columns}
-    df = sql.load_sql(database,
-                      **args)
+    conditions = [f'size = "{size}"', f'layer = "{layer}"']
+    args = {"conditions": conditions, "columns": columns}
+    df = sql.load_sql(database, **args)
     if not df.empty:
-        return float(df.iloc[0]['thickness'])
+        return float(df.iloc[0]["thickness"])
 
 
-def get_candidates(points,
-                   w_fit,
-                   r_fit,
-                   threshold,
-                   spacing,
-                   dimensions):
+def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
     """Get Agatston candidates."""
     # Projection along z axis
     valve = points.copy()
-    valve, affine = z_projection(valve,
-                                 w_fit)
+    valve, affine = z_projection(valve, w_fit)
     # Center in (0,0,0)
-    valve, translation = \
-        centered_point(valve)
+    valve, translation = centered_point(valve)
     # Determine the radius of the valve
-    size = closest_element(2*r_fit)
+    size = closest_element(2 * r_fit)
     # Load associated native valve
     native = get_native_valve(size)
     # Arbitrary level of threshold to find the metalic part
     native_threshold = native[native[:, 3] > threshold]
     valve_threshold = valve[valve[:, 3] > threshold]
     # Perform ICP using mainly metalic part
-    _, matrix = \
-        icp(source=native_threshold,
-            target=valve_threshold)
+    _, matrix = icp(source=native_threshold, target=valve_threshold)
     # Apply given affine transformation
     pcd_ = o3d.geometry.PointCloud()
     pcd_.points = o3d.utility.Vector3dVector(native[:, :3])
     native[:, :3] = np.asarray(pcd_.transform(matrix).points)
     # Perform Convex-Hull algo to extract outside part
     hull = ft.convex_hull(native[:, :3])
-    mask_hull = isInHull(valve[:, :3],
-                         hull)
+    mask_hull = isInHull(valve[:, :3], hull)
     # Apply masks
     valve = valve[mask_hull]
     # Add a column that will play the role of index
-    valve = np.insert(valve,
-                      valve.shape[1],
-                      np.arange(len(valve)),
-                      axis=1)
+    valve = np.insert(valve, valve.shape[1], np.arange(len(valve)), axis=1)
     # Project along z axis to help for circle-points fitting
     valve_p = valve.copy()
     valve_p[:, 2] = np.round(valve_p[:, 2])
-    valve_threshold = \
-        valve_p[valve_p[:, 3] > threshold]
+    valve_threshold = valve_p[valve_p[:, 3] > threshold]
     # For each layer, attempt to fit a circle using the component
     # of the metalic part and remove points outside of it by saving
     # its index position for the last column
-    candidates = np.array([False]*valve.shape[0])
+    candidates = np.array([False] * valve.shape[0])
     p_fit = []
-    for _, z in enumerate(
-            np.unique(valve_p[:, 2])[2:-2]):
+    for _, z in enumerate(np.unique(valve_p[:, 2])[2:-2]):
         valve_z = valve_threshold[valve_threshold[:, 2] == z]
         if valve_z.shape[0] > 2:
             # Fit a circle using 2 points for each layer
-            xc, yc, r, _ = \
-                leastsq_circle(valve_z[:, 0],
-                               valve_z[:, 1])
+            xc, yc, r, _ = leastsq_circle(valve_z[:, 0], valve_z[:, 1])
             circle_center = np.array([xc, yc, z])
             for point in valve_p[valve_p[:, 2] == z]:
                 # Measure the distance from the center of the circle
                 dist = euclidean(point[:3], circle_center)
                 # Get thickness from a native valve
-                thick = get_thickness_infos(size=size,
-                                            layer=z)
+                thick = get_thickness_infos(size=size, layer=z)
                 # Keep only points where distance < radius - thickness
                 # Half pixel resolution
-                if (thick) and (dist < (r - thick - 1.1*spacing[0])):
+                if (thick) and (dist < (r - thick - 1.1 * spacing[0])):
                     p_fit.append(int(point[-1]))
     if p_fit:
         p_fit = np.array(p_fit)
         candidates[p_fit] = True
         valve_candidates = valve[candidates][:, :4]
         valve_candidates += translation
-        valve_candidates = affine_projection(valve_candidates,
-                                             affine)
+        valve_candidates = affine_projection(valve_candidates, affine)
         valve = valve[~candidates][:, :4]
         valve += translation
-        valve = affine_projection(valve,
-                                  affine)
-        mask_agatston = \
-            get_mask_2D(
-                valve_candidates,
-                dimensions,
-                spacing)
+        valve = affine_projection(valve, affine)
+        mask_agatston = get_mask_2D(valve_candidates, dimensions, spacing)
     else:
         valve_candidates = valve[candidates][:, :4]
         valve_candidates += translation
-        valve_candidates = affine_projection(valve_candidates,
-                                             affine)
+        valve_candidates = affine_projection(valve_candidates, affine)
         valve += translation
-        valve = affine_projection(valve,
-                                  affine)
-        mask_agatston = \
-            np.zeros([dimensions[2],
-                      dimensions[0],
-                      dimensions[1]],
-                     dtype=np.uint8)
+        valve = affine_projection(valve, affine)
+        mask_agatston = np.zeros(
+            [dimensions[2], dimensions[0], dimensions[1]], dtype=np.uint8
+        )
     return mask_agatston, valve, valve_candidates

@@ -29,10 +29,10 @@ def get_tablenames(sql_path):
         List of table names of the SQL database
     """
     if not Path(sql_path).exists():
-        raise Exception(f'File {sql_path} does not exists')
+        raise Exception(f"File {sql_path} does not exists")
 
     sqliteDB = sql3.connect(sql_path)
-    sqliteDB.text_factory = lambda x: str(x, 'latin1')
+    sqliteDB.text_factory = lambda x: str(x, "latin1")
     sqliteCursor = sqliteDB.cursor()
     sqliteCursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
     tables = [t[0] for t in sqliteCursor.fetchall()]
@@ -57,14 +57,13 @@ def get_tablename(sql_path):
         table name of the SQL database
     """
     if not Path(sql_path).exists():
-        raise Exception(f'File {sql_path} does not exists')
+        raise Exception(f"File {sql_path} does not exists")
 
     tables = get_tablenames(sql_path)
     if not len(tables):
-        raise Exception(f'No table name found for file {sql_path}')
+        raise Exception(f"No table name found for file {sql_path}")
     elif len(tables) > 1:
-        raise Exception(f'Multiple table names found for file {sql_path}: '
-                        f'{tables}')
+        raise Exception(f"Multiple table names found for file {sql_path}: " f"{tables}")
     tablename = tables[0]
     return tablename
 
@@ -86,19 +85,19 @@ def get_version(sql_path):
         version of the database
     """
     if not Path(sql_path).exists():
-        raise Exception(f'File {sql_path} does not exists')
+        raise Exception(f"File {sql_path} does not exists")
 
     sqliteDB = sql3.connect(sql_path)
-    sqliteDB.text_factory = lambda x: str(x, 'latin1')
+    sqliteDB.text_factory = lambda x: str(x, "latin1")
     sqliteCursor = sqliteDB.cursor()
     version = sqliteCursor.execute("PRAGMA user_version").fetchall()
     sqliteCursor.close()
     sqliteDB.close()
 
     if not len(version):
-        raise Exception(f'WARNING: Version not found for file {sql_path}')
+        raise Exception(f"WARNING: Version not found for file {sql_path}")
     elif len(version) > 1:
-        raise Exception(f'WARNING: Multiple versions for file {sql_path}')
+        raise Exception(f"WARNING: Multiple versions for file {sql_path}")
     version = version[0][0]
     return version
 
@@ -117,12 +116,12 @@ def get_columns(sql_path):
         Column names from database
     """
     if not Path(sql_path).exists():
-        raise Exception(f'File {sql_path} does not exists')
+        raise Exception(f"File {sql_path} does not exists")
 
     sqliteDB = sql3.connect(sql_path)
-    sqliteDB.text_factory = lambda x: str(x, 'latin1')
+    sqliteDB.text_factory = lambda x: str(x, "latin1")
     sqliteCursor = sqliteDB.cursor()
-    columns = sqliteCursor.execute('PRAGMA table_info(data)').fetchall()
+    columns = sqliteCursor.execute("PRAGMA table_info(data)").fetchall()
     sqliteCursor.close()
     sqliteDB.close()
 
@@ -146,22 +145,22 @@ def get_count(sql_path):
         Number of lines of the database
     """
     if not Path(sql_path).exists():
-        raise Exception(f'File {sql_path} does not exists')
+        raise Exception(f"File {sql_path} does not exists")
 
     sqliteDB = sql3.connect(sql_path)
-    sqliteDB.text_factory = lambda x: str(x, 'latin1')
+    sqliteDB.text_factory = lambda x: str(x, "latin1")
     sqliteCursor = sqliteDB.cursor()
     tablename = get_tablename(sql_path)
 
-    count_cmd = "SELECT MAX(rowid) from "+tablename
+    count_cmd = "SELECT MAX(rowid) from " + tablename
     count = sqliteCursor.execute(count_cmd).fetchall()
     sqliteCursor.close()
     sqliteDB.close()
 
     if not len(count):
-        raise Exception(f'WARNING: n_lines not found for file {sql_path}')
+        raise Exception(f"WARNING: n_lines not found for file {sql_path}")
     elif len(count) > 1:
-        raise Exception(f'WARNING: Multiple n_lines for file {sql_path}')
+        raise Exception(f"WARNING: Multiple n_lines for file {sql_path}")
     count = count[0][0]
 
     if count is None:
@@ -170,8 +169,7 @@ def get_count(sql_path):
     return count
 
 
-def get_count_values(sql_path,
-                     column):
+def get_count_values(sql_path, column):
     """Return number of unique value in a specific column of a SQL database.
 
     Parameters
@@ -189,38 +187,34 @@ def get_count_values(sql_path,
         and the second column the number of occurence
     """
     if not Path(sql_path).exists():
-        raise Exception(f'File {sql_path} does not exists')
+        raise Exception(f"File {sql_path} does not exists")
 
     sqliteDB = sql3.connect(sql_path)
-    sqliteDB.text_factory = lambda x: str(x, 'latin1')
+    sqliteDB.text_factory = lambda x: str(x, "latin1")
     sqliteCursor = sqliteDB.cursor()
     tablename = get_tablename(sql_path)
 
     cols = get_columns(sql_path)
     if column not in cols:
-        raise Exception(f'WARNING: No such column :{column} in {sql_path}')
+        raise Exception(f"WARNING: No such column :{column} in {sql_path}")
 
-    count_cmd = f"SELECT {column}, COUNT(*) " + \
-                f"from {tablename} " + \
-                f"GROUP BY {column}"
+    count_cmd = (
+        f"SELECT {column}, COUNT(*) " + f"from {tablename} " + f"GROUP BY {column}"
+    )
 
     count = sqliteCursor.execute(count_cmd).fetchall()
     sqliteCursor.close()
     sqliteDB.close()
 
     if not len(count):
-        raise Exception(f'WARNING: empty database: {sql_path}')
+        raise Exception(f"WARNING: empty database: {sql_path}")
 
     df = pd.DataFrame(count, columns=[column, "counts"])
 
     return df
 
 
-def from_sql(sql_path,
-             columns=None,
-             conditions=None,
-             chunk_size=None,
-             verbose=False):
+def from_sql(sql_path, columns=None, conditions=None, chunk_size=None, verbose=False):
     """Import a .db SQL database into pandas.
 
     This function returns an iterator of chunks of the database.
@@ -257,14 +251,14 @@ def from_sql(sql_path,
     """
     sql_path = os.path.abspath(os.path.expanduser(sql_path))
     if not Path(sql_path).exists():
-        raise Exception(f'File {sql_path} does not exists')
+        raise Exception(f"File {sql_path} does not exists")
 
     # version = get_version(sql_path)
 
     try:
         tablename = get_tablename(sql_path)
     except sql3.DatabaseError:
-        print(f'ERROR: {sql_path} DATABASE DISK IMAGE IS MALFORMED')
+        print(f"ERROR: {sql_path} DATABASE DISK IMAGE IS MALFORMED")
         return []
 
     count = get_count(sql_path)
@@ -282,29 +276,28 @@ def from_sql(sql_path,
     if not isinstance(conditions, list) and not isinstance(conditions, set):
         conditions = [conditions]
     for i_c, c in enumerate(conditions):
-        if hasattr(c, 'sql_condition') and c.sql_condition:
+        if hasattr(c, "sql_condition") and c.sql_condition:
             conditions[i_c] = c.sql_condition
 
     sqliteDB = sql3.connect(sql_path)
-    sqliteDB.text_factory = lambda x: str(x, 'latin1')
+    sqliteDB.text_factory = lambda x: str(x, "latin1")
 
     if chunk_size is None:
         chunk_size = count
     if count:
-        n_chunks = (count-1)//chunk_size+1
+        n_chunks = (count - 1) // chunk_size + 1
     else:
         n_chunks = 1
 
     if verbose:
         pbar = tqdm(total=n_chunks)
     for i_chunk in range(n_chunks):
-        offset = i_chunk*chunk_size+1
-        chunk_limit = (f'(rowid >= {offset} AND rowid < {offset+chunk_size})')
+        offset = i_chunk * chunk_size + 1
+        chunk_limit = f"(rowid >= {offset} AND rowid < {offset+chunk_size})"
         chunk_conditions = conditions + [chunk_limit]
         cmd_chunk = f'{cmd_template} WHERE ({" AND ".join(chunk_conditions)})'
 
-        output = pd.read_sql_query(cmd_chunk,
-                                   sqliteDB)
+        output = pd.read_sql_query(cmd_chunk, sqliteDB)
         output.reset_index(inplace=True, drop=True)
         if len(output):
             yield output
@@ -350,11 +343,11 @@ def delete_sql(sql_path):
     tablename = get_tablename(sql_path)
 
     sqliteDB = sql3.connect(sql_path)
-    sqliteDB.text_factory = lambda x: str(x, 'latin1')
+    sqliteDB.text_factory = lambda x: str(x, "latin1")
     sqliteCursor = sqliteDB.cursor()
-    sqliteCursor.execute(f'DELETE from {tablename};')
+    sqliteCursor.execute(f"DELETE from {tablename};")
     sqliteDB.commit()
-    sqliteCursor.execute('VACUUM')
+    sqliteCursor.execute("VACUUM")
     sqliteDB.commit()
     sqliteCursor.close()
     sqliteDB.close()
@@ -379,7 +372,7 @@ def insert_sql(df, sql_path):
     tablename = get_tablename(sql_path)
 
     sqliteDB = sql3.connect(sql_path)
-    sqliteDB.text_factory = lambda x: str(x, 'latin1')
+    sqliteDB.text_factory = lambda x: str(x, "latin1")
     sqliteCursor = sqliteDB.cursor()
 
     for _, row in df.iterrows():
@@ -392,8 +385,10 @@ def insert_sql(df, sql_path):
         if not cols:
             continue
         data_tuple = tuple(data)
-        cmd = (f'INSERT INTO {tablename} ({",".join(cols)}) '
-               f'VALUES ({", ".join(["?"]*len(cols))});')
+        cmd = (
+            f'INSERT INTO {tablename} ({",".join(cols)}) '
+            f'VALUES ({", ".join(["?"]*len(cols))});'
+        )
         sqliteCursor.execute(cmd, data_tuple)
     sqliteDB.commit()
     sqliteCursor.close()
@@ -414,9 +409,9 @@ def to_sql(df, sql_path, name="data"):
         Path to the SQL database file to save
     """
     columns = tuple(df.columns)
-    query = f'CREATE TABLE IF NOT EXISTS {name} {columns}'
+    query = f"CREATE TABLE IF NOT EXISTS {name} {columns}"
     conn = sql3.connect(sql_path)
     c = conn.cursor()
     c.execute(query)
     conn.commit()
-    df.to_sql(name, conn, if_exists='replace', index=False)
+    df.to_sql(name, conn, if_exists="replace", index=False)

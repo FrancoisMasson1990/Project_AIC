@@ -16,11 +16,13 @@ import numpy as np
 from scipy import ndimage
 from skimage.transform import resize
 
-LABEL_CHANNELS = {"labels": {
-    "background": 0,
-    "other": 1,
-    "Magna_valve": 2,
-}}
+LABEL_CHANNELS = {
+    "labels": {
+        "background": 0,
+        "other": 1,
+        "Magna_valve": 2,
+    }
+}
 
 
 def normalize_img(img):
@@ -33,8 +35,8 @@ def normalize_img(img):
     """
     for channel in range(img.shape[-1]):
         img[:, :, :, channel] = (
-            img[:, :, :, channel] - np.mean(img[:, :, :, channel])) \
-            / np.std(img[:, :, :, channel])
+            img[:, :, :, channel] - np.mean(img[:, :, :, channel])
+        ) / np.std(img[:, :, :, channel])
 
     return img
 
@@ -71,7 +73,7 @@ def preprocess_inputs(img, resize=-1):
     if len(img.shape) != 4:  # Make sure 4D
         img = np.expand_dims(img, -1)
 
-    if (resize != -1):
+    if resize != -1:
         img = crop_center(img, resize, resize, -1)
 
     img = normalize_img(img)
@@ -91,10 +93,10 @@ def preprocess_label_v1(msk, intel_model=False, resize=-1):
     else:
         # extract certain classes from mask
         msks = [(msk == v) for v in LABEL_CHANNELS["labels"].values()]
-        msk = np.stack(msks, axis=-1).astype('float')
+        msk = np.stack(msks, axis=-1).astype("float")
 
     # Cropping
-    if (resize != -1):
+    if resize != -1:
         msk = crop_center(msk, resize, resize, -1)
 
     # WIP : Trying to find labels with no data imbalanced
@@ -125,9 +127,7 @@ def preprocess_label(label):
     return label
 
 
-def preprocess_label_3d(label,
-                        resize_dim,
-                        number_output_classes=1):
+def preprocess_label_3d(label, resize_dim, number_output_classes=1):
     """Set label attribution.
 
     Please refer LABEL_CHANNEL for the mask attribution.
@@ -140,17 +140,15 @@ def preprocess_label_3d(label,
     # label[label == 2] = 1.0
     label = np.moveaxis(label, 0, -1)
     if resize_dim != -1:
-        label = resize_input(label,
-                             width=resize_dim[0],
-                             height=resize_dim[1],
-                             depth=resize_dim[2])
+        label = resize_input(
+            label, width=resize_dim[0], height=resize_dim[1], depth=resize_dim[2]
+        )
     # Combine all masks but background
     if number_output_classes == 1:
         label[label > 0] = 1.0
         label = np.expand_dims(label, -1)
     else:
-        label_temp = \
-            np.zeros(list(label.shape) + [number_output_classes])
+        label_temp = np.zeros(list(label.shape) + [number_output_classes])
         for channel in range(number_output_classes):
             label_temp[label == channel, channel] = 1.0
         label = label_temp
@@ -175,10 +173,7 @@ def preprocess_img(img):
     return (img - img.mean()) / img.std()
 
 
-def preprocess_img_3d(img,
-                      resize_dim,
-                      min_=0,
-                      max_=1000):
+def preprocess_img_3d(img, resize_dim, min_=0, max_=1000):
     """Preprocess images.
 
     Preprocessing for the image
@@ -193,10 +188,9 @@ def preprocess_img_3d(img,
     img = img.astype("float32")
     img = np.moveaxis(img, 0, -1)
     if resize_dim != -1:
-        img = resize_input(img,
-                           width=resize_dim[0],
-                           height=resize_dim[1],
-                           depth=resize_dim[2])
+        img = resize_input(
+            img, width=resize_dim[0], height=resize_dim[1], depth=resize_dim[2]
+        )
     img = np.expand_dims(img, -1)
     return img
 
@@ -227,42 +221,37 @@ def crop_dim_2d(img, crop_dim):
         return img[:, startx:endx, starty:endy, :]
 
 
-def crop_dim_3d(img,
-                msk,
-                crop_dim,
-                randomize):
+def crop_dim_3d(img, msk, crop_dim, randomize):
     """Randomly crop the image and mask."""
     slices = []
     # Do we randomize?
     is_random = randomize and np.random.rand() > 0.5
-    for idx in range(len(img.shape)-1):  # Go through each dimension
+    for idx in range(len(img.shape) - 1):  # Go through each dimension
 
         cropLen = crop_dim[idx]
         imgLen = img.shape[idx]
 
-        start = (imgLen-cropLen)//2
+        start = (imgLen - cropLen) // 2
 
         ratio_crop = 0.20  # Crop up this % of pixels for offset
         # Number of pixels to offset crop in this dimension
-        offset = int(np.floor(start*ratio_crop))
+        offset = int(np.floor(start * ratio_crop))
 
         if offset > 0:
             if is_random:
                 start += np.random.choice(range(-offset, offset))
                 # Don't fall off the image
-                if ((start + cropLen) > imgLen):
-                    start = (imgLen-cropLen)//2
+                if (start + cropLen) > imgLen:
+                    start = (imgLen - cropLen) // 2
         else:
             start = 0
 
-        slices.append(slice(start, start+cropLen))
+        slices.append(slice(start, start + cropLen))
 
     return img[tuple(slices)], msk[tuple(slices)]
 
 
-def augment_data_3d(img,
-                    msk,
-                    crop_dim):
+def augment_data_3d(img, msk, crop_dim):
     """Get Data augmentation.
 
     Flip image and mask. Rotate image and mask.
@@ -271,14 +260,14 @@ def augment_data_3d(img,
     # If the axes aren't equal then we can't rotate them.
     equal_dim_axis = []
     for idx in range(0, len(crop_dim)):
-        for jdx in range(idx+1, len(crop_dim)):
+        for jdx in range(idx + 1, len(crop_dim)):
             if crop_dim[idx] == crop_dim[jdx]:
                 equal_dim_axis.append([idx, jdx])  # Valid rotation axes
     dim_to_rotate = equal_dim_axis
 
     if np.random.rand() > 0.5:
         # Random 0,1 (axes to flip)
-        ax = np.random.choice(np.arange(len(crop_dim)-1))
+        ax = np.random.choice(np.arange(len(crop_dim) - 1))
         img = np.flip(img, ax)
         msk = np.flip(msk, ax)
 
@@ -292,10 +281,7 @@ def augment_data_3d(img,
     return img, msk
 
 
-def resize_input(input_,
-                 width=128,
-                 height=128,
-                 depth=64):
+def resize_input(input_, width=128, height=128, depth=64):
     """Resize across z-axis"""
     # Set the desired depth
     desired_depth = depth
@@ -314,9 +300,7 @@ def resize_input(input_,
     width_factor = 1 / width
     height_factor = 1 / height
     # Resize across z-axis
-    input_ = ndimage.interpolation.zoom(input_,
-                                        (width_factor,
-                                         height_factor,
-                                         depth_factor),
-                                        order=1)
+    input_ = ndimage.interpolation.zoom(
+        input_, (width_factor, height_factor, depth_factor), order=1
+    )
     return input_

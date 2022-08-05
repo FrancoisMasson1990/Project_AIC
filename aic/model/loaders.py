@@ -16,8 +16,7 @@ import yaml
 import aic.misc.files as fs
 
 
-def load_model(model_name,
-               model_version=1):
+def load_model(model_name, model_version=1):
     """Load AI model."""
     model = None
     if model_name is not None:
@@ -30,11 +29,12 @@ def load_model(model_name,
         if model_name:
             if model_version == 0:
                 from aic.model.architecture import model_2D_old
+
                 unet_model = model_2D_old.Unet()
-                model = unet_model.load_model(model_name,
-                                              False)
+                model = unet_model.load_model(model_name, False)
             elif model_version == 1:
                 from aic.model.architecture import model_2D
+
                 unet_model = model_2D.Unet()
                 model = unet_model.load_model(model_name)
             print("-" * 30)
@@ -54,9 +54,8 @@ def load_tflitemodel(model_name):
             model_name = None
         if model_name:
             import tflite_runtime.interpreter as tflite
-            model = \
-                tflite.Interpreter(
-                    model_path=str(model_name))
+
+            model = tflite.Interpreter(model_path=str(model_name))
             print("-" * 30)
             print("Model load successfully")
             print("-" * 30)
@@ -66,7 +65,7 @@ def load_tflitemodel(model_name):
 def load_config(path):
     """Load a config file."""
     config = {}
-    if path.endswith('.yml'):
+    if path.endswith(".yml"):
         with open(path) as f:
             # The FullLoader parameter handles the conversion from YAML
             # scalar values to Python the dictionary format

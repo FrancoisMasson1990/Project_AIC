@@ -17,7 +17,7 @@ import shutil
 
 def rm_tmp_files(typ=None):
     """Remove tmp file."""
-    tmps = ['./cache/prediction.pbz2', './cache/progress.txt']
+    tmps = ["./cache/prediction.pbz2", "./cache/progress.txt"]
     for t in tmps:
         if os.path.exists(t):
             if not typ:
@@ -28,7 +28,7 @@ def rm_tmp_files(typ=None):
 
 def rm_tmp_folders(typ=None):
     """Remove tmp file."""
-    tmps = ['./cache/tmp']
+    tmps = ["./cache/tmp"]
     for t in tmps:
         if os.path.exists(t):
             shutil.rmtree(t)
@@ -36,4 +36,4 @@ def rm_tmp_folders(typ=None):
 
 def mk_tmp_folder():
     """Generate cache folder."""
-    os.makedirs('./cache', exist_ok=True)
+    os.makedirs("./cache", exist_ok=True)

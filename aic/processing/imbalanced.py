@@ -15,11 +15,13 @@ and data for training/infering.
 import numpy as np
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-LABEL_CHANNELS = {"labels": {
-    "background": 0,
-    "other": 1,
-    "Magna_valve": 2,
-}}
+LABEL_CHANNELS = {
+    "labels": {
+        "background": 0,
+        "other": 1,
+        "Magna_valve": 2,
+    }
+}
 
 
 def imbalanced_data_counter(image, msks):
@@ -30,13 +32,12 @@ def imbalanced_data_counter(image, msks):
     This done image wise and pixel wise
     """
     # Pixel Wise
-    total_pixel = image.shape[0] * image.shape[1] * \
-        image.shape[2] * image.shape[3]
+    total_pixel = image.shape[0] * image.shape[1] * image.shape[2] * image.shape[3]
 
     print("\n")
     for key, value in LABEL_CHANNELS["labels"].items():
         count = (msks[:, :, :, 0] == value).sum()
-        ratio = 100*count/total_pixel
+        ratio = 100 * count / total_pixel
         print("pixel wise ratio (%) of {} is {}".format(key, str(ratio)))
 
     # Image Wise
@@ -49,8 +50,9 @@ def imbalanced_data_counter(image, msks):
                 is_value = np.any((msks[index, :, :, 0] == value))
             if is_value:
                 count += 1
-        print("image wise ratio (%) of {} is {}".format(
-            key, str(count/msks.shape[0])))
+        print(
+            "image wise ratio (%) of {} is {}".format(key, str(count / msks.shape[0]))
+        )
     print("\n")
 
 
@@ -68,7 +70,8 @@ def imbalanced_data_augmentation(imgs, msks, total=20, seed=42):
         shear_range=0.15,
         horizontal_flip=True,
         vertical_flip=True,
-        fill_mode="nearest")
+        fill_mode="nearest",
+    )
 
     msks_stack = []
     for i in tqdm(range(msks.shape[0])):

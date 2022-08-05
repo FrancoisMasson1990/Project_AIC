@@ -26,12 +26,13 @@ from aic.misc import files as fs
 def get_sheet(url, index=0):
     """Get sheet page."""
     # define the scope
-    scope = ['https://spreadsheets.google.com/feeds',
-             'https://www.googleapis.com/auth/drive']
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive",
+    ]
     json_file = fs.get_valve_credentials()
     # add credentials to the account
-    creds = ServiceAccountCredentials.from_json_keyfile_name(json_file,
-                                                             scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name(json_file, scope)
     # authorize the clientsheet
     client = gspread.authorize(creds)
     # get the instance of the Spreadsheet
@@ -50,24 +51,26 @@ def get_sheet_cells(df, sheet):
 
 def update_sheet_cells(df, sheet, col="G", header=4):
     """Update sheet cells infos."""
-    start = col+str(header)
-    end = col+str(len(df))
-    cell_list = sheet.range(start+":"+end)
+    start = col + str(header)
+    end = col + str(len(df))
+    cell_list = sheet.range(start + ":" + end)
 
     # Write the array to worksheet
     index = 0
     for index, row in tqdm(df.iterrows(), total=len(df)):
-        if index >= header-1:
+        if index >= header - 1:
             cell_list[index].value = row["score"]
             index += 1
 
     sheet.update_cells(cell_list)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    url = "https://docs.google.com/spreadsheets/d/" + \
-        "1quuMfuGeg3-DmWE3O8q4sseMFRvOzG0hmKziR4IEpVg/edit?usp=sharing"
+    url = (
+        "https://docs.google.com/spreadsheets/d/"
+        + "1quuMfuGeg3-DmWE3O8q4sseMFRvOzG0hmKziR4IEpVg/edit?usp=sharing"
+    )
     sheet = get_sheet(url)
     df = pd.DataFrame({})
     df = get_sheet_cells(df, sheet)
@@ -77,24 +80,19 @@ if __name__ == '__main__':
     for dir in natsorted(os.listdir(folder_dataset)):
         patient = dir.split("/")[0]
         patient = ("-").join(patient.split("-")[:2])
-        df.score = np.where(df.patient == patient,
-                            'Failed',
-                            df.score)
+        df.score = np.where(df.patient == patient, "Failed", df.score)
 
     folder_prediction = fs.get_prediction_root()
     for dir in natsorted(os.listdir(folder_prediction)):
-        for sub_dir in natsorted(os.listdir(os.path.join(folder_prediction,
-                                                         dir))):
-            pkl_file = glob.glob(os.path.join(folder_prediction,
-                                              dir,
-                                              sub_dir,
-                                              "*.pkl"))[0]
+        for sub_dir in natsorted(os.listdir(os.path.join(folder_prediction, dir))):
+            pkl_file = glob.glob(
+                os.path.join(folder_prediction, dir, sub_dir, "*.pkl")
+            )[0]
             data = pd.read_pickle(pkl_file)
             patient = data["data_path"].split("/")[0]
             patient = ("-").join(patient.split("-")[:2])
-            df.score = np.where(df.patient == patient,
-                                round(data["score"],
-                                      2),
-                                df.score)
+            df.score = np.where(
+                df.patient == patient, round(data["score"], 2), df.score
+            )
 
     update_sheet_cells(df, sheet)

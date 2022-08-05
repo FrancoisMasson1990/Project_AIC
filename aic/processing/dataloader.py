@@ -24,17 +24,19 @@ import aic.processing.operations as op
 class DatasetGenerator2D(Sequence):
     """TensorFlow Dataset from Python/NumPy Iterator."""
 
-    def __init__(self,
-                 filenames,
-                 labelnames,
-                 num_slices_per_scan,
-                 batch_size=8,
-                 crop_dim=[240, 240],
-                 augment=False,
-                 seed=816,
-                 imbalanced=False,
-                 z_slice_min=-1,
-                 z_slice_max=-1):
+    def __init__(
+        self,
+        filenames,
+        labelnames,
+        num_slices_per_scan,
+        batch_size=8,
+        crop_dim=[240, 240],
+        augment=False,
+        seed=816,
+        imbalanced=False,
+        z_slice_min=-1,
+        z_slice_max=-1,
+    ):
         """Init function."""
         img = ut.load_scan(filenames[0])
         img = op.get_pixels_hu(img)
@@ -100,22 +102,22 @@ class DatasetGenerator2D(Sequence):
             cropLen = self.crop_dim[idx]
             imgLen = img.shape[idy]
 
-            start = (imgLen-cropLen)//2
+            start = (imgLen - cropLen) // 2
 
             ratio_crop = 0.20  # Crop up this this % of pixels for offset
             # Number of pixels to offset crop in this dimension
-            offset = int(np.floor(start*ratio_crop))
+            offset = int(np.floor(start * ratio_crop))
 
             if offset > 0:
                 if is_random:
                     start += np.random.choice(range(-offset, offset))
-                    if ((start + cropLen) > imgLen):
+                    if (start + cropLen) > imgLen:
                         # Don't fall off the image
-                        start = (imgLen-cropLen)//2
+                        start = (imgLen - cropLen) // 2
             else:
                 start = 0
 
-            slices.append(slice(start, start+cropLen))
+            slices.append(slice(start, start + cropLen))
 
         return img[tuple(slices)], msk[tuple(slices)]
 
@@ -140,8 +142,7 @@ class DatasetGenerator2D(Sequence):
             """
             Pack N_IMAGES files at a time to queue
             """
-            NUM_QUEUED_IMAGES = 1 + \
-                self.batch_size // self.num_slices_per_scan
+            NUM_QUEUED_IMAGES = 1 + self.batch_size // self.num_slices_per_scan
             # Get enough for full batch + 1
             # print(NUM_QUEUED_IMAGES)
             for idz in range(NUM_QUEUED_IMAGES):
@@ -155,8 +156,8 @@ class DatasetGenerator2D(Sequence):
                 index_z_crop = []
                 if (self.z_slice_min != -1) and (self.z_slice_max != -1):
                     self.imbalanced = False
-                    min_ = int(self.z_slice_min*label.shape[0])
-                    max_ = int(self.z_slice_max*label.shape[0])
+                    min_ = int(self.z_slice_min * label.shape[0])
+                    max_ = int(self.z_slice_max * label.shape[0])
                     index_z_crop = np.arange(min_, max_)
                     label = label[index_z_crop]
 
@@ -170,8 +171,9 @@ class DatasetGenerator2D(Sequence):
                     index_imbalanced = np.array(index_imbalanced)
                     extra_index = 5
                     index_imbalanced = np.arange(
-                        index_imbalanced[0]-extra_index,
-                        index_imbalanced[-1]+extra_index)
+                        index_imbalanced[0] - extra_index,
+                        index_imbalanced[-1] + extra_index,
+                    )
                     label = label[index_imbalanced]
 
                 while label.shape[0] < self.num_slices_per_scan:
@@ -203,10 +205,10 @@ class DatasetGenerator2D(Sequence):
                     img_stack = img
                     label_stack = label
                 else:
-                    img_stack = np.concatenate(
-                        (img_stack, img), axis=self.slice_dim)
+                    img_stack = np.concatenate((img_stack, img), axis=self.slice_dim)
                     label_stack = np.concatenate(
-                        (label_stack, label), axis=self.slice_dim)
+                        (label_stack, label), axis=self.slice_dim
+                    )
 
                 idx += 1
                 if idx >= len(self.filenames):
@@ -224,10 +226,11 @@ class DatasetGenerator2D(Sequence):
             num_slices = img.shape[self.slice_dim]
 
             if self.batch_size > num_slices:
-                raise Exception("Batch size {} is greater than"
-                                " the number of slices in the image {}."
-                                " Data loader cannot be used.".format(
-                                    self.batch_size, num_slices))
+                raise Exception(
+                    "Batch size {} is greater than"
+                    " the number of slices in the image {}."
+                    " Data loader cannot be used.".format(self.batch_size, num_slices)
+                )
 
             """
             We can also randomize the slices
@@ -245,23 +248,23 @@ class DatasetGenerator2D(Sequence):
 
             if (idy + self.batch_size) < num_slices:
                 # We have enough slices for batch
-                img_batch = img[:, :, idy:idy + self.batch_size]
-                label_batch = label[:, :, idy:idy+self.batch_size]
+                img_batch = img[:, :, idy : idy + self.batch_size]
+                label_batch = label[:, :, idy : idy + self.batch_size]
             else:  # We need to pad the batch with slices
                 # Get remaining slices
-                img_batch = img[:, :, -self.batch_size:]
-                label_batch = label[:, :, -self.batch_size:]
+                img_batch = img[:, :, -self.batch_size :]
+                label_batch = label[:, :, -self.batch_size :]
 
             if self.augment:
-                img_batch, label_batch = self.augment_data(
-                    img_batch, label_batch)
+                img_batch, label_batch = self.augment_data(img_batch, label_batch)
 
             if len(np.shape(img_batch)) == 3:
                 img_batch = np.expand_dims(img_batch, axis=-1)
             if len(np.shape(label_batch)) == 3:
                 label_batch = np.expand_dims(label_batch, axis=-1)
-            yield np.transpose(img_batch, [2, 0, 1, 3]).astype(np.float32), \
-                np.transpose(label_batch, [2, 0, 1, 3]).astype(np.float32)
+            yield np.transpose(img_batch, [2, 0, 1, 3]).astype(
+                np.float32
+            ), np.transpose(label_batch, [2, 0, 1, 3]).astype(np.float32)
 
             idy += self.batch_size
             if idy >= num_slices:  # We finished this file, move to the next
@@ -293,7 +296,7 @@ class DatasetGenerator2D(Sequence):
 
     def __len__(self):
         """Return len."""
-        return (self.num_slices_per_scan * self.num_files)//self.batch_size
+        return (self.num_slices_per_scan * self.num_files) // self.batch_size
 
     def __getitem__(self, idx):
         """Return next item."""
@@ -324,18 +327,20 @@ class DatasetGenerator2D(Sequence):
 class DatasetGenerator3D:
     """TensorFlow Dataset from Python/NumPy Iterator."""
 
-    def __init__(self,
-                 data_path=None,
-                 json_filename=None,
-                 batch_size=None,
-                 crop_dim=-1,
-                 resize_dim=-1,
-                 train_test_split=0.8,
-                 validate_test_split=0.5,
-                 number_output_classes=1,
-                 random_seed=None,
-                 randomize=False,
-                 shard=0):
+    def __init__(
+        self,
+        data_path=None,
+        json_filename=None,
+        batch_size=None,
+        crop_dim=-1,
+        resize_dim=-1,
+        train_test_split=0.8,
+        validate_test_split=0.5,
+        number_output_classes=1,
+        random_seed=None,
+        randomize=False,
+        shard=0,
+    ):
         """Init function."""
         self.data_path = data_path
         self.json_filename = json_filename
@@ -369,7 +374,8 @@ class DatasetGenerator3D:
         label_files = ut.expand_list(label_folder)
         self.num_files = len(image_files)
         assert len(image_files) == len(
-            label_files), "Files and labels don't have the same length"
+            label_files
+        ), "Files and labels don't have the same length"
         self.filenames = {}
         for idx in range(self.num_files):
             self.filenames[idx] = [image_files[idx], label_files[idx]]
@@ -383,22 +389,15 @@ class DatasetGenerator3D:
 
         img = ut.load_scan(img_filename)
         img = op.get_pixels_hu(img)
-        img = dp.preprocess_img_3d(img,
-                                   self.resize_dim)
+        img = dp.preprocess_img_3d(img, self.resize_dim)
         label = ut.load_mask(label_filename)
-        label = dp.preprocess_label_3d(label,
-                                       self.resize_dim)
+        label = dp.preprocess_label_3d(label, self.resize_dim)
         # Crop
         if self.crop_dim != -1:
-            img, label = dp.crop_dim_3d(img,
-                                        label,
-                                        self.crop_dim,
-                                        self.randomize)
+            img, label = dp.crop_dim_3d(img, label, self.crop_dim, self.randomize)
         # Randomly rotate
         if self.randomize:
-            img, label = dp.augment_data_3d(img,
-                                            label,
-                                            self.crop_dim)
+            img, label = dp.augment_data_3d(img, label, self.crop_dim)
         return img, label
 
     def get_input_shape(self):
@@ -415,15 +414,14 @@ class DatasetGenerator3D:
         for img, msk in ds.take(1):
             bs = img.shape[0]
             for idx in range(bs):
-                plt.subplot(bs, num_cols, idx*num_cols + 1)
+                plt.subplot(bs, num_cols, idx * num_cols + 1)
                 plt.imshow(img[idx, :, :, slice_num, img_channel], cmap="bone")
                 plt.title("CT Scan", fontsize=18)
-                plt.subplot(bs, num_cols, idx*num_cols + 2)
+                plt.subplot(bs, num_cols, idx * num_cols + 2)
                 plt.imshow(msk[idx, :, :, slice_num, msk_channel], cmap="bone")
                 plt.title("Label", fontsize=18)
         plt.show()
-        print("Mean pixel value of image = {}".format(
-            np.mean(img[0, :, :, :, 0])))
+        print("Mean pixel value of image = {}".format(np.mean(img[0, :, :, :, 0])))
 
     def get_train(self):
         """Return train dataset."""
@@ -440,7 +438,8 @@ class DatasetGenerator3D:
     def get_dataset(self):
         """Create a TensorFlow data loader."""
         ds = tf.data.Dataset.range(self.num_files).shuffle(
-            self.num_files, self.random_seed)  # Shuffle the dataset
+            self.num_files, self.random_seed
+        )  # Shuffle the dataset
         """
         Horovod Sharding
         Here we are not actually dividing the dataset into shards
@@ -452,7 +451,8 @@ class DatasetGenerator3D:
         if self.num_train == 0:
             self.num_train = self.num_files
         ds_train = ds.take(self.num_train).shuffle(
-            self.num_train, self.shard)  # Reshuffle based on shard
+            self.num_train, self.shard
+        )  # Reshuffle based on shard
 
         num_val_test = self.num_files - self.num_train
         self.num_val = int(num_val_test * self.validate_test_split)
@@ -468,21 +468,17 @@ class DatasetGenerator3D:
             ds_test = ds_val_test.skip(self.num_val)
 
         ds_train = ds_train.map(
-            lambda x: tf.py_function(self.read_files,
-                                     [x],
-                                     [tf.float32,
-                                      tf.float32]),
-            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            lambda x: tf.py_function(self.read_files, [x], [tf.float32, tf.float32]),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE,
+        )
         ds_val = ds_val.map(
-            lambda x: tf.py_function(self.read_files,
-                                     [x],
-                                     [tf.float32, tf.float32]),
-            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            lambda x: tf.py_function(self.read_files, [x], [tf.float32, tf.float32]),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE,
+        )
         ds_test = ds_test.map(
-            lambda x: tf.py_function(self.read_files,
-                                     [x],
-                                     [tf.float32, tf.float32]),
-            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            lambda x: tf.py_function(self.read_files, [x], [tf.float32, tf.float32]),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE,
+        )
 
         ds_train = ds_train.repeat()
         ds_train = ds_train.batch(self.batch_size)

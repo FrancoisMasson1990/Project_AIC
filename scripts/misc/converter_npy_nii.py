@@ -19,24 +19,19 @@ import os
 import nibabel as nib
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     path = str(fs.get_label_2d_root())
     save_path = str(fs.get_dataset_root())
     folders = os.listdir(path)
     for folder in folders:
-        files_ = os.path.join(path,
-                              folder)
+        files_ = os.path.join(path, folder)
         file = os.listdir(files_)
         for f in file:
             f = os.path.join(files_, f)
             labels = ut.load_mask(f)
-            labels = \
-                [np.load(labels[i])
-                 for i in range(len(labels))]
+            labels = [np.load(labels[i]) for i in range(len(labels))]
             labels = np.stack(labels, axis=0)
-            save = os.path.join(save_path,
-                                files_.split('/')[-1])
-            co.npy_to_nii(labels,
-                          name='segmentation.nii.gz',
-                          directory=save)
+            # labels[labels > 0] = 1.0
+            save = os.path.join(save_path, files_.split("/")[-1])
+            co.npy_to_nii(labels, name="segmentation.nii.gz", directory=save)

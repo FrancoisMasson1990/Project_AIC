@@ -18,7 +18,7 @@ import shutil
 from natsort import natsorted
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     # Following section give the consistency between subfolder
     # - AIC-###
@@ -31,8 +31,7 @@ if __name__ == '__main__':
     sub_folders = os.listdir(folder)
     for sub_folder in tqdm(sub_folders):
         file_names = list()
-        for (dirpath, dirnames, filenames) in os.walk(
-             os.path.join(folder, sub_folder)):
+        for (dirpath, dirnames, filenames) in os.walk(os.path.join(folder, sub_folder)):
             file_names += [os.path.join(dirpath, file) for file in filenames]
 
         file_names = natsorted(file_names)
@@ -50,8 +49,7 @@ if __name__ == '__main__':
         elif len(source_dir) < 8:
             target_dir = "\\".join(source_dir)[:-4]
             last_digits = int(target_dir.split(".")[-1]) - 1
-            target_dir = target_dir.replace(target_dir.split(".")[-1],
-                                            str(last_digits))
+            target_dir = target_dir.replace(target_dir.split(".")[-1], str(last_digits))
             os.makedirs(target_dir, exist_ok=True)
             for f in file_names:
                 shutil.move(f, target_dir)
@@ -64,10 +62,7 @@ if __name__ == '__main__':
     predictions_path = os.path.join(data_path, "predictions")
     data_path = os.path.join(data_path, "datasets_dcm")
 
-    folders = [data_path,
-               surface_label_path,
-               volume_label_path,
-               predictions_path]
+    folders = [data_path, surface_label_path, volume_label_path, predictions_path]
     for folder in tqdm(folders):
         for sub in os.listdir(folder):
             if "-CT1" in os.path.join(folder, sub):
@@ -75,11 +70,12 @@ if __name__ == '__main__':
                 dst = src.replace("-CT1", "")
                 os.rename(src, dst)
 
-            for (dirpath, dirnames, filenames) in os.walk(
-                 os.path.join(folder, sub)):
-                file_name = \
-                    [os.path.join(dirpath, file) for file in filenames
-                     if file.endswith(".txt")]
+            for (dirpath, dirnames, filenames) in os.walk(os.path.join(folder, sub)):
+                file_name = [
+                    os.path.join(dirpath, file)
+                    for file in filenames
+                    if file.endswith(".txt")
+                ]
 
             if file_name:
                 tmp = "tmp.txt"

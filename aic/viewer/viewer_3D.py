@@ -26,19 +26,16 @@ import aic.processing.fitting as ft
 from scipy import ndimage as ndi
 import aic.viewer.viewer_2D as v2d
 import aic.model.loaders as ld
+
 vtk.vtkObject.GlobalWarningDisplayOff()
 
 
 class Viewer3D(object):
     """Class supporting the 3D Viewer interface."""
 
-    def __init__(self,
-                 data_path: str,
-                 mode=1,
-                 label='/label_mask/',
-                 npy=None,
-                 frame=0,
-                 **kwargs):
+    def __init__(
+        self, data_path: str, mode=1, label="/label_mask/", npy=None, frame=0, **kwargs
+    ):
         """Init function."""
         self.frame = frame
         self.init = True
@@ -47,15 +44,11 @@ class Viewer3D(object):
         self.colors = vtk.vtkNamedColors()
         self.window_size = (1200, 800)
         if mode == 1:
-            self.mode = ['ray_cast']
+            self.mode = ["ray_cast"]
         elif mode == 2:
-            self.mode = ['ray_cast',
-                         'iso']
+            self.mode = ["ray_cast", "iso"]
         elif mode == 4:
-            self.mode = ['ray_cast',
-                         'iso',
-                         'slicer_2d',
-                         'inference']
+            self.mode = ["ray_cast", "iso", "slicer_2d", "inference"]
 
         self.actor_list = []
         self.buttons = []
@@ -97,11 +90,9 @@ class Viewer3D(object):
 
         # Model loading
         self.model = kwargs.get("model_name", None)
-        self.model = \
-            ld.load_model(self.model,
-                          self.model_version)
+        self.model = ld.load_model(self.model, self.model_version)
 
-        '''One render window, multiple viewports'''
+        """One render window, multiple viewports"""
         self.rw = vtk.vtkRenderWindow()
         self.rw.SetSize(int(self.window_size[0]), int(self.window_size[1]))
         self.iren = vtk.vtkRenderWindowInteractor()
@@ -116,9 +107,9 @@ class Viewer3D(object):
         self.slicer_2d_view_mode = False
 
         # Callback to update content
-        self.iren.RemoveObservers('KeyPressEvent')
-        self.iren.AddObserver('LeftButtonPressEvent', self._mouseleft)
-        self.iren.AddObserver('KeyPressEvent', self.update)
+        self.iren.RemoveObservers("KeyPressEvent")
+        self.iren.AddObserver("LeftButtonPressEvent", self._mouseleft)
+        self.iren.AddObserver("KeyPressEvent", self.update)
 
         self.iren.SetRenderWindow(self.rw)
         self.viewport_frame()
@@ -133,8 +124,8 @@ class Viewer3D(object):
 
         # Define viewport ranges
         for size in range(len(self.mode)):
-            self.xmins.append(size/len(self.mode))
-            self.xmaxs.append(size/len(self.mode) + 1/len(self.mode))
+            self.xmins.append(size / len(self.mode))
+            self.xmaxs.append(size / len(self.mode) + 1 / len(self.mode))
             self.ymins.append(0)
             self.ymaxs.append(1)
 
@@ -152,7 +143,7 @@ class Viewer3D(object):
         # Have some fun with colors
         # self.ren_bkg = ['AliceBlue', 'GhostWhite', 'WhiteSmoke', 'Seashell']
         # self.ren_bkg = ['GhostWhite']
-        self.ren_bkg = ['Black']
+        self.ren_bkg = ["Black"]
 
     def viewport(self):
         """Generate viewport."""
@@ -160,30 +151,39 @@ class Viewer3D(object):
             self.ren = vtk.vtkRenderer()
             self.render_list.append(self.ren)
             self.rw.AddRenderer(self.ren)
-            self.ren.SetViewport(self.xmins[i],
-                                 self.ymins[i],
-                                 self.xmaxs[i],
-                                 self.ymaxs[i])
+            self.ren.SetViewport(
+                self.xmins[i], self.ymins[i], self.xmaxs[i], self.ymaxs[i]
+            )
             self.actor = self.add_actors(self.mode[i], self.frame)
             if self.actor:
                 self.ren.AddActor(self.actor)
-            if self.mode[i] == 'ray_cast':
+            if self.mode[i] == "ray_cast":
                 # button used for the colors changing
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = \
-                    self.button_cast(pos=[0.7, 0.035],
-                                     states=["State 1", "State 2"])
-                self.but = \
-                    Button(self.buttonfuncMode,
-                           states,
-                           c,
-                           bc,
-                           pos,
-                           size,
-                           font,
-                           bold,
-                           italic,
-                           alpha,
-                           angle).status(int(0))
+                (
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ) = self.button_cast(pos=[0.7, 0.035], states=["State 1", "State 2"])
+                self.but = Button(
+                    self.buttonfuncMode,
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ).status(int(0))
                 self.ren.AddActor2D(self.but.actor)
                 self.buttons.append(self.but)
 
@@ -195,161 +195,248 @@ class Viewer3D(object):
                     self.grid_list.append(self.grid.grid)
                     self.ren.AddActor(self.grid.grid)
 
-            elif self.mode[i] == 'iso':
+            elif self.mode[i] == "iso":
                 # button used for the slicer 2d
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = \
-                    self.button_cast(pos=[0.7, 0.035],
-                                     states=["Cutter On", "Cutter Off"])
-                self.cutter = \
-                    Button(self.buttonfuncMode_cutter,
-                           states,
-                           c,
-                           bc,
-                           pos,
-                           size,
-                           font,
-                           bold,
-                           italic,
-                           alpha,
-                           angle).status(int(0))
+                (
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ) = self.button_cast(
+                    pos=[0.7, 0.035], states=["Cutter On", "Cutter Off"]
+                )
+                self.cutter = Button(
+                    self.buttonfuncMode_cutter,
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ).status(int(0))
                 self.ren.AddActor2D(self.cutter.actor)
                 self.buttons.append(self.cutter)
 
                 # button used for saving
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = \
-                    self.button_cast(pos=[0.5, 0.035], states=["Save"])
-                self.saver = \
-                    Button(self.buttonfuncMode_saving,
-                           states,
-                           c,
-                           bc,
-                           pos,
-                           size,
-                           font,
-                           bold,
-                           italic,
-                           alpha,
-                           angle).status(int(0))
+                (
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ) = self.button_cast(pos=[0.5, 0.035], states=["Save"])
+                self.saver = Button(
+                    self.buttonfuncMode_saving,
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ).status(int(0))
                 self.ren.AddActor2D(self.saver.actor)
                 self.buttons.append(self.saver)
 
-            elif self.mode[i] == 'slicer_2d':
+            elif self.mode[i] == "slicer_2d":
                 # button used for the 2D Slicer and change view
                 # button used for the colors changing
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = \
-                    self.button_cast(pos=[0.7, 0.035],
-                                     states=["Start Slicer Mode",
-                                             "Stop Slicer Mode"])
-                self.but_ = \
-                    Button(self.buttonviewMode,
-                           states,
-                           c,
-                           bc,
-                           pos,
-                           size,
-                           font,
-                           bold,
-                           italic,
-                           alpha,
-                           angle).status(int(0))
+                (
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ) = self.button_cast(
+                    pos=[0.7, 0.035], states=["Start Slicer Mode", "Stop Slicer Mode"]
+                )
+                self.but_ = Button(
+                    self.buttonviewMode,
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ).status(int(0))
                 self.ren.AddActor2D(self.but_.actor)
                 self.buttons.append(self.but_)
 
-            elif self.mode[i] == 'inference':
+            elif self.mode[i] == "inference":
                 self.render_score = self.ren
                 # button used for inference and GT
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = \
-                    self.button_cast(pos=[0.5, 0.035],
-                                     states=["Inference (On)",
-                                             "Inference (Off)"])
-                self.infer = \
-                    Button(self.buttonfuncInference,
-                           states,
-                           c,
-                           bc,
-                           pos,
-                           size,
-                           font,
-                           bold,
-                           italic,
-                           alpha,
-                           angle).status(int(0))
+                (
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ) = self.button_cast(
+                    pos=[0.5, 0.035], states=["Inference (On)", "Inference (Off)"]
+                )
+                self.infer = Button(
+                    self.buttonfuncInference,
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ).status(int(0))
                 self.ren.AddActor2D(self.infer.actor)
                 self.buttons.append(self.infer)
 
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = \
-                    self.button_cast(pos=[0.15, 0.035],
-                                     states=["Ground Truth (On)",
-                                             "Ground Truth (Off)"])
-                self.ground_truth = \
-                    Button(self.buttonfuncGroundTruth,
-                           states,
-                           c,
-                           bc,
-                           pos,
-                           size,
-                           font,
-                           bold,
-                           italic,
-                           alpha,
-                           angle).status(int(0))
+                (
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ) = self.button_cast(
+                    pos=[0.15, 0.035],
+                    states=["Ground Truth (On)", "Ground Truth (Off)"],
+                )
+                self.ground_truth = Button(
+                    self.buttonfuncGroundTruth,
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ).status(int(0))
                 self.ren.AddActor2D(self.ground_truth.actor)
                 self.buttons.append(self.ground_truth)
 
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = \
-                    self.button_cast(pos=[0.8, 0.035],
-                                     states=["Fitting (On)",
-                                             "Fitting (Off)"])
-                self.fitting = \
-                    Button(self.buttonfuncFitting,
-                           states,
-                           c,
-                           bc,
-                           pos,
-                           size,
-                           font,
-                           bold,
-                           italic,
-                           alpha,
-                           angle).status(int(0))
+                (
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ) = self.button_cast(
+                    pos=[0.8, 0.035], states=["Fitting (On)", "Fitting (Off)"]
+                )
+                self.fitting = Button(
+                    self.buttonfuncFitting,
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ).status(int(0))
                 self.ren.AddActor2D(self.fitting.actor)
                 self.buttons.append(self.fitting)
 
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = \
-                    self.button_cast(pos=[0.12, 0.94],
-                                     states=["Agatston Score"])
-                self.score_ratio = \
-                    Button(self.buttonfuncAgatston,
-                           states,
-                           c,
-                           bc,
-                           pos,
-                           size,
-                           font,
-                           bold,
-                           italic,
-                           alpha,
-                           angle).status(int(0))
+                (
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ) = self.button_cast(pos=[0.12, 0.94], states=["Agatston Score"])
+                self.score_ratio = Button(
+                    self.buttonfuncAgatston,
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ).status(int(0))
                 self.ren.AddActor2D(self.score_ratio.actor)
                 self.buttons.append(self.score_ratio)
 
                 # button used for the cylinder properties
-                states, c, bc, pos, size, font, bold, italic, alpha, angle = \
-                    self.button_cast(pos=[0.8, 0.135],
-                                     states=["Move On",
-                                             "Move Off"])
-                self.mover = \
-                    Button(self.buttonfuncMode_mover,
-                           states,
-                           c,
-                           bc,
-                           pos,
-                           size,
-                           font,
-                           bold,
-                           italic,
-                           alpha,
-                           angle).status(int(0))
+                (
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ) = self.button_cast(pos=[0.8, 0.135], states=["Move On", "Move Off"])
+                self.mover = Button(
+                    self.buttonfuncMode_mover,
+                    states,
+                    c,
+                    bc,
+                    pos,
+                    size,
+                    font,
+                    bold,
+                    italic,
+                    alpha,
+                    angle,
+                ).status(int(0))
                 self.ren.AddActor2D(self.mover.actor)
                 self.buttons.append(self.mover)
 
@@ -359,9 +446,9 @@ class Viewer3D(object):
 
     def add_actors(self, mode, frame):
         """Add actors."""
-        txt = glob.glob(self.data_path[frame] + '/*.txt')
-        self.title = self.data_path[frame].split('/')
-        self.title = self.title[-2] + '/' + self.title[-1]
+        txt = glob.glob(self.data_path[frame] + "/*.txt")
+        self.title = self.data_path[frame].split("/")
+        self.title = self.title[-2] + "/" + self.title[-1]
         if len(txt) > 0:
             txt = txt[0]
             f = open(txt, "r")
@@ -370,26 +457,26 @@ class Viewer3D(object):
             # Remove wrong asci character
             valve = valve[:-1]
             # Add progress bar
-            valve += " file : {} on {}".format(frame+1, len(self.data_path))
+            valve += " file : {} on {}".format(frame + 1, len(self.data_path))
             self.rw.SetWindowName(valve)
         else:
-            self.rw.SetWindowName('Valve Unknown')
+            self.rw.SetWindowName("Valve Unknown")
 
         # Add actors according to the mode and create tmp file
-        if mode == 'ray_cast':
+        if mode == "ray_cast":
             actor = self.ray_cast(self.data_path[frame])
             self.actor_list.append(actor)
-        if mode == 'iso':
+        if mode == "iso":
             actor = self.iso_surface(self.data_path[frame])
             self.cutter_actor = actor
             self.actor_list.append(actor)
-        if mode == 'slicer_2d':
+        if mode == "slicer_2d":
             actor = self.slicer_2d(self.data_path[frame])
             self.actor_list.append(actor)
 
         self.init = False
 
-        if mode == 'inference':
+        if mode == "inference":
             return None
         else:
             return actor
@@ -430,9 +517,8 @@ class Viewer3D(object):
         """Switch Cutter button mode."""
         if not self.cutter_tool:
             self.cutter_obj.append(
-                Cutter(self.render_list[-1],
-                       self.iren,
-                       self.cutter_actor))
+                Cutter(self.render_list[-1], self.iren, self.cutter_actor)
+            )
             for cut in self.cutter_obj:
                 self.widget_cut = cut.boxWidget
                 self.widget_cut.On()
@@ -451,9 +537,8 @@ class Viewer3D(object):
         if self.fitting_view_mode:
             if not self.mover_tool:
                 self.mover_obj.append(
-                    Mover(self.render_list[-1],
-                          self.iren,
-                          self.cylinder))
+                    Mover(self.render_list[-1], self.iren, self.cylinder)
+                )
                 for mov in self.mover_obj:
                     self.widget_mov = mov.boxWidget
                     self.widget_mov.On()
@@ -488,12 +573,9 @@ class Viewer3D(object):
         """Switch Ground Truth button mode."""
         self.ground_truth.switch()
         if not self.gt_view_mode:
-            numpy_3d = \
-                glob.glob(os.path.join(self.npy_folder,
-                                       self.title) + '/*.npy')
+            numpy_3d = glob.glob(os.path.join(self.npy_folder, self.title) + "/*.npy")
             if len(numpy_3d) > 0:
-                actor_ = self.label_3d(numpy_3d[0],
-                                       c=[1, 0, 0])
+                actor_ = self.label_3d(numpy_3d[0], c=[1, 0, 0])
                 self.actor_gt_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -519,63 +601,60 @@ class Viewer3D(object):
         self.infer.switch()
         if self.model is not None:
             if not self.infer_view_mode:
-                predictions, crop_values = \
-                    infer.get_predictions(self.model,
-                                          self.model_version,
-                                          self.data_path[self.frame],
-                                          self.crop_dim,
-                                          self.z_slice_max,
-                                          self.z_slice_min,
-                                          self.spacing,
-                                          self.dimensions)
+                predictions, crop_values = infer.get_predictions(
+                    self.model,
+                    self.model_version,
+                    self.data_path[self.frame],
+                    self.crop_dim,
+                    self.z_slice_max,
+                    self.z_slice_min,
+                    self.spacing,
+                    self.dimensions,
+                )
                 vertices, _ = op.make_mesh(predictions, -1)
 
                 # Clustering
-                self.vertices_predictions = \
-                    op.clustering(vertices,
-                                  self.model_version,
-                                  self.center,
-                                  self.all_numpy_nodes,
-                                  ratio=0.4,
-                                  threshold=4000,
-                                  max_=self.max,
-                                  dimensions=self.dimensions,
-                                  spacings=self.spacing,
-                                  crop_values=crop_values)
+                self.vertices_predictions = op.clustering(
+                    vertices,
+                    self.model_version,
+                    self.center,
+                    self.all_numpy_nodes,
+                    ratio=0.4,
+                    threshold=4000,
+                    max_=self.max,
+                    dimensions=self.dimensions,
+                    spacings=self.spacing,
+                    crop_values=crop_values,
+                )
 
                 # Volume Cropping
                 # First prediction : UX visual
                 self.predictions_final = self.img.clone()
-                self.predictions_final = op.boxe_3d(self.predictions_final,
-                                                    self.vertices_predictions,
-                                                    max_=self.max)
+                self.predictions_final = op.boxe_3d(
+                    self.predictions_final, self.vertices_predictions, max_=self.max
+                )
                 # Second prediction : Volume
                 self.predictions_agatston = self.volume.clone()
-                self.predictions_agatston = \
-                    op.boxe_3d(self.predictions_agatston,
-                               self.vertices_predictions,
-                               max_=self.max)
+                self.predictions_agatston = op.boxe_3d(
+                    self.predictions_agatston, self.vertices_predictions, max_=self.max
+                )
                 # Get the all points in isosurface Mesh/Volume
-                self.predictions_agatston_points = \
-                    op.to_points(self.predictions_agatston,
-                                 template=self.template)
-                self.predictions_final_points = \
-                    op.to_points(self.predictions_final)
-                self.predictions_final_points_threshold = \
+                self.predictions_agatston_points = op.to_points(
+                    self.predictions_agatston, template=self.template
+                )
+                self.predictions_final_points = op.to_points(self.predictions_final)
+                self.predictions_final_points_threshold = (
                     self.predictions_agatston_points[
-                        self.predictions_agatston_points[:, 3] >
-                        self.threshold]
+                        self.predictions_agatston_points[:, 3] > self.threshold
+                    ]
+                )
                 # Convex-Hull estimation
-                hull = \
-                    ft.convex_hull(
-                        self.predictions_final_points_threshold[:, :3])
-                mask = \
-                    op.isInHull(self.predictions_agatston_points[:, :3],
-                                hull)
-                self.predictions_agatston_points = \
-                    self.predictions_agatston_points[mask]
-                actor_ = self.label_3d(self.predictions_final_points,
-                                       c=[0, 1, 0])
+                hull = ft.convex_hull(self.predictions_final_points_threshold[:, :3])
+                mask = op.isInHull(self.predictions_agatston_points[:, :3], hull)
+                self.predictions_agatston_points = self.predictions_agatston_points[
+                    mask
+                ]
+                actor_ = self.label_3d(self.predictions_final_points, c=[0, 1, 0])
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -605,22 +684,23 @@ class Viewer3D(object):
             fit_err = Fitting error (G function)
         """
         self.fitting.switch()
-        if (self.fitting.status() == "Fitting (Off)") \
-                and (self.predictions_final_points_threshold is not None):
+        if (self.fitting.status() == "Fitting (Off)") and (
+            self.predictions_final_points_threshold is not None
+        ):
             # Cylinder Fit
             print("performing fitting...")
-            self.w_fit, self.C_fit, self.r_fit, self.fit_err = \
-                ft.fitting_cylinder(
-                    self.predictions_final_points_threshold[:, :3],
-                    guess_angles=None)
+            self.w_fit, self.C_fit, self.r_fit, self.fit_err = ft.fitting_cylinder(
+                self.predictions_final_points_threshold[:, :3], guess_angles=None
+            )
             print("fitting done !")
-            self.cylinder = \
-                Cylinder(pos=tuple(self.C_fit),
-                         r=self.r_fit,
-                         height=20,
-                         axis=tuple(self.w_fit),
-                         alpha=0.5,
-                         c="white")
+            self.cylinder = Cylinder(
+                pos=tuple(self.C_fit),
+                r=self.r_fit,
+                height=20,
+                axis=tuple(self.w_fit),
+                alpha=0.5,
+                c="white",
+            )
             self.actor_fitting_list.append(self.cylinder)
             for render in self.render_list:
                 if render == self.render_score:
@@ -649,35 +729,38 @@ class Viewer3D(object):
             # Update center and axis if object was moved
             self.C_fit = np.asarray(self.cylinder.GetCenter())
             self.w_fit = np.asarray(self.cylinder.normalAt(48))
-            mask_agatston, valve, candidate = \
-                op.get_candidates(self.predictions_agatston_points,
-                                  self.w_fit,
-                                  self.r_fit,
-                                  self.threshold,
-                                  self.spacing,
-                                  self.dimensions)
+            mask_agatston, valve, candidate = op.get_candidates(
+                self.predictions_agatston_points,
+                self.w_fit,
+                self.r_fit,
+                self.threshold,
+                self.spacing,
+                self.dimensions,
+            )
             # Show the score in 2D mode
-            v2d.Viewer2D(data_path=self.data_path,
-                         folder_mask="",
-                         frame=self.frame,
-                         mask_agatston=mask_agatston,
-                         agatston=True,
-                         area=self.area,
-                         threshold_min=130,
-                         threshold_max=None,
-                         valve=valve,
-                         candidate=candidate)
+            v2d.Viewer2D(
+                data_path=self.data_path,
+                folder_mask="",
+                frame=self.frame,
+                mask_agatston=mask_agatston,
+                agatston=True,
+                area=self.area,
+                threshold_min=130,
+                threshold_max=None,
+                valve=valve,
+                candidate=candidate,
+            )
         else:
-            v2d.Viewer2D(data_path=self.data_path,
-                         folder_mask="",
-                         frame=self.frame,
-                         mask_agatston=self.mask.copy(),
-                         agatston=False,
-                         area=self.area)
+            v2d.Viewer2D(
+                data_path=self.data_path,
+                folder_mask="",
+                frame=self.frame,
+                mask_agatston=self.mask.copy(),
+                agatston=False,
+                area=self.area,
+            )
 
-    def button_cast(self,
-                    pos: list = None,
-                    states: list = None):
+    def button_cast(self, pos: list = None, states: list = None):
         """Cast button."""
         c = ["bb", "gray"]
         # colors of states
@@ -699,9 +782,7 @@ class Viewer3D(object):
         """Set ray cast."""
         self.img = load(data).imagedata()
         if self.init:
-            self.volume = Volume(self.img,
-                                 c='jet',
-                                 mode=int(0))
+            self.volume = Volume(self.img, c="jet", mode=int(0))
             self.volume.jittering(True)
         else:
             self.volume._update(self.img)
@@ -712,12 +793,12 @@ class Viewer3D(object):
             print(self.threshold)
 
         if self.template:
-            points = vtk_to_numpy(self.volume.topoints()
-                                  .GetMapper().GetInput()
-                                  .GetPoints().GetData())
-            intensity = vtk_to_numpy(self.volume.imagedata()
-                                     .GetPointData()
-                                     .GetScalars())
+            points = vtk_to_numpy(
+                self.volume.topoints().GetMapper().GetInput().GetPoints().GetData()
+            )
+            intensity = vtk_to_numpy(
+                self.volume.imagedata().GetPointData().GetScalars()
+            )
             # Pixel value intensity
             index = np.argmax(intensity)
             self.max = points[index]
@@ -735,14 +816,14 @@ class Viewer3D(object):
         self.mask = tuple(reversed(load(data).imagedata().GetDimensions()))
 
         if self.mask != self.shape.shape:
-            self.img.resize(self.shape.shape[1],
-                            self.shape.shape[2],
-                            self.shape.shape[0])
+            self.img.resize(
+                self.shape.shape[1], self.shape.shape[2], self.shape.shape[0]
+            )
             self.mask = self.shape.shape
 
         self.mask = np.zeros(self.mask, dtype=int)
         self.spacing = self.img.imagedata().GetSpacing()
-        self.area = self.spacing[0]*self.spacing[1]
+        self.area = self.spacing[0] * self.spacing[1]
         self.dimensions = self.img.imagedata().GetDimensions()
 
         # High value for the cylinder fitting
@@ -754,14 +835,25 @@ class Viewer3D(object):
         self.all_array = self.points.GetPoints()
         self.all_numpy_nodes = vtk_to_numpy(self.all_array.GetData())
         # x y z center from isovolume
-        self.center = \
-            np.array(
-                [(np.min(self.all_numpy_nodes[:, 0]) +
-                    np.max(self.all_numpy_nodes[:, 0]))/2,
-                 (np.min(self.all_numpy_nodes[:, 1]) +
-                     np.max(self.all_numpy_nodes[:, 1]))/2,
-                 (np.min(self.all_numpy_nodes[:, 2]) +
-                     np.max(self.all_numpy_nodes[:, 2]))/2])
+        self.center = np.array(
+            [
+                (
+                    np.min(self.all_numpy_nodes[:, 0])
+                    + np.max(self.all_numpy_nodes[:, 0])
+                )
+                / 2,
+                (
+                    np.min(self.all_numpy_nodes[:, 1])
+                    + np.max(self.all_numpy_nodes[:, 1])
+                )
+                / 2,
+                (
+                    np.min(self.all_numpy_nodes[:, 2])
+                    + np.max(self.all_numpy_nodes[:, 2])
+                )
+                / 2,
+            ]
+        )
 
         return self.img
 
@@ -785,7 +877,7 @@ class Viewer3D(object):
     def label_3d(self, data, c=[1, 0, 0]):
         """Generate 3D Labels."""
         if isinstance(data, str):
-            with open(data, 'rb') as f:
+            with open(data, "rb") as f:
                 img = np.load(f)
         if isinstance(data, np.ndarray):
             img = data
@@ -830,39 +922,37 @@ class Viewer3D(object):
         else:
             directory = os.getcwd() + self.npy_folder
         # Make folder recursively
-        os.makedirs(os.path.join(
-            directory,
-            self.title),
-                    exist_ok=True)
+        os.makedirs(os.path.join(directory, self.title), exist_ok=True)
 
-        with open(os.path.join(directory,
-                               self.title) + '/' + 'volume_label.npy',
-                  'wb') as f:
+        with open(
+            os.path.join(directory, self.title) + "/" + "volume_label.npy", "wb"
+        ) as f:
             np.save(f, numpy_nodes)
 
-        numpy_nodes[:, 0] = np.around(numpy_nodes[:, 0]/self.spacing[0])
-        numpy_nodes[:, 1] = np.around(numpy_nodes[:, 1]/self.spacing[1])
-        numpy_nodes[:, 2] = np.around(numpy_nodes[:, 2]/self.spacing[2])
+        numpy_nodes[:, 0] = np.around(numpy_nodes[:, 0] / self.spacing[0])
+        numpy_nodes[:, 1] = np.around(numpy_nodes[:, 1] / self.spacing[1])
+        numpy_nodes[:, 2] = np.around(numpy_nodes[:, 2] / self.spacing[2])
         # Along the z axis : Later Along x axis and y axis ...
         # (3D Object Detection from CT Scans using a Slice-and-fuse Approach)
         slicer = np.unique(numpy_nodes[:, 2]).astype(int)
 
         if self.multi_label:
-            self.all_numpy_nodes[:, 0] = \
-                np.around(self.all_numpy_nodes[:, 0]/self.spacing[0])
-            self.all_numpy_nodes[:, 1] = \
-                np.around(self.all_numpy_nodes[:, 1]/self.spacing[1])
-            self.all_numpy_nodes[:, 2] = \
-                np.around(self.all_numpy_nodes[:, 2]/self.spacing[2])
+            self.all_numpy_nodes[:, 0] = np.around(
+                self.all_numpy_nodes[:, 0] / self.spacing[0]
+            )
+            self.all_numpy_nodes[:, 1] = np.around(
+                self.all_numpy_nodes[:, 1] / self.spacing[1]
+            )
+            self.all_numpy_nodes[:, 2] = np.around(
+                self.all_numpy_nodes[:, 2] / self.spacing[2]
+            )
             slicer_tot = np.unique(self.all_numpy_nodes[:, 2]).astype(int)
 
         if os.path.exists(self.label_folder):
             directory = self.label_folder
         else:
             directory = os.getcwd() + self.label_folder
-        os.makedirs(os.path.join(directory,
-                                 self.title),
-                    exist_ok=True)
+        os.makedirs(os.path.join(directory, self.title), exist_ok=True)
 
         mask_1 = self.mask.copy()
         mask_2 = self.mask.copy()
@@ -877,9 +967,9 @@ class Viewer3D(object):
                     x_y = np.unique(x_y, axis=0)
                     for value in x_y:
                         mask_1[z_axis, value[0], value[1]] = 1
-                    self.mask[z_axis, ::] = \
-                        ndi.binary_fill_holes(
-                            mask_1[z_axis, ::]).astype(int)
+                    self.mask[z_axis, ::] = ndi.binary_fill_holes(
+                        mask_1[z_axis, ::]
+                    ).astype(int)
 
             if z_axis in slicer:
                 # save and diplay the mask (Magna valve label)
@@ -889,17 +979,14 @@ class Viewer3D(object):
                 x_y[:] = z[:, 0:2]
                 x_y = np.unique(x_y, axis=0)
                 for value in x_y:
-                    mask_2[z_axis,
-                           value[0],
-                           value[1]] = 1
+                    mask_2[z_axis, value[0], value[1]] = 1
                 if self.multi_label:
-                    mask_2[z_axis, ::] = \
-                        ndi.binary_fill_holes(
-                            mask_2[z_axis, ::]).astype(int)
+                    mask_2[z_axis, ::] = ndi.binary_fill_holes(
+                        mask_2[z_axis, ::]
+                    ).astype(int)
                 self.mask[z_axis, ::] += mask_2[z_axis, ::]
 
-            self.mask[z_axis, ::] = \
-                np.rot90(self.mask[z_axis, ::])
+            self.mask[z_axis, ::] = np.rot90(self.mask[z_axis, ::])
             # To be aligned with 2D show.
             # Need to fill contour image
             # Not perfect so will use manual tool correction
@@ -908,28 +995,25 @@ class Viewer3D(object):
             # Can not be binary_fill_holes in multi label detection otherwise
             # will fill everything with 1 value
             if not self.multi_label:
-                self.mask[z_axis, ::] = \
-                    ndi.binary_fill_holes(self.mask[z_axis, ::]).astype(int)
+                self.mask[z_axis, ::] = ndi.binary_fill_holes(
+                    self.mask[z_axis, ::]
+                ).astype(int)
             np.save(
-                os.path.join(directory,
-                             self.title) + '/' + str(z_axis),
-                self.mask[z_axis, ::])
+                os.path.join(directory, self.title) + "/" + str(z_axis),
+                self.mask[z_axis, ::],
+            )
             # plt.imsave(
             #     os.path.join(directory,
             #                  self.title) + '/' + str(z_axis) + ".png",
             #     self.mask[z_axis, ::])
 
-        print('Labeling done !')
+        print("Labeling done !")
 
-    def create_window(self,
-                      render,
-                      renderwindow,
-                      interactor):
+    def create_window(self, render, renderwindow, interactor):
         """Create windows."""
         renderer = vtk.vtkRenderer()
         renderWindow = vtk.vtkRenderWindow()
-        renderWindow.SetSize(int(self.window_size[0]),
-                             int(self.window_size[1]))
+        renderWindow.SetSize(int(self.window_size[0]), int(self.window_size[1]))
         renderWindow.AddRenderer(renderer)
         renderWindowInteractor = vtk.vtkRenderWindowInteractor()
         renderWindowInteractor.SetRenderWindow(renderWindow)
@@ -948,10 +1032,9 @@ class Viewer3D(object):
     def update(self, obj, ev):
         """Update render."""
         key = self.iren.GetKeySym()
-        if key == 'Left':
+        if key == "Left":
             if self.frame > 0:
-                for render, actor in zip(self.render_list,
-                                         self.actor_list):
+                for render, actor in zip(self.render_list, self.actor_list):
                     render.RemoveActor(actor)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -968,15 +1051,13 @@ class Viewer3D(object):
                 self.frame += -1
                 for mode in self.mode:
                     _ = self.add_actors(mode, self.frame)
-                for render, actor in zip(self.render_list,
-                                         self.actor_list):
+                for render, actor in zip(self.render_list, self.actor_list):
                     render.AddActor(actor)
                 self.rw.Render()
 
-        elif key == 'Right':
-            if self.frame < (len(self.data_path)-1):
-                for render, actor in zip(self.render_list,
-                                         self.actor_list):
+        elif key == "Right":
+            if self.frame < (len(self.data_path) - 1):
+                for render, actor in zip(self.render_list, self.actor_list):
                     render.RemoveActor(actor)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -993,48 +1074,49 @@ class Viewer3D(object):
                 self.frame += 1
                 for mode in self.mode:
                     _ = self.add_actors(mode, self.frame)
-                for render, actor in zip(self.render_list,
-                                         self.actor_list):
+                for render, actor in zip(self.render_list, self.actor_list):
                     render.AddActor(actor)
                 self.rw.Render()
 
-        elif key == 'p':
+        elif key == "p":
             for render in self.render_list:
                 render.ResetCamera()
-        elif key == 'plus':
+        elif key == "plus":
             self.valve_value += 1
             for render in self.render_list:
                 if render == self.render_score:
                     render.RemoveActor(self.valve_value_actor)
-                    self.valve_value_actor = \
-                        Text_2D(str(self.valve_value),
-                                pos=[0.49, 0.87],
-                                s=0.8,
-                                c=None,
-                                alpha=1,
-                                bg=None,
-                                font="Montserrat",
-                                justify="bottom-left",
-                                bold=False,
-                                italic=False)
+                    self.valve_value_actor = Text_2D(
+                        str(self.valve_value),
+                        pos=[0.49, 0.87],
+                        s=0.8,
+                        c=None,
+                        alpha=1,
+                        bg=None,
+                        font="Montserrat",
+                        justify="bottom-left",
+                        bold=False,
+                        italic=False,
+                    )
                     render.AddActor2D(self.valve_value_actor)
             self.rw.Render()
-        elif key == 'minus':
+        elif key == "minus":
             self.valve_value -= 1
             for render in self.render_list:
                 if render == self.render_score:
                     render.RemoveActor(self.valve_value_actor)
-                    self.valve_value_actor = \
-                        Text_2D(str(self.valve_value),
-                                pos=[0.49, 0.87],
-                                s=0.8,
-                                c=None,
-                                alpha=1,
-                                bg=None,
-                                font="Montserrat",
-                                justify="bottom-left",
-                                bold=False,
-                                italic=False)
+                    self.valve_value_actor = Text_2D(
+                        str(self.valve_value),
+                        pos=[0.49, 0.87],
+                        s=0.8,
+                        c=None,
+                        alpha=1,
+                        bg=None,
+                        font="Montserrat",
+                        justify="bottom-left",
+                        bold=False,
+                        italic=False,
+                    )
                     render.AddActor2D(self.valve_value_actor)
             self.rw.Render()
         else:

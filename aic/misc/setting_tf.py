@@ -24,8 +24,9 @@ def requirements_2d():
 
     blocktime = 0
     num_inter_threads = 1
-    num_threads = min(len(psutil.Process().cpu_affinity()),
-                      psutil.cpu_count(logical=False))
+    num_threads = min(
+        len(psutil.Process().cpu_affinity()), psutil.cpu_count(logical=False)
+    )
 
     os.environ["KMP_BLOCKTIME"] = str(blocktime)
     os.environ["OMP_NUM_THREADS"] = str(num_threads)
@@ -33,8 +34,8 @@ def requirements_2d():
     os.environ["INTER_THREADS"] = str(num_inter_threads)
     os.environ["KMP_SETTINGS"] = "0"  # Show the settings at runtime
 
-    os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-    gpus = tf.config.experimental.list_physical_devices('GPU')
+    os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
+    gpus = tf.config.experimental.list_physical_devices("GPU")
 
     if gpus:
         print("allowing growth")
@@ -46,9 +47,8 @@ def requirements_2d():
     try:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, growth)
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            print(len(gpus), "Physical GPUs,", len(logical_gpus),
-                  "Logical GPUs")
+            logical_gpus = tf.config.experimental.list_logical_devices("GPU")
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
     except RuntimeError as e:
         print(e)
 
@@ -62,8 +62,9 @@ def requirements_3d():
 
     blocktime = 0
     num_inter_threads = 1
-    num_threads = min(len(psutil.Process().cpu_affinity()),
-                      psutil.cpu_count(logical=False))
+    num_threads = min(
+        len(psutil.Process().cpu_affinity()), psutil.cpu_count(logical=False)
+    )
 
     os.environ["KMP_BLOCKTIME"] = str(blocktime)
     os.environ["OMP_NUM_THREADS"] = str(num_threads)
@@ -71,8 +72,8 @@ def requirements_3d():
     os.environ["INTER_THREADS"] = str(num_inter_threads)
     os.environ["KMP_SETTINGS"] = "0"  # Show the settings at runtime
 
-    os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-    gpus = tf.config.experimental.list_physical_devices('GPU')
+    os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
+    gpus = tf.config.experimental.list_physical_devices("GPU")
 
     if gpus:
         print("allowing growth")
@@ -84,9 +85,8 @@ def requirements_3d():
     try:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, growth)
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            print(len(gpus), "Physical GPUs,", len(logical_gpus),
-                  "Logical GPUs")
+            logical_gpus = tf.config.experimental.list_logical_devices("GPU")
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
     except RuntimeError as e:
         print(e)
 

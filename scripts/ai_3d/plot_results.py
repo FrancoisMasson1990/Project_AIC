@@ -41,7 +41,7 @@ if __name__ == "__main__":
     """
     Load the config required for the model
     """
-    config = str(fs.get_configs_root() / 'train_config_3d.yml')
+    config = str(fs.get_configs_root() / "train_config_3d.yml")
     with open(config) as f:
         # The FullLoader parameter handles the conversion from YAML
         # scalar values to Python the dictionary format
@@ -58,8 +58,7 @@ if __name__ == "__main__":
     blocktime, num_inter_threads, num_threads = req3d()
 
     # model_version = 1
-    model_filename = str(fs.get_models_root() /
-                         "unet_3d_model_for_aic.hdf5")
+    model_filename = str(fs.get_models_root() / "unet_3d_model_for_aic.hdf5")
 
     """
     Load a model, load the data, and see inference.
@@ -69,12 +68,13 @@ if __name__ == "__main__":
     Step 1: Define a data loader
     """
     print("-" * 30)
-    print("Loading the data from the Valve project directory" +
-          "to a TensorFlow data loader ...")
+    print(
+        "Loading the data from the Valve project directory"
+        + "to a TensorFlow data loader ..."
+    )
     print("-" * 30)
 
-    files = ut.get_file_list(data_path=data_path,
-                             json_filename=json_filename)
+    files = ut.get_file_list(data_path=data_path, json_filename=json_filename)
     trainFiles = files[0]
     trainLabels = files[1]
     validateFiles = files[2]
@@ -99,14 +99,15 @@ if __name__ == "__main__":
     # The plots will be saved to the png_directory
     imgs = trainFiles
     labels = trainLabels
-    for index, (img, label) in tqdm(enumerate(
-         zip(imgs, labels)), total=len(imgs)):
-        valve_name = str(Path(img).parent).split('/')[-1]
-        plt.plot_results_3d(imgs=img,
-                            labels=label,
-                            model=model,
-                            crop_dim=crop_dim,
-                            resize_dim=resize_dim,
-                            folder=png_folder,
-                            name=valve_name,
-                            randomize=False)
+    for index, (img, label) in tqdm(enumerate(zip(imgs, labels)), total=len(imgs)):
+        valve_name = str(Path(img).parent).split("/")[-1]
+        plt.plot_results_3d(
+            imgs=img,
+            labels=label,
+            model=model,
+            crop_dim=crop_dim,
+            resize_dim=resize_dim,
+            folder=png_folder,
+            name=valve_name,
+            randomize=False,
+        )

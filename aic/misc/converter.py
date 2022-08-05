@@ -16,10 +16,7 @@ import numpy as np
 import nibabel as nib
 
 
-def npy_to_nii(obj,
-               name='imaging.nii.gz',
-               directory='.',
-               affine=np.eye(4)):
+def npy_to_nii(obj, name="imaging.nii.gz", directory=".", affine=np.eye(4)):
     ni_img = nib.Nifti1Image(obj, affine)
     save = os.path.join(directory, name)
     nib.save(ni_img, save)
