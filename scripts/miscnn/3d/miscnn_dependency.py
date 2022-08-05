@@ -1,6 +1,7 @@
 from miscnn import Data_Augmentation
 from miscnn import Preprocessor
 from miscnn import Data_IO
+from miscnn import Neural_Network
 from miscnn.data_loading.interfaces import NIFTI_interface
 from miscnn.neural_network.architecture.unet.standard import Architecture
 from miscnn.processing.preprocessor import Preprocessor

@@ -30,6 +30,8 @@ import warnings
 import yaml
 import aic.misc.files as fs
 from aic.misc.setting_tf import requirements_3d as req3d
+from tensorflow.keras.callbacks import ReduceLROnPlateau
+from tensorflow.keras.callbacks import EarlyStopping
 
 warnings.filterwarnings("ignore")
 from miscnn_dependency import *  # noqa: E402
@@ -43,7 +45,7 @@ if __name__ == "__main__":
     """
     Load the config required for the model
     """
-    config = str(fs.get_configs_root() / "train_config_3d.yml")
+    config = str(fs.get_configs_root() / "train_config_3d_miscnn.yml")
     with open(config) as f:
         # The FullLoader parameter handles the conversion from YAML
         # scalar values to Python the dictionary format
@@ -51,6 +53,7 @@ if __name__ == "__main__":
     blocktime, num_inter_threads, num_threads = req3d()
 
     data_path = config.get("data_path", fs.get_dataset_root())
+
     interface = NIFTI_interface(pattern="AIC-00[0-9]*", channels=1, classes=2)
     # Initialize data path and create the Data I/O instance
     data_io = Data_IO(interface, data_path)
@@ -96,4 +99,27 @@ if __name__ == "__main__":
     # Create a deep learning neural network model with
     # a standard U-Net architecture
     unet_standard = Architecture()
-    model = miscnn.Neural_Network(preprocessor=pp, architecture=unet_standard)
+    model = Neural_Network(
+        preprocessor=pp,
+        loss=tversky_loss,
+        metrics=[dice_soft, dice_crossentropy],
+        architecture=unet_standard,
+        batch_queue_size=2,
+        workers=8,
+    )
+
+    cb_lr = ReduceLROnPlateau(
+        monitor="loss",
+        factor=0.1,
+        patience=20,
+        verbose=1,
+        mode="min",
+        min_delta=0.0001,
+        cooldown=1,
+        min_lr=0.00001,
+    )
+    cb_es = EarlyStopping(
+        monitor="loss", min_delta=0, patience=150, verbose=1, mode="min"
+    )
+    sample_list = data_io.get_indiceslist()
+    model.train(sample_list=sample_list, callbacks=[cb_lr, cb_es])
