@@ -12,3 +12,5 @@ from miscnn.processing.subfunctions.resampling import Resampling
 from miscnn.neural_network.metrics import dice_soft
 from miscnn.neural_network.metrics import dice_crossentropy
 from miscnn.neural_network.metrics import tversky_loss
+from miscnn.evaluation.cross_validation import cross_validation
+from miscnn.evaluation import split_validation
