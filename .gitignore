@@ -36,12 +36,15 @@ MANIFEST
 *.tflite
 *.db
 *.nii.gz
+*.pb
 *events.out*
 dataset_2d.json
 dataset_3d.json
 res/credentials/
 sandbox/
 inference_examples
+**/model/assets/**
+**/model/variables/
 
 # Not ignored
 !requirements-no-deps.txt
