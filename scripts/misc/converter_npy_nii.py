@@ -26,12 +26,15 @@ if __name__ == "__main__":
     folders = os.listdir(path)
     for folder in folders:
         files_ = os.path.join(path, folder)
-        file = os.listdir(files_)
-        for f in file:
-            f = os.path.join(files_, f)
-            labels = ut.load_mask(f)
-            labels = [np.load(labels[i]) for i in range(len(labels))]
-            labels = np.stack(labels, axis=0)
-            # labels[labels > 0] = 1.0
-            save = os.path.join(save_path, files_.split("/")[-1])
-            co.npy_to_nii(labels, name="segmentation.nii.gz", directory=save)
+        file_ = os.listdir(files_)
+        for f in file_:
+            if os.path.isdir(os.path.join(files_, f)):
+                f = os.path.join(files_, f)
+                labels = ut.load_mask(f)
+                labels = [np.load(labels[i]) for i in range(len(labels))]
+                labels = np.stack(labels, axis=0)
+                # labels[labels > 0] = 1.0
+                save = os.path.join(save_path, files_.split("/")[-1])
+                co.npy_to_nii(labels,
+                              name="segmentation.nii.gz",
+                              directory=save)

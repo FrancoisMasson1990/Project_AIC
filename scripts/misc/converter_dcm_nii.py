@@ -24,9 +24,12 @@ if __name__ == "__main__":
     folders = os.listdir(path)
     for folder in folders:
         files_ = os.path.join(path, folder)
-        file = os.listdir(files_)
-        for f in file:
-            f = os.path.join(files_, f)
-            imgs = ut.load_scan(f)
-            imgs = op.get_pixels_hu(imgs)
-            co.npy_to_nii(imgs, name="imaging.nii.gz", directory=files_)
+        file_ = os.listdir(files_)
+        for f in file_:
+            if os.path.isdir(os.path.join(files_, f)):
+                f = os.path.join(files_, f)
+                imgs = ut.load_scan(f)
+                imgs = op.get_pixels_hu(imgs)
+                co.npy_to_nii(imgs,
+                              name="imaging.nii.gz",
+                              directory=files_)
