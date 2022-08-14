@@ -128,3 +128,4 @@ if __name__ == "__main__":
     )
     sample_list = data_io.get_indiceslist()
     model.train(sample_list, epochs=50, callbacks=[cb_ckpt, cb_lr, cb_es])
+    model.predict(sample_list)
