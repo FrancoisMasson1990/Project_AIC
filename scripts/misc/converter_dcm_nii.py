@@ -30,6 +30,4 @@ if __name__ == "__main__":
                 f = os.path.join(files_, f)
                 imgs = ut.load_scan(f)
                 imgs = op.get_pixels_hu(imgs)
-                co.npy_to_nii(imgs,
-                              name="imaging.nii.gz",
-                              directory=files_)
+                co.npy_to_nii(imgs, name="imaging.nii.gz", directory=files_)

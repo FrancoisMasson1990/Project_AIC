@@ -32,7 +32,9 @@ def imbalanced_data_counter(image, msks):
     This done image wise and pixel wise
     """
     # Pixel Wise
-    total_pixel = image.shape[0] * image.shape[1] * image.shape[2] * image.shape[3]
+    total_pixel = (
+        image.shape[0] * image.shape[1] * image.shape[2] * image.shape[3]
+    )
 
     print("\n")
     for key, value in LABEL_CHANNELS["labels"].items():
@@ -51,7 +53,9 @@ def imbalanced_data_counter(image, msks):
             if is_value:
                 count += 1
         print(
-            "image wise ratio (%) of {} is {}".format(key, str(count / msks.shape[0]))
+            "image wise ratio (%) of {} is {}".format(
+                key, str(count / msks.shape[0])
+            )
         )
     print("\n")
 

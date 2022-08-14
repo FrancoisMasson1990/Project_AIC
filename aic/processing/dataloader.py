@@ -205,7 +205,9 @@ class DatasetGenerator2D(Sequence):
                     img_stack = img
                     label_stack = label
                 else:
-                    img_stack = np.concatenate((img_stack, img), axis=self.slice_dim)
+                    img_stack = np.concatenate(
+                        (img_stack, img), axis=self.slice_dim
+                    )
                     label_stack = np.concatenate(
                         (label_stack, label), axis=self.slice_dim
                     )
@@ -229,7 +231,9 @@ class DatasetGenerator2D(Sequence):
                 raise Exception(
                     "Batch size {} is greater than"
                     " the number of slices in the image {}."
-                    " Data loader cannot be used.".format(self.batch_size, num_slices)
+                    " Data loader cannot be used.".format(
+                        self.batch_size, num_slices
+                    )
                 )
 
             """
@@ -256,7 +260,9 @@ class DatasetGenerator2D(Sequence):
                 label_batch = label[:, :, -self.batch_size :]
 
             if self.augment:
-                img_batch, label_batch = self.augment_data(img_batch, label_batch)
+                img_batch, label_batch = self.augment_data(
+                    img_batch, label_batch
+                )
 
             if len(np.shape(img_batch)) == 3:
                 img_batch = np.expand_dims(img_batch, axis=-1)
@@ -394,7 +400,9 @@ class DatasetGenerator3D:
         label = dp.preprocess_label_3d(label, self.resize_dim)
         # Crop
         if self.crop_dim != -1:
-            img, label = dp.crop_dim_3d(img, label, self.crop_dim, self.randomize)
+            img, label = dp.crop_dim_3d(
+                img, label, self.crop_dim, self.randomize
+            )
         # Randomly rotate
         if self.randomize:
             img, label = dp.augment_data_3d(img, label, self.crop_dim)
@@ -421,7 +429,11 @@ class DatasetGenerator3D:
                 plt.imshow(msk[idx, :, :, slice_num, msk_channel], cmap="bone")
                 plt.title("Label", fontsize=18)
         plt.show()
-        print("Mean pixel value of image = {}".format(np.mean(img[0, :, :, :, 0])))
+        print(
+            "Mean pixel value of image = {}".format(
+                np.mean(img[0, :, :, :, 0])
+            )
+        )
 
     def get_train(self):
         """Return train dataset."""
@@ -468,15 +480,21 @@ class DatasetGenerator3D:
             ds_test = ds_val_test.skip(self.num_val)
 
         ds_train = ds_train.map(
-            lambda x: tf.py_function(self.read_files, [x], [tf.float32, tf.float32]),
+            lambda x: tf.py_function(
+                self.read_files, [x], [tf.float32, tf.float32]
+            ),
             num_parallel_calls=tf.data.experimental.AUTOTUNE,
         )
         ds_val = ds_val.map(
-            lambda x: tf.py_function(self.read_files, [x], [tf.float32, tf.float32]),
+            lambda x: tf.py_function(
+                self.read_files, [x], [tf.float32, tf.float32]
+            ),
             num_parallel_calls=tf.data.experimental.AUTOTUNE,
         )
         ds_test = ds_test.map(
-            lambda x: tf.py_function(self.read_files, [x], [tf.float32, tf.float32]),
+            lambda x: tf.py_function(
+                self.read_files, [x], [tf.float32, tf.float32]
+            ),
             num_parallel_calls=tf.data.experimental.AUTOTUNE,
         )
 

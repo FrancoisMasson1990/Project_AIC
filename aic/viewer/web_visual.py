@@ -38,7 +38,9 @@ def generate_imgs(data, index, fig):
     fig.update_xaxes(showticklabels=False)
     fig.update_yaxes(showticklabels=False)
     fig.update_layout(px.imshow(imgs[0], color_continuous_scale="gray").layout)
-    fig.update_traces(hovertemplate="x: %{x} <br> y: %{y} <br> Hounsfield unit: %{z}")
+    fig.update_traces(
+        hovertemplate="x: %{x} <br> y: %{y} <br> Hounsfield unit: %{z}"
+    )
     fig.update_coloraxes(showscale=False)
 
     return fig
@@ -124,7 +126,11 @@ def update_graph_2d(data):
             step["args"][0]["visible"][i + len(fig.data) // 2] = True
             steps.append(step)
 
-        sliders = [dict(active=0, currentvalue={"prefix": "Dicom file: "}, steps=steps)]
+        sliders = [
+            dict(
+                active=0, currentvalue={"prefix": "Dicom file: "}, steps=steps
+            )
+        ]
 
         fig.update_layout(
             sliders=sliders,
@@ -170,7 +176,9 @@ def update_graph_3d(data):
                     marker=dict(size=3, color="red", opacity=0.8),
                 )
             )
-        fig.update_scenes(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False)
+        fig.update_scenes(
+            xaxis_visible=False, yaxis_visible=False, zaxis_visible=False
+        )
     fig.update_layout(template="plotly_dark")
     fig.update_layout(paper_bgcolor="#1e1e1e", plot_bgcolor="#1e1e1e")
     return fig

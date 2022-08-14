@@ -84,7 +84,9 @@ if __name__ == "__main__":
 
     folder_prediction = fs.get_prediction_root()
     for dir in natsorted(os.listdir(folder_prediction)):
-        for sub_dir in natsorted(os.listdir(os.path.join(folder_prediction, dir))):
+        for sub_dir in natsorted(
+            os.listdir(os.path.join(folder_prediction, dir))
+        ):
             pkl_file = glob.glob(
                 os.path.join(folder_prediction, dir, sub_dir, "*.pkl")
             )[0]

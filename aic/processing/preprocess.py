@@ -141,7 +141,10 @@ def preprocess_label_3d(label, resize_dim, number_output_classes=1):
     label = np.moveaxis(label, 0, -1)
     if resize_dim != -1:
         label = resize_input(
-            label, width=resize_dim[0], height=resize_dim[1], depth=resize_dim[2]
+            label,
+            width=resize_dim[0],
+            height=resize_dim[1],
+            depth=resize_dim[2],
         )
     # Combine all masks but background
     if number_output_classes == 1:

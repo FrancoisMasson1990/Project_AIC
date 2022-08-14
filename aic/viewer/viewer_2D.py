@@ -205,9 +205,15 @@ class Image_2D(object):
 
         # Need to activate Press and release
         self.pressed = False
-        self.fig_canvas.canvas.mpl_connect("button_press_event", self.mouse_pressed)
-        self.fig_canvas.canvas.mpl_connect("button_release_event", self.mouse_released)
-        self.fig_canvas.canvas.mpl_connect("motion_notify_event", self.mouse_position)
+        self.fig_canvas.canvas.mpl_connect(
+            "button_press_event", self.mouse_pressed
+        )
+        self.fig_canvas.canvas.mpl_connect(
+            "button_release_event", self.mouse_released
+        )
+        self.fig_canvas.canvas.mpl_connect(
+            "motion_notify_event", self.mouse_position
+        )
 
         self._image = None
         self._image2 = None
@@ -230,7 +236,9 @@ class Image_2D(object):
                 self.threshold_min,
                 self.threshold_max,
             )
-            self._prediction_view = self.axis2.imshow(self.prediction, cmap="jet")
+            self._prediction_view = self.axis2.imshow(
+                self.prediction, cmap="jet"
+            )
             self.score = sc.agatston_score(
                 self.image,
                 self.mask_agatston,
@@ -275,7 +283,9 @@ class Image_2D(object):
         if len(self.label) == 0:
             self.label = None
 
-        self.fig_canvas.suptitle(self.data_path[self.frame].split("/")[-2], fontsize=12)
+        self.fig_canvas.suptitle(
+            self.data_path[self.frame].split("/")[-2], fontsize=12
+        )
 
         self.slicer.ax.set_xlim(0, len(self.image) - 1)
         self.slicer.valmax = len(self.image) - 1
@@ -305,7 +315,9 @@ class Image_2D(object):
         if len(self.label) == 0:
             self.label = None
 
-        self.fig_canvas.suptitle(self.data_path[self.frame].split("/")[-2], fontsize=12)
+        self.fig_canvas.suptitle(
+            self.data_path[self.frame].split("/")[-2], fontsize=12
+        )
 
         self.slicer.ax.set_xlim(0, len(self.image) - 1)
         self.slicer.valmax = len(self.image) - 1
@@ -316,8 +328,12 @@ class Image_2D(object):
         """Update slice render."""
         self.index = int(self.slicer.val)
         if self._image is None:
-            self._image = self.axis1.imshow(self.image[self.index], cmap="gray")
-            self._image2 = self.axis2.imshow(self.image[self.index], cmap="gray")
+            self._image = self.axis1.imshow(
+                self.image[self.index], cmap="gray"
+            )
+            self._image2 = self.axis2.imshow(
+                self.image[self.index], cmap="gray"
+            )
         else:
             self._image.set_data(self.image[self.index])
             self._image2.set_data(self.image[self.index])
@@ -332,7 +348,9 @@ class Image_2D(object):
                 self.threshold_max,
             )
             if self._prediction_view is None:
-                self._prediction_view = self.axis2.imshow(self.prediction, cmap="jet")
+                self._prediction_view = self.axis2.imshow(
+                    self.prediction, cmap="jet"
+                )
             else:
                 self._prediction_view.set_data(self.prediction)
 

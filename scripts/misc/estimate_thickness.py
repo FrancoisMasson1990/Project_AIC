@@ -30,7 +30,9 @@ if __name__ == "__main__":
     threshold = 900
     for j in layers:
         # load projected native valve
-        path = fs.get_native_root() / f"Magna/projected/Magna_{j}/projected.npy"
+        path = (
+            fs.get_native_root() / f"Magna/projected/Magna_{j}/projected.npy"
+        )
         with open(str(path), "rb") as f:
             native = np.load(f)
 

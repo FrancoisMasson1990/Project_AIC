@@ -21,7 +21,15 @@ import matplotlib.pyplot as plt
 
 
 def plot_results_2d(
-    imgs, labels, model, crop_dim, z_slice_min, z_slice_max, folder, name, model_version
+    imgs,
+    labels,
+    model,
+    crop_dim,
+    z_slice_min,
+    z_slice_max,
+    folder,
+    name,
+    model_version,
 ):
     """Plot the predicted masks for image."""
     # Image processing
@@ -72,7 +80,9 @@ def plot_results_2d(
 
         # Image
         if ax0_object is None:
-            ax0_object = ax0.imshow(imgs[i, :, :, 0], cmap="bone", origin="lower")
+            ax0_object = ax0.imshow(
+                imgs[i, :, :, 0], cmap="bone", origin="lower"
+            )
         else:
             ax0_object.set_data(imgs[i, :, :, 0])
 
@@ -81,7 +91,9 @@ def plot_results_2d(
 
         # Label
         if ax1_object is None:
-            ax1_object = ax1.imshow(labels[i, :, :], origin="lower", vmin=0, vmax=1)
+            ax1_object = ax1.imshow(
+                labels[i, :, :], origin="lower", vmin=0, vmax=1
+            )
         else:
             ax1_object.set_data(labels[i, :, :])
 
@@ -99,7 +111,9 @@ def plot_results_2d(
             ax2.set_title(
                 "Predictions\n(Dice {:.4f}".format(
                     mt.dice_coefficient(
-                        np.expand_dims(labels[i, :, :], (0, -1)).astype(np.float32),
+                        np.expand_dims(labels[i, :, :], (0, -1)).astype(
+                            np.float32
+                        ),
                         prediction,
                         axis=(1, 2),
                     ),
@@ -123,12 +137,26 @@ def plot_results_3d(
     randomize=False,
 ):
     """Plot the predicted masks for image."""
-    # Image processing
-    imgs = ut.load_scan(imgs)
-    imgs = op.get_pixels_hu(imgs)
-    imgs = dp.preprocess_img_3d(imgs, resize_dim)
-    labels = ut.load_mask(labels)
-    labels = dp.preprocess_label_3d(labels, resize_dim, number_output_classes)
+    # # Image processing
+    # imgs = ut.load_scan(imgs)
+    # imgs = op.get_pixels_hu(imgs)
+    # imgs = dp.preprocess_img_3d(imgs, resize_dim)
+    # labels = ut.load_mask(labels)
+    # labels = dp.preprocess_label_3d(labels, resize_dim, number_output_classes)
+    import nibabel as nib
+
+    imgs = "/home/francoismasson/Project_AIC/scripts/data_kidney/case_00000/imaging.nii.gz"
+    imgs = nib.load(imgs)
+    imgs = np.array(imgs.dataobj)
+    imgs = np.moveaxis(imgs, 0, -1)
+    imgs = np.expand_dims(imgs, -1)
+
+    labels = "/home/francoismasson/Project_AIC/scripts/data_kidney/case_00000/segmentation.nii.gz"
+    labels = nib.load(labels)
+    labels = np.array(labels.dataobj)
+    labels = np.moveaxis(labels, 0, -1)
+    labels = np.expand_dims(labels, -1)
+
     # Crop
     if crop_dim != -1:
         imgs, labels = dp.crop_dim_3d(imgs, labels, crop_dim, randomize)
@@ -154,10 +182,14 @@ def plot_results_3d(
         prediction[-1][prediction[-1] >= 0.5] = 1
         prediction[-1][prediction[-1] < 0.5] = 0
 
+    vmin = np.min(labels)
+    vmax = np.max(labels)
     for i in range(imgs.shape[2]):
         # Image
         if ax0_object is None:
-            ax0_object = ax0.imshow(imgs[:, :, i, 0], cmap="bone", origin="lower")
+            ax0_object = ax0.imshow(
+                imgs[:, :, i, 0], cmap="bone", origin="lower"
+            )
         else:
             ax0_object.set_data(imgs[:, :, i, 0])
 
@@ -166,7 +198,9 @@ def plot_results_3d(
 
         # Label
         if ax1_object is None:
-            ax1_object = ax1.imshow(labels[:, :, i], origin="lower", vmin=0, vmax=1)
+            ax1_object = ax1.imshow(
+                labels[:, :, i], origin="lower", vmin=vmin, vmax=vmax
+            )
         else:
             ax1_object.set_data(labels[:, :, i])
 

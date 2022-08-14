@@ -46,7 +46,10 @@ app.layout = html.Div(
                                 dcc.Upload(
                                     id="upload-data",
                                     children=html.Div(
-                                        ["Drag and Drop or ", html.A("Select Files")]
+                                        [
+                                            "Drag and Drop or ",
+                                            html.A("Select Files"),
+                                        ]
                                     ),
                                     style={
                                         "width": "100%",
@@ -76,7 +79,10 @@ app.layout = html.Div(
                         html.P(
                             [
                                 dcc.Input(
-                                    id="score", value="", type="text", disabled=True
+                                    id="score",
+                                    value="",
+                                    type="text",
+                                    disabled=True,
                                 )
                             ]
                         ),
@@ -85,7 +91,10 @@ app.layout = html.Div(
                         html.P(
                             [
                                 dcc.Input(
-                                    id="age", value=None, type="text", disabled=False
+                                    id="age",
+                                    value=None,
+                                    type="text",
+                                    disabled=False,
                                 )
                             ]
                         ),
@@ -94,7 +103,9 @@ app.layout = html.Div(
                         html.P(
                             [
                                 dcc.Dropdown(
-                                    options=["Man", "Woman"], value=None, id="sex"
+                                    options=["Man", "Woman"],
+                                    value=None,
+                                    id="sex",
                                 )
                             ]
                         ),
@@ -103,7 +114,9 @@ app.layout = html.Div(
                         html.P(
                             [
                                 dcc.Dropdown(
-                                    options=["Yes", "No"], value=None, id="hypertension"
+                                    options=["Yes", "No"],
+                                    value=None,
+                                    id="hypertension",
                                 )
                             ]
                         ),
@@ -112,7 +125,9 @@ app.layout = html.Div(
                         html.P(
                             [
                                 dcc.Dropdown(
-                                    options=["Yes", "No"], value=None, id="renal"
+                                    options=["Yes", "No"],
+                                    value=None,
+                                    id="renal",
                                 )
                             ]
                         ),
@@ -145,7 +160,10 @@ app.layout = html.Div(
                         html.P(
                             [
                                 dcc.Input(
-                                    id="ldl", value=None, type="text", disabled=False
+                                    id="ldl",
+                                    value=None,
+                                    type="text",
+                                    disabled=False,
                                 )
                             ]
                         ),
@@ -187,7 +205,9 @@ app.layout = html.Div(
                                             style={"height": "100vh"},
                                         ),
                                         dbc.Progress(
-                                            id="pbar", striped=True, animated=True
+                                            id="pbar",
+                                            striped=True,
+                                            animated=True,
                                         ),
                                         dcc.Interval(
                                             id="timer_progress", interval=1000
@@ -270,7 +290,17 @@ def update_outcome(
     implantation,
 ):
     """Get outputs."""
-    values = [age, score, sex, renal, gradient, size, ldl, cholesterol, implantation]
+    values = [
+        age,
+        score,
+        sex,
+        renal,
+        gradient,
+        size,
+        ldl,
+        cholesterol,
+        implantation,
+    ]
     if any(elem is None for elem in values):
         return "Missing informations for Clinical Outcomes"
     elif any(not elem for elem in values):

@@ -34,7 +34,13 @@ class Viewer3D(object):
     """Class supporting the 3D Viewer interface."""
 
     def __init__(
-        self, data_path: str, mode=1, label="/label_mask/", npy=None, frame=0, **kwargs
+        self,
+        data_path: str,
+        mode=1,
+        label="/label_mask/",
+        npy=None,
+        frame=0,
+        **kwargs
     ):
         """Init function."""
         self.frame = frame
@@ -170,7 +176,9 @@ class Viewer3D(object):
                     italic,
                     alpha,
                     angle,
-                ) = self.button_cast(pos=[0.7, 0.035], states=["State 1", "State 2"])
+                ) = self.button_cast(
+                    pos=[0.7, 0.035], states=["State 1", "State 2"]
+                )
                 self.but = Button(
                     self.buttonfuncMode,
                     states,
@@ -271,7 +279,8 @@ class Viewer3D(object):
                     alpha,
                     angle,
                 ) = self.button_cast(
-                    pos=[0.7, 0.035], states=["Start Slicer Mode", "Stop Slicer Mode"]
+                    pos=[0.7, 0.035],
+                    states=["Start Slicer Mode", "Stop Slicer Mode"],
                 )
                 self.but_ = Button(
                     self.buttonviewMode,
@@ -304,7 +313,8 @@ class Viewer3D(object):
                     alpha,
                     angle,
                 ) = self.button_cast(
-                    pos=[0.5, 0.035], states=["Inference (On)", "Inference (Off)"]
+                    pos=[0.5, 0.035],
+                    states=["Inference (On)", "Inference (Off)"],
                 )
                 self.infer = Button(
                     self.buttonfuncInference,
@@ -394,7 +404,9 @@ class Viewer3D(object):
                     italic,
                     alpha,
                     angle,
-                ) = self.button_cast(pos=[0.12, 0.94], states=["Agatston Score"])
+                ) = self.button_cast(
+                    pos=[0.12, 0.94], states=["Agatston Score"]
+                )
                 self.score_ratio = Button(
                     self.buttonfuncAgatston,
                     states,
@@ -423,7 +435,9 @@ class Viewer3D(object):
                     italic,
                     alpha,
                     angle,
-                ) = self.button_cast(pos=[0.8, 0.135], states=["Move On", "Move Off"])
+                ) = self.button_cast(
+                    pos=[0.8, 0.135], states=["Move On", "Move Off"]
+                )
                 self.mover = Button(
                     self.buttonfuncMode_mover,
                     states,
@@ -573,7 +587,9 @@ class Viewer3D(object):
         """Switch Ground Truth button mode."""
         self.ground_truth.switch()
         if not self.gt_view_mode:
-            numpy_3d = glob.glob(os.path.join(self.npy_folder, self.title) + "/*.npy")
+            numpy_3d = glob.glob(
+                os.path.join(self.npy_folder, self.title) + "/*.npy"
+            )
             if len(numpy_3d) > 0:
                 actor_ = self.label_3d(numpy_3d[0], c=[1, 0, 0])
                 self.actor_gt_list.append(actor_)
@@ -631,30 +647,42 @@ class Viewer3D(object):
                 # First prediction : UX visual
                 self.predictions_final = self.img.clone()
                 self.predictions_final = op.boxe_3d(
-                    self.predictions_final, self.vertices_predictions, max_=self.max
+                    self.predictions_final,
+                    self.vertices_predictions,
+                    max_=self.max,
                 )
                 # Second prediction : Volume
                 self.predictions_agatston = self.volume.clone()
                 self.predictions_agatston = op.boxe_3d(
-                    self.predictions_agatston, self.vertices_predictions, max_=self.max
+                    self.predictions_agatston,
+                    self.vertices_predictions,
+                    max_=self.max,
                 )
                 # Get the all points in isosurface Mesh/Volume
                 self.predictions_agatston_points = op.to_points(
                     self.predictions_agatston, template=self.template
                 )
-                self.predictions_final_points = op.to_points(self.predictions_final)
+                self.predictions_final_points = op.to_points(
+                    self.predictions_final
+                )
                 self.predictions_final_points_threshold = (
                     self.predictions_agatston_points[
                         self.predictions_agatston_points[:, 3] > self.threshold
                     ]
                 )
                 # Convex-Hull estimation
-                hull = ft.convex_hull(self.predictions_final_points_threshold[:, :3])
-                mask = op.isInHull(self.predictions_agatston_points[:, :3], hull)
-                self.predictions_agatston_points = self.predictions_agatston_points[
-                    mask
-                ]
-                actor_ = self.label_3d(self.predictions_final_points, c=[0, 1, 0])
+                hull = ft.convex_hull(
+                    self.predictions_final_points_threshold[:, :3]
+                )
+                mask = op.isInHull(
+                    self.predictions_agatston_points[:, :3], hull
+                )
+                self.predictions_agatston_points = (
+                    self.predictions_agatston_points[mask]
+                )
+                actor_ = self.label_3d(
+                    self.predictions_final_points, c=[0, 1, 0]
+                )
                 self.actor_infer_list.append(actor_)
                 for render in self.render_list:
                     if render == self.render_score:
@@ -689,8 +717,14 @@ class Viewer3D(object):
         ):
             # Cylinder Fit
             print("performing fitting...")
-            self.w_fit, self.C_fit, self.r_fit, self.fit_err = ft.fitting_cylinder(
-                self.predictions_final_points_threshold[:, :3], guess_angles=None
+            (
+                self.w_fit,
+                self.C_fit,
+                self.r_fit,
+                self.fit_err,
+            ) = ft.fitting_cylinder(
+                self.predictions_final_points_threshold[:, :3],
+                guess_angles=None,
             )
             print("fitting done !")
             self.cylinder = Cylinder(
@@ -794,7 +828,11 @@ class Viewer3D(object):
 
         if self.template:
             points = vtk_to_numpy(
-                self.volume.topoints().GetMapper().GetInput().GetPoints().GetData()
+                self.volume.topoints()
+                .GetMapper()
+                .GetInput()
+                .GetPoints()
+                .GetData()
             )
             intensity = vtk_to_numpy(
                 self.volume.imagedata().GetPointData().GetScalars()
@@ -925,7 +963,8 @@ class Viewer3D(object):
         os.makedirs(os.path.join(directory, self.title), exist_ok=True)
 
         with open(
-            os.path.join(directory, self.title) + "/" + "volume_label.npy", "wb"
+            os.path.join(directory, self.title) + "/" + "volume_label.npy",
+            "wb",
         ) as f:
             np.save(f, numpy_nodes)
 
@@ -1013,7 +1052,9 @@ class Viewer3D(object):
         """Create windows."""
         renderer = vtk.vtkRenderer()
         renderWindow = vtk.vtkRenderWindow()
-        renderWindow.SetSize(int(self.window_size[0]), int(self.window_size[1]))
+        renderWindow.SetSize(
+            int(self.window_size[0]), int(self.window_size[1])
+        )
         renderWindow.AddRenderer(renderer)
         renderWindowInteractor = vtk.vtkRenderWindowInteractor()
         renderWindowInteractor.SetRenderWindow(renderWindow)

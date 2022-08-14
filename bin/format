@@ -3,5 +3,5 @@
 set -e
 
 Project_Dir=$HOME/Project_AIC/
-black "${Project_Dir}/aic"
-black "${Project_Dir}/scripts"
+black "${Project_Dir}/aic" -l 79
+black "${Project_Dir}/scripts" -l 79

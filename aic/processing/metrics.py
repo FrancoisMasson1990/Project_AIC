@@ -38,7 +38,9 @@ def dice_loss(
         fn = K.backend.sum(y_true * (1 - y_pred), axis=axis)
         fp = K.backend.sum((1 - y_true) * y_pred, axis=axis)
         # Calculate Dice score
-        dice_class = (tp + smooth) / (tp + delta * fn + (1 - delta) * fp + smooth)
+        dice_class = (tp + smooth) / (
+            tp + delta * fn + (1 - delta) * fp + smooth
+        )
         # Average class scores
         dice_loss = K.backend.mean(1 - dice_class)
 
@@ -62,7 +64,9 @@ def tversky_loss(target, prediction, axis, delta=0.7, smooth=0.000001):
         tp = K.backend.sum(y_true * y_pred, axis=axis)
         fn = K.backend.sum(y_true * (1 - y_pred), axis=axis)
         fp = K.backend.sum((1 - y_true) * y_pred, axis=axis)
-        tversky_class = (tp + smooth) / (tp + delta * fn + (1 - delta) * fp + smooth)
+        tversky_class = (tp + smooth) / (
+            tp + delta * fn + (1 - delta) * fp + smooth
+        )
         # Average class scores
         tversky_loss = K.backend.mean(1 - tversky_class)
 
@@ -139,9 +143,13 @@ def focal_tversky_loss(
         tp = K.backend.sum(y_true * y_pred, axis=axis)
         fn = K.backend.sum(y_true * (1 - y_pred), axis=axis)
         fp = K.backend.sum((1 - y_true) * y_pred, axis=axis)
-        tversky_class = (tp + smooth) / (tp + delta * fn + (1 - delta) * fp + smooth)
+        tversky_class = (tp + smooth) / (
+            tp + delta * fn + (1 - delta) * fp + smooth
+        )
         # Average class scores
-        focal_tversky_loss = K.backend.mean(K.backend.pow((1 - tversky_class), gamma))
+        focal_tversky_loss = K.backend.mean(
+            K.backend.pow((1 - tversky_class), gamma)
+        )
 
         return focal_tversky_loss
 
@@ -168,7 +176,9 @@ def focal_loss(target, prediction, alpha=None, gamma_f=2.0):
         if alpha is not None:
             alpha_weight = np.array(alpha, dtype=np.float32)
             focal_loss = (
-                alpha_weight * K.backend.pow(1 - y_pred, gamma_f) * cross_entropy
+                alpha_weight
+                * K.backend.pow(1 - y_pred, gamma_f)
+                * cross_entropy
             )
         else:
             focal_loss = K.backend.pow(1 - y_pred, gamma_f) * cross_entropy
@@ -198,12 +208,14 @@ def symmetric_focal_loss(target, prediction, delta=0.7, gamma=2.0):
         cross_entropy = -y_true * K.backend.log(y_pred)
         # calculate losses separately for each class
         back_ce = (
-            K.backend.pow(1 - y_pred[:, :, :, 0], gamma) * cross_entropy[:, :, :, 0]
+            K.backend.pow(1 - y_pred[:, :, :, 0], gamma)
+            * cross_entropy[:, :, :, 0]
         )
         back_ce = (1 - delta) * back_ce
 
         fore_ce = (
-            K.backend.pow(1 - y_pred[:, :, :, 1], gamma) * cross_entropy[:, :, :, 1]
+            K.backend.pow(1 - y_pred[:, :, :, 1], gamma)
+            * cross_entropy[:, :, :, 1]
         )
         fore_ce = delta * fore_ce
 
@@ -216,7 +228,9 @@ def symmetric_focal_loss(target, prediction, delta=0.7, gamma=2.0):
     return loss_function(target, prediction)
 
 
-def symmetric_focal_tversky_loss(target, prediction, axis, delta=0.7, gamma=0.75):
+def symmetric_focal_tversky_loss(
+    target, prediction, axis, delta=0.7, gamma=0.75
+):
     """Get the symmetric focal tversky loss.
 
     This is the implementation for binary segmentation.
@@ -235,11 +249,17 @@ def symmetric_focal_tversky_loss(target, prediction, axis, delta=0.7, gamma=0.75
         tp = K.backend.sum(y_true * y_pred, axis=axis)
         fn = K.backend.sum(y_true * (1 - y_pred), axis=axis)
         fp = K.backend.sum((1 - y_true) * y_pred, axis=axis)
-        dice_class = (tp + epsilon) / (tp + delta * fn + (1 - delta) * fp + epsilon)
+        dice_class = (tp + epsilon) / (
+            tp + delta * fn + (1 - delta) * fp + epsilon
+        )
 
         # calculate losses separately for each class, enhancing both classes
-        back_dice = (1 - dice_class[:, 0]) * K.backend.pow(1 - dice_class[:, 0], -gamma)
-        fore_dice = (1 - dice_class[:, 1]) * K.backend.pow(1 - dice_class[:, 1], -gamma)
+        back_dice = (1 - dice_class[:, 0]) * K.backend.pow(
+            1 - dice_class[:, 0], -gamma
+        )
+        fore_dice = (1 - dice_class[:, 1]) * K.backend.pow(
+            1 - dice_class[:, 1], -gamma
+        )
 
         # Average class scores
         loss = K.backend.mean(tf.stack([back_dice, fore_dice], axis=-1))
@@ -265,7 +285,8 @@ def asymmetric_focal_loss(target, prediction, delta=0.7, gamma=2.0):
         y_pred = K.backend.clip(y_pred, epsilon, 1.0 - epsilon)
         cross_entropy = -y_true * K.backend.log(y_pred)
         back_ce = (
-            K.backend.pow(1 - y_pred[:, :, :, 0], gamma) * cross_entropy[:, :, :, 0]
+            K.backend.pow(1 - y_pred[:, :, :, 0], gamma)
+            * cross_entropy[:, :, :, 0]
         )
         back_ce = (1 - delta) * back_ce
         fore_ce = cross_entropy[:, :, :, 1]
@@ -280,7 +301,9 @@ def asymmetric_focal_loss(target, prediction, delta=0.7, gamma=2.0):
     return loss_function(target, prediction)
 
 
-def asymmetric_focal_tversky_loss(target, prediction, axis, delta=0.7, gamma=0.75):
+def asymmetric_focal_tversky_loss(
+    target, prediction, axis, delta=0.7, gamma=0.75
+):
     """Get the asymmetric focal loss for binary segmentation.
 
     Parameters
@@ -298,9 +321,13 @@ def asymmetric_focal_tversky_loss(target, prediction, axis, delta=0.7, gamma=0.7
         tp = K.backend.sum(y_true * y_pred, axis=axis)
         fn = K.backend.sum(y_true * (1 - y_pred), axis=axis)
         fp = K.backend.sum((1 - y_true) * y_pred, axis=axis)
-        dice_class = (tp + epsilon) / (tp + delta * fn + (1 - delta) * fp + epsilon)
+        dice_class = (tp + epsilon) / (
+            tp + delta * fn + (1 - delta) * fp + epsilon
+        )
         back_dice = 1 - dice_class[:, 0]
-        fore_dice = (1 - dice_class[:, 1]) * K.backend.pow(1 - dice_class[:, 1], -gamma)
+        fore_dice = (1 - dice_class[:, 1]) * K.backend.pow(
+            1 - dice_class[:, 1], -gamma
+        )
         # Average class scores
         loss = K.backend.mean(tf.stack([back_dice, fore_dice], axis=-1))
         return loss
@@ -308,7 +335,9 @@ def asymmetric_focal_tversky_loss(target, prediction, axis, delta=0.7, gamma=0.7
     return loss_function(target, prediction)
 
 
-def sym_unified_focal_loss(target, prediction, weight=0.5, delta=0.6, gamma=0.5):
+def sym_unified_focal_loss(
+    target, prediction, weight=0.5, delta=0.6, gamma=0.5
+):
     """Get the Unified Focal loss.
 
     This a new compound loss function that unifies
@@ -331,7 +360,9 @@ def sym_unified_focal_loss(target, prediction, weight=0.5, delta=0.6, gamma=0.5)
         symmetric_ftl = symmetric_focal_tversky_loss(
             y_true, y_pred, delta=delta, gamma=gamma
         )
-        symmetric_fl = symmetric_focal_loss(y_true, y_pred, delta=delta, gamma=gamma)
+        symmetric_fl = symmetric_focal_loss(
+            y_true, y_pred, delta=delta, gamma=gamma
+        )
         if weight is not None:
             return (weight * symmetric_ftl) + ((1 - weight) * symmetric_fl)
         else:
@@ -340,7 +371,9 @@ def sym_unified_focal_loss(target, prediction, weight=0.5, delta=0.6, gamma=0.5)
     return loss_function(target, prediction)
 
 
-def asym_unified_focal_loss(target, prediction, weight=0.5, delta=0.6, gamma=0.5):
+def asym_unified_focal_loss(
+    target, prediction, weight=0.5, delta=0.6, gamma=0.5
+):
     """Get the Unified Focal loss.
 
     This is a new compound loss function that unifies Dice-based
@@ -363,7 +396,9 @@ def asym_unified_focal_loss(target, prediction, weight=0.5, delta=0.6, gamma=0.5
         asymmetric_ftl = asymmetric_focal_tversky_loss(
             y_true, y_pred, delta=delta, gamma=gamma
         )
-        asymmetric_fl = asymmetric_focal_loss(y_true, y_pred, delta=delta, gamma=gamma)
+        asymmetric_fl = asymmetric_focal_loss(
+            y_true, y_pred, delta=delta, gamma=gamma
+        )
         if weight is not None:
             return (weight * asymmetric_ftl) + ((1 - weight) * asymmetric_fl)
         else:

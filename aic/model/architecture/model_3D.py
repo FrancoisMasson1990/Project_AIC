@@ -96,7 +96,9 @@ class Unet(object):
 
     def dice_coef(self, target, prediction, axis=(1, 2, 3)):
         """Get the Sorenson Dice."""
-        return mt.dice_coefficient(target=target, prediction=prediction, axis=axis)
+        return mt.dice_coefficient(
+            target=target, prediction=prediction, axis=axis
+        )
 
     def dice_loss(self, target, prediction, axis=(1, 2, 3)):
         """Get the Sorenson (Soft) Dice loss.
@@ -109,7 +111,9 @@ class Unet(object):
 
     def focal_tversky_loss(self, target, prediction, axis=(1, 2, 3)):
         """Get focal tversky loss."""
-        return mt.focal_tversky_loss(target=target, prediction=prediction, axis=axis)
+        return mt.focal_tversky_loss(
+            target=target, prediction=prediction, axis=axis
+        )
 
     def convolution_block(self, x, name, filters, params):
         """Get Convolution Block.
@@ -152,19 +156,37 @@ class Unet(object):
         )
 
         # BEGIN - Encoding path
-        encodeA = self.convolution_block(inputs, "encodeA", self.filters, params)
-        poolA = K.layers.MaxPooling3D(name="poolA", pool_size=(2, 2, 2))(encodeA)
+        encodeA = self.convolution_block(
+            inputs, "encodeA", self.filters, params
+        )
+        poolA = K.layers.MaxPooling3D(name="poolA", pool_size=(2, 2, 2))(
+            encodeA
+        )
 
-        encodeB = self.convolution_block(poolA, "encodeB", self.filters * 2, params)
-        poolB = K.layers.MaxPooling3D(name="poolB", pool_size=(2, 2, 2))(encodeB)
+        encodeB = self.convolution_block(
+            poolA, "encodeB", self.filters * 2, params
+        )
+        poolB = K.layers.MaxPooling3D(name="poolB", pool_size=(2, 2, 2))(
+            encodeB
+        )
 
-        encodeC = self.convolution_block(poolB, "encodeC", self.filters * 4, params)
-        poolC = K.layers.MaxPooling3D(name="poolC", pool_size=(2, 2, 2))(encodeC)
+        encodeC = self.convolution_block(
+            poolB, "encodeC", self.filters * 4, params
+        )
+        poolC = K.layers.MaxPooling3D(name="poolC", pool_size=(2, 2, 2))(
+            encodeC
+        )
 
-        encodeD = self.convolution_block(poolC, "encodeD", self.filters * 8, params)
-        poolD = K.layers.MaxPooling3D(name="poolD", pool_size=(2, 2, 2))(encodeD)
+        encodeD = self.convolution_block(
+            poolC, "encodeD", self.filters * 8, params
+        )
+        poolD = K.layers.MaxPooling3D(name="poolD", pool_size=(2, 2, 2))(
+            encodeD
+        )
 
-        encodeE = self.convolution_block(poolD, "encodeE", self.filters * 16, params)
+        encodeE = self.convolution_block(
+            poolD, "encodeE", self.filters * 16, params
+        )
         # END - Encoding path
 
         # BEGIN - Decoding path
@@ -178,7 +200,9 @@ class Unet(object):
             [up, encodeD], axis=self.concat_axis, name="concatD"
         )
 
-        decodeC = self.convolution_block(concatD, "decodeC", self.filters * 8, params)
+        decodeC = self.convolution_block(
+            concatD, "decodeC", self.filters * 8, params
+        )
 
         if self.use_upsampling:
             up = K.layers.UpSampling3D(name="upC", size=(2, 2, 2))(decodeC)
@@ -190,7 +214,9 @@ class Unet(object):
             [up, encodeC], axis=self.concat_axis, name="concatC"
         )
 
-        decodeB = self.convolution_block(concatC, "decodeB", self.filters * 4, params)
+        decodeB = self.convolution_block(
+            concatC, "decodeB", self.filters * 4, params
+        )
 
         if self.use_upsampling:
             up = K.layers.UpSampling3D(name="upB", size=(2, 2, 2))(decodeB)
@@ -202,7 +228,9 @@ class Unet(object):
             [up, encodeB], axis=self.concat_axis, name="concatB"
         )
 
-        decodeA = self.convolution_block(concatB, "decodeA", self.filters * 2, params)
+        decodeA = self.convolution_block(
+            concatB, "decodeA", self.filters * 2, params
+        )
 
         if self.use_upsampling:
             up = K.layers.UpSampling3D(name="upA", size=(2, 2, 2))(decodeA)
@@ -216,7 +244,9 @@ class Unet(object):
 
         # END - Decoding path
 
-        convOut = self.convolution_block(concatA, "convOut", self.filters, params)
+        convOut = self.convolution_block(
+            concatA, "convOut", self.filters, params
+        )
 
         prediction = K.layers.Conv3D(
             name="PredictionMask",
@@ -226,7 +256,9 @@ class Unet(object):
         )(convOut)
 
         model = K.models.Model(
-            inputs=[inputs], outputs=[prediction], name="3DUNet_Valve_Challenge"
+            inputs=[inputs],
+            outputs=[prediction],
+            name="3DUNet_Valve_Challenge",
         )
 
         optimizer = self.optimizer
@@ -234,7 +266,9 @@ class Unet(object):
         if final:
             model.trainable = False
         else:
-            model.compile(optimizer=optimizer, loss=self.loss, metrics=self.metrics)
+            model.compile(
+                optimizer=optimizer, loss=self.loss, metrics=self.metrics
+            )
 
             if self.print_model:
                 model.summary()
@@ -243,7 +277,9 @@ class Unet(object):
 
     def get_callbacks(self):
         """Define any callbacks for the training."""
-        model_filename = os.path.join(self.output_path, self.inference_filename)
+        model_filename = os.path.join(
+            self.output_path, self.inference_filename
+        )
 
         print("Writing model to '{}'".format(model_filename))
 
@@ -275,13 +311,19 @@ class Unet(object):
 
     def evaluate_model(self, model_filename, ds_test):
         """Evaluate the best model on the validation dataset."""
-        model = K.models.load_model(model_filename, custom_objects=self.custom_objects)
+        model = K.models.load_model(
+            model_filename, custom_objects=self.custom_objects
+        )
 
         print("Evaluating model on test dataset. Please wait...")
         metrics = model.evaluate(ds_test, verbose=1)
 
         for idx, metric in enumerate(metrics):
-            print("Test dataset {} = {:.4f}".format(model.metrics_names[idx], metric))
+            print(
+                "Test dataset {} = {:.4f}".format(
+                    model.metrics_names[idx], metric
+                )
+            )
 
     def create_model(self, imgs_shape, msks_shape, final=False):
         """Create model.
@@ -292,4 +334,6 @@ class Unet(object):
 
     def load_model(self, model_filename):
         """Load a model from Keras file."""
-        return K.models.load_model(model_filename, custom_objects=self.custom_objects)
+        return K.models.load_model(
+            model_filename, custom_objects=self.custom_objects
+        )

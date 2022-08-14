@@ -253,7 +253,9 @@ def to_points(data, threshold=None, template=False):
             if threshold is not None:
                 points = points[points[:, 3] < threshold]
     if isinstance(data, mesh.Mesh):
-        points = vtk_to_numpy(data.GetMapper().GetInput().GetPoints().GetData())
+        points = vtk_to_numpy(
+            data.GetMapper().GetInput().GetPoints().GetData()
+        )
 
     return points
 
@@ -326,7 +328,9 @@ def isInHull(P, hull):
     """
     A = hull.equations[:, 0:-1]
     b = np.transpose(np.array([hull.equations[:, -1]]))
-    isInHullBool = np.all((A @ np.transpose(P)) <= np.tile(-b, (1, len(P))), axis=0)
+    isInHullBool = np.all(
+        (A @ np.transpose(P)) <= np.tile(-b, (1, len(P))), axis=0
+    )
     return isInHullBool
 
 

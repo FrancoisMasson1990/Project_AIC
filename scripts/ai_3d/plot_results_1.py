@@ -58,7 +58,7 @@ if __name__ == "__main__":
     blocktime, num_inter_threads, num_threads = req3d()
 
     # model_version = 1
-    model_filename = str(fs.get_models_root() / "unet_3d_model_for_aic.hdf5")
+    model_filename = None
 
     """
     Load a model, load the data, and see inference.
@@ -97,8 +97,9 @@ if __name__ == "__main__":
         os.makedirs(png_folder)
 
     # The plots will be saved to the png_directory
-    imgs = trainFiles
-    labels = trainLabels
+    imgs = testFiles
+    labels = testLabels
+
     for index, (img, label) in tqdm(
         enumerate(zip(imgs, labels)), total=len(imgs)
     ):

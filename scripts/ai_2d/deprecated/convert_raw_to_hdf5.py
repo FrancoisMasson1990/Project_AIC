@@ -108,7 +108,9 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
     attach_attributes(hdf_file, json_data["name"], "name")
     attach_attributes(hdf_file, json_data["description"], "description")
     attach_attributes(hdf_file, json_data["release"], "release")
-    attach_attributes(hdf_file, json_data["tensorImageSize"], "tensorImageSize")
+    attach_attributes(
+        hdf_file, json_data["tensorImageSize"], "tensorImageSize"
+    )
 
     image_files = dp.expand_list(json_data["dataset_folder"], format="/*.dcm")
     label_files = dp.expand_list(json_data["label_folder"], format="/*.npy")
@@ -163,13 +165,19 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
         imgs = dp.get_pixels_hu(images)
         imgs_ = dp.preprocess_inputs(imgs).shape[1:]
         print(
-            "Process Image shape = (?, {}, {}, {})".format(imgs_[0], imgs_[1], imgs_[2])
+            "Process Image shape = (?, {}, {}, {})".format(
+                imgs_[0], imgs_[1], imgs_[2]
+            )
         )
 
         msk = dp.load_mask(label_files[0])
         msk_, _ = dp.preprocess_labels(msk)
         msk_ = msk_.shape[1:]
-        print("Process Masks shape = (?, {}, {}, {})".format(msk_[0], msk_[1], msk_[2]))
+        print(
+            "Process Masks shape = (?, {}, {}, {})".format(
+                msk_[0], msk_[1], msk_[2]
+            )
+        )
     except:
         pass
 

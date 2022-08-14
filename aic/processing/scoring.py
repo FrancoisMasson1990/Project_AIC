@@ -49,7 +49,9 @@ def area_measurements(slice_):
     return area_, lw
 
 
-def agatston_score(image, mask_agatston, area, threshold_min=None, threshold_max=None):
+def agatston_score(
+    image, mask_agatston, area, threshold_min=None, threshold_max=None
+):
     """Get Agatston score."""
     score = 0.0
     for i in range(len(image)):
@@ -100,7 +102,9 @@ def save_prediction(
     save_predict["valve"] = valve
     save_predict["candidate"] = candidate
     if not online:
-        save_predict["data_path"] = "/".join([path.split("/")[-2], path.split("/")[-1]])
+        save_predict["data_path"] = "/".join(
+            [path.split("/")[-2], path.split("/")[-1]]
+        )
         folder = path.replace("datasets_dcm", "predictions")
     else:
         folder = path

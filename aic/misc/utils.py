@@ -172,10 +172,13 @@ def get_slices(file_dcm, path=None):
 
     try:
         slice_thickness = np.abs(
-            slices[0].ImagePositionPatient[2] - slices[1].ImagePositionPatient[2]
+            slices[0].ImagePositionPatient[2]
+            - slices[1].ImagePositionPatient[2]
         )
     except Exception as e:
-        slice_thickness = np.abs(slices[0].SliceLocation - slices[1].SliceLocation)
+        slice_thickness = np.abs(
+            slices[0].SliceLocation - slices[1].SliceLocation
+        )
 
     for s in slices:
         s.SliceThickness = slice_thickness

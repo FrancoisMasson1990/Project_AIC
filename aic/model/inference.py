@@ -74,9 +74,12 @@ def get_inference(data, file_types, config="./model_info.yml"):
         # x y z center from isovolume
         center = np.array(
             [
-                (np.min(all_numpy_nodes[:, 0]) + np.max(all_numpy_nodes[:, 0])) / 2,
-                (np.min(all_numpy_nodes[:, 1]) + np.max(all_numpy_nodes[:, 1])) / 2,
-                (np.min(all_numpy_nodes[:, 2]) + np.max(all_numpy_nodes[:, 2])) / 2,
+                (np.min(all_numpy_nodes[:, 0]) + np.max(all_numpy_nodes[:, 0]))
+                / 2,
+                (np.min(all_numpy_nodes[:, 1]) + np.max(all_numpy_nodes[:, 1]))
+                / 2,
+                (np.min(all_numpy_nodes[:, 2]) + np.max(all_numpy_nodes[:, 2]))
+                / 2,
             ]
         )
         # Get predictions
@@ -233,7 +236,9 @@ def get_predictions(
                 index_z_crop, xc : xc + img.shape[1], yc : yc + img.shape[2]
             ] = predictions
         else:
-            padding[:, xc : xc + img.shape[1], yc : yc + img.shape[2]] = predictions
+            padding[
+                :, xc : xc + img.shape[1], yc : yc + img.shape[2]
+            ] = predictions
         predictions = padding
         crop_values = [
             xc * spacing[0],

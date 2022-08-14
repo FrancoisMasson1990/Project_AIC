@@ -119,7 +119,9 @@ class PreprocessHDF5Matrix(K.utils.HDF5Matrix):
             self.crop = False
 
         if self.channels_first:
-            self._base_shape = tuple([base_shape[2], base_shape[0], base_shape[1]])
+            self._base_shape = tuple(
+                [base_shape[2], base_shape[0], base_shape[1]]
+            )
         else:
             self._base_shape = base_shape
 

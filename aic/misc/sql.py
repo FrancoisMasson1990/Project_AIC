@@ -63,7 +63,9 @@ def get_tablename(sql_path):
     if not len(tables):
         raise Exception(f"No table name found for file {sql_path}")
     elif len(tables) > 1:
-        raise Exception(f"Multiple table names found for file {sql_path}: " f"{tables}")
+        raise Exception(
+            f"Multiple table names found for file {sql_path}: " f"{tables}"
+        )
     tablename = tables[0]
     return tablename
 
@@ -199,7 +201,9 @@ def get_count_values(sql_path, column):
         raise Exception(f"WARNING: No such column :{column} in {sql_path}")
 
     count_cmd = (
-        f"SELECT {column}, COUNT(*) " + f"from {tablename} " + f"GROUP BY {column}"
+        f"SELECT {column}, COUNT(*) "
+        + f"from {tablename} "
+        + f"GROUP BY {column}"
     )
 
     count = sqliteCursor.execute(count_cmd).fetchall()
@@ -214,7 +218,9 @@ def get_count_values(sql_path, column):
     return df
 
 
-def from_sql(sql_path, columns=None, conditions=None, chunk_size=None, verbose=False):
+def from_sql(
+    sql_path, columns=None, conditions=None, chunk_size=None, verbose=False
+):
     """Import a .db SQL database into pandas.
 
     This function returns an iterator of chunks of the database.

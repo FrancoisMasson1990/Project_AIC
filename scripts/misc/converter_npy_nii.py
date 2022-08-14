@@ -35,6 +35,6 @@ if __name__ == "__main__":
                 labels = np.stack(labels, axis=0)
                 # labels[labels > 0] = 1.0
                 save = os.path.join(save_path, files_.split("/")[-1])
-                co.npy_to_nii(labels,
-                              name="segmentation.nii.gz",
-                              directory=save)
+                co.npy_to_nii(
+                    labels, name="segmentation.nii.gz", directory=save
+                )

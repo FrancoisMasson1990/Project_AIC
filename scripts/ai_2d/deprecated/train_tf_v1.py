@@ -23,6 +23,11 @@ This module loads the data from data.py, creates a TensorFlow/Keras model
 from model.py, trains the model on the data, and then saves the
 best model.
 """
+from aic_models import model_2D
+import numpy as np
+from data import load_data
+import yaml
+from tensorflow import keras as K
 import multiprocessing
 import psutil
 import datetime
@@ -47,11 +52,6 @@ try:
 except RuntimeError as e:
     print(e)
 
-from tensorflow import keras as K
-import yaml
-from data import load_data
-import numpy as np
-from aic_models import model_2D
 
 """
 For best CPU speed set the number of intra and inter threads
@@ -136,7 +136,9 @@ def train_and_predict(
         print_model=print_model,
     )
 
-    model = unet_model.create_model(imgs_train.shape, msks_train.shape, intel_model)
+    model = unet_model.create_model(
+        imgs_train.shape, msks_train.shape, intel_model
+    )
     model_filename, model_callbacks = unet_model.get_callbacks()
 
     # If there is a current saved file, then load weights and start from
@@ -206,7 +208,8 @@ if __name__ == "__main__":
     intel_model = config.get("intel_model", None)
 
     # Set environment
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE warnings
+    # Get rid of the AVX, SSE warnings
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
     os.environ["OMP_NUM_THREADS"] = str(num_threads)
     os.environ["KMP_BLOCKTIME"] = str(blocktime)
     os.environ["KMP_AFFINITY"] = "granularity=fine,compact,1,0"

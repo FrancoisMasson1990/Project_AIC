@@ -22,7 +22,9 @@ import os
 class Button(object):
     """Build a Button object to be shown in the rendering window."""
 
-    def __init__(self, fnc, states, c, bc, pos, size, font, bold, italic, alpha, angle):
+    def __init__(
+        self, fnc, states, c, bc, pos, size, font, bold, italic, alpha, angle
+    ):
         """Init function."""
         self._status = 0
         self.states = states
@@ -152,17 +154,20 @@ class Grid(object):
         limitRatio = self.axes.pop("limitRatio", 20)
         vbb, sizes, min_bns, max_bns = self.computeVisibleBounds(self.actor)
         if sizes[0] and (
-            sizes[1] / sizes[0] > limitRatio or sizes[2] / sizes[0] > limitRatio
+            sizes[1] / sizes[0] > limitRatio
+            or sizes[2] / sizes[0] > limitRatio
         ):
             sizes[0] = 0
             xtitle = ""
         if sizes[1] and (
-            sizes[0] / sizes[1] > limitRatio or sizes[2] / sizes[1] > limitRatio
+            sizes[0] / sizes[1] > limitRatio
+            or sizes[2] / sizes[1] > limitRatio
         ):
             sizes[1] = 0
             ytitle = ""
         if sizes[2] and (
-            sizes[0] / sizes[2] > limitRatio or sizes[1] / sizes[2] > limitRatio
+            sizes[0] / sizes[2] > limitRatio
+            or sizes[1] / sizes[2] > limitRatio
         ):
             sizes[2] = 0
             ztitle = ""
@@ -304,32 +309,44 @@ class Grid(object):
         lines = []
         if xtitle:
             lines.append(
-                shapes.Line([0, 0, 0], [1, 0, 0], c=xLineColor, lw=axesLineWidth)
+                shapes.Line(
+                    [0, 0, 0], [1, 0, 0], c=xLineColor, lw=axesLineWidth
+                )
             )
         if ytitle:
             lines.append(
-                shapes.Line([0, 0, 0], [0, 1, 0], c=yLineColor, lw=axesLineWidth)
+                shapes.Line(
+                    [0, 0, 0], [0, 1, 0], c=yLineColor, lw=axesLineWidth
+                )
             )
         if ztitle:
             lines.append(
-                shapes.Line([0, 0, 0], [0, 0, 1], c=zLineColor, lw=axesLineWidth)
+                shapes.Line(
+                    [0, 0, 0], [0, 0, 1], c=zLineColor, lw=axesLineWidth
+                )
             )
 
         grids = []
         if xyGrid and xtitle and ytitle:
-            gxy = shapes.Grid(pos=(0.5, 0.5, 0), normal=[0, 0, 1], resx=rx, resy=ry)
+            gxy = shapes.Grid(
+                pos=(0.5, 0.5, 0), normal=[0, 0, 1], resx=rx, resy=ry
+            )
             gxy.alpha(xyAlpha).wireframe(xyGridTransparent).c(xyPlaneColor).lw(
                 gridLineWidth
             ).lc(xyGridColor)
             grids.append(gxy)
         if yzGrid and ytitle and ztitle:
-            gyz = shapes.Grid(pos=(0, 0.5, 0.5), normal=[1, 0, 0], resx=rz, resy=ry)
+            gyz = shapes.Grid(
+                pos=(0, 0.5, 0.5), normal=[1, 0, 0], resx=rz, resy=ry
+            )
             gyz.alpha(yzAlpha).wireframe(yzGridTransparent).c(yzPlaneColor).lw(
                 gridLineWidth
             ).lc(yzGridColor)
             grids.append(gyz)
         if zxGrid and ztitle and xtitle:
-            gzx = shapes.Grid(pos=(0.5, 0, 0.5), normal=[0, 1, 0], resx=rz, resy=rx)
+            gzx = shapes.Grid(
+                pos=(0.5, 0, 0.5), normal=[0, 1, 0], resx=rz, resy=rx
+            )
             gzx.alpha(zxAlpha).wireframe(zxGridTransparent).c(zxPlaneColor).lw(
                 gridLineWidth
             ).lc(zxGridColor)
@@ -337,58 +354,76 @@ class Grid(object):
 
         grids2 = []
         if xyGrid2 and xtitle and ytitle:
-            gxy2 = shapes.Grid(pos=(0.5, 0.5, 1), normal=[0, 0, 1], resx=rx, resy=ry)
-            gxy2.alpha(xyAlpha).wireframe(xyGrid2Transparent).c(xyPlaneColor).lw(
-                gridLineWidth
-            ).lc(xyGridColor)
+            gxy2 = shapes.Grid(
+                pos=(0.5, 0.5, 1), normal=[0, 0, 1], resx=rx, resy=ry
+            )
+            gxy2.alpha(xyAlpha).wireframe(xyGrid2Transparent).c(
+                xyPlaneColor
+            ).lw(gridLineWidth).lc(xyGridColor)
             grids2.append(gxy2)
         if yzGrid2 and ytitle and ztitle:
-            gyz2 = shapes.Grid(pos=(1, 0.5, 0.5), normal=[1, 0, 0], resx=rz, resy=ry)
-            gyz2.alpha(yzAlpha).wireframe(yzGrid2Transparent).c(yzPlaneColor).lw(
-                gridLineWidth
-            ).lc(yzGridColor)
+            gyz2 = shapes.Grid(
+                pos=(1, 0.5, 0.5), normal=[1, 0, 0], resx=rz, resy=ry
+            )
+            gyz2.alpha(yzAlpha).wireframe(yzGrid2Transparent).c(
+                yzPlaneColor
+            ).lw(gridLineWidth).lc(yzGridColor)
             grids2.append(gyz2)
         if zxGrid2 and ztitle and xtitle:
-            gzx2 = shapes.Grid(pos=(0.5, 1, 0.5), normal=[0, 1, 0], resx=rz, resy=rx)
-            gzx2.alpha(zxAlpha).wireframe(zxGrid2Transparent).c(zxPlaneColor).lw(
-                gridLineWidth
-            ).lc(zxGridColor)
+            gzx2 = shapes.Grid(
+                pos=(0.5, 1, 0.5), normal=[0, 1, 0], resx=rz, resy=rx
+            )
+            gzx2.alpha(zxAlpha).wireframe(zxGrid2Transparent).c(
+                zxPlaneColor
+            ).lw(gridLineWidth).lc(zxGridColor)
             grids2.append(gzx2)
 
         highlights = []
         if xyGrid and xtitle and ytitle:
             if xHighlightZero and min_bns[0] <= 0 and max_bns[1] > 0:
                 xhl = -min_bns[0] / sizes[0]
-                hxy = shapes.Line([xhl, 0, 0], [xhl, 1, 0], c=xHighlightZeroColor)
+                hxy = shapes.Line(
+                    [xhl, 0, 0], [xhl, 1, 0], c=xHighlightZeroColor
+                )
                 hxy.alpha(np.sqrt(xyAlpha)).lw(gridLineWidth * 2)
                 highlights.append(hxy)
             if yHighlightZero and min_bns[2] <= 0 and max_bns[3] > 0:
                 yhl = -min_bns[2] / sizes[1]
-                hyx = shapes.Line([0, yhl, 0], [1, yhl, 0], c=yHighlightZeroColor)
+                hyx = shapes.Line(
+                    [0, yhl, 0], [1, yhl, 0], c=yHighlightZeroColor
+                )
                 hyx.alpha(np.sqrt(yzAlpha)).lw(gridLineWidth * 2)
                 highlights.append(hyx)
 
         if yzGrid and ytitle and ztitle:
             if yHighlightZero and min_bns[2] <= 0 and max_bns[3] > 0:
                 yhl = -min_bns[2] / sizes[1]
-                hyz = shapes.Line([0, yhl, 0], [0, yhl, 1], c=yHighlightZeroColor)
+                hyz = shapes.Line(
+                    [0, yhl, 0], [0, yhl, 1], c=yHighlightZeroColor
+                )
                 hyz.alpha(np.sqrt(yzAlpha)).lw(gridLineWidth * 2)
                 highlights.append(hyz)
             if zHighlightZero and min_bns[4] <= 0 and max_bns[5] > 0:
                 zhl = -min_bns[4] / sizes[2]
-                hzy = shapes.Line([0, 0, zhl], [0, 1, zhl], c=zHighlightZeroColor)
+                hzy = shapes.Line(
+                    [0, 0, zhl], [0, 1, zhl], c=zHighlightZeroColor
+                )
                 hzy.alpha(np.sqrt(yzAlpha)).lw(gridLineWidth * 2)
                 highlights.append(hzy)
 
         if zxGrid and ztitle and xtitle:
             if zHighlightZero and min_bns[4] <= 0 and max_bns[5] > 0:
                 zhl = -min_bns[4] / sizes[2]
-                hzx = shapes.Line([0, 0, zhl], [1, 0, zhl], c=zHighlightZeroColor)
+                hzx = shapes.Line(
+                    [0, 0, zhl], [1, 0, zhl], c=zHighlightZeroColor
+                )
                 hzx.alpha(np.sqrt(zxAlpha)).lw(gridLineWidth * 2)
                 highlights.append(hzx)
             if xHighlightZero and min_bns[0] <= 0 and max_bns[1] > 0:
                 xhl = -min_bns[0] / sizes[0]
-                hxz = shapes.Line([xhl, 0, 0], [xhl, 0, 1], c=xHighlightZeroColor)
+                hxz = shapes.Line(
+                    [xhl, 0, 0], [xhl, 0, 1], c=xHighlightZeroColor
+                )
                 hxz.alpha(np.sqrt(zxAlpha)).lw(gridLineWidth * 2)
                 highlights.append(hxz)
 
@@ -450,7 +485,11 @@ class Grid(object):
                 depth=titleDepth,
             )
             if reorientShortTitle and len(ytitle) < 3:  # title is short
-                wpos = [-yTitleOffset + 0.03 - 0.01 * len(ytitle), yTitlePosition, 0]
+                wpos = [
+                    -yTitleOffset + 0.03 - 0.01 * len(ytitle),
+                    yTitlePosition,
+                    0,
+                ]
                 if yKeepAspectRatio:
                     # x!
                     yt.SetScale(x_aspect_ratio_scale)
@@ -490,7 +529,11 @@ class Grid(object):
             else:
                 if zKeepAspectRatio:
                     zt.SetScale(z_aspect_ratio_scale)
-                wpos = [-zTitleOffset / 1.42, -zTitleOffset / 1.42, zTitlePosition]
+                wpos = [
+                    -zTitleOffset / 1.42,
+                    -zTitleOffset / 1.42,
+                    zTitlePosition,
+                ]
                 zt.RotateY(-90)
                 zt.RotateX(zTitleRotation)
                 zt.pos(wpos)
@@ -505,7 +548,9 @@ class Grid(object):
                         side=originMarkerSize,
                         c=xLineColor,
                     )
-                    originmarks.append(ox.lighting(specular=0, diffuse=0, ambient=1))
+                    originmarks.append(
+                        ox.lighting(specular=0, diffuse=0, ambient=1)
+                    )
 
             if ytitle:
                 if min_bns[2] <= 0 and max_bns[3] > 0:  # mark y origin
@@ -514,7 +559,9 @@ class Grid(object):
                         side=originMarkerSize,
                         c=yLineColor,
                     )
-                    originmarks.append(oy.lighting(specular=0, diffuse=0, ambient=1))
+                    originmarks.append(
+                        oy.lighting(specular=0, diffuse=0, ambient=1)
+                    )
 
             if ztitle:
                 if min_bns[4] <= 0 and max_bns[5] > 0:  # mark z origin
@@ -523,7 +570,9 @@ class Grid(object):
                         side=originMarkerSize,
                         c=zLineColor,
                     )
-                    originmarks.append(oz.lighting(specular=0, diffuse=0, ambient=1))
+                    originmarks.append(
+                        oz.lighting(specular=0, diffuse=0, ambient=1)
+                    )
 
         cones = []
         if tipSize:
@@ -564,23 +613,41 @@ class Grid(object):
                 for coo in range(1, rx):
                     v = [coo / rx, 0, 0]
                     xds = shapes.Cylinder(
-                        v, r=xTickRadius, height=xTickThickness, axis=(1, 0, 0), res=10
+                        v,
+                        r=xTickRadius,
+                        height=xTickThickness,
+                        axis=(1, 0, 0),
+                        res=10,
                     )
-                    ticks.append(xds.c(xTickColor).lighting(specular=0, ambient=1))
+                    ticks.append(
+                        xds.c(xTickColor).lighting(specular=0, ambient=1)
+                    )
             if ytitle:
                 for coo in range(1, ry):
                     v = [0, coo / ry, 0]
                     yds = shapes.Cylinder(
-                        v, r=yTickRadius, height=yTickThickness, axis=(0, 1, 0), res=10
+                        v,
+                        r=yTickRadius,
+                        height=yTickThickness,
+                        axis=(0, 1, 0),
+                        res=10,
                     )
-                    ticks.append(yds.c(yTickColor).lighting(specular=0, ambient=1))
+                    ticks.append(
+                        yds.c(yTickColor).lighting(specular=0, ambient=1)
+                    )
             if ztitle:
                 for coo in range(1, rz):
                     v = [0, 0, coo / rz]
                     zds = shapes.Cylinder(
-                        v, r=zTickRadius, height=zTickThickness, axis=(0, 0, 1), res=10
+                        v,
+                        r=zTickRadius,
+                        height=zTickThickness,
+                        axis=(0, 0, 1),
+                        res=10,
                     )
-                    ticks.append(zds.c(zTickColor).lighting(specular=0, ambient=1))
+                    ticks.append(
+                        zds.c(zTickColor).lighting(specular=0, ambient=1)
+                    )
 
         minorticks = []
         if xMinorTicks and xtitle:
@@ -588,25 +655,43 @@ class Grid(object):
             for coo in range(1, rx * xMinorTicks):
                 v = [coo / rx / xMinorTicks, 0, 0]
                 mxds = shapes.Cylinder(
-                    v, r=xTickRadius / 1.5, height=xTickThickness, axis=(1, 0, 0), res=6
+                    v,
+                    r=xTickRadius / 1.5,
+                    height=xTickThickness,
+                    axis=(1, 0, 0),
+                    res=6,
                 )
-                minorticks.append(mxds.c(xTickColor).lighting(specular=0, ambient=1))
+                minorticks.append(
+                    mxds.c(xTickColor).lighting(specular=0, ambient=1)
+                )
         if yMinorTicks and ytitle:
             yMinorTicks += 1
             for coo in range(1, ry * yMinorTicks):
                 v = [0, coo / ry / yMinorTicks, 0]
                 myds = shapes.Cylinder(
-                    v, r=yTickRadius / 1.5, height=yTickThickness, axis=(0, 1, 0), res=6
+                    v,
+                    r=yTickRadius / 1.5,
+                    height=yTickThickness,
+                    axis=(0, 1, 0),
+                    res=6,
                 )
-                minorticks.append(myds.c(yTickColor).lighting(specular=0, ambient=1))
+                minorticks.append(
+                    myds.c(yTickColor).lighting(specular=0, ambient=1)
+                )
         if zMinorTicks and ztitle:
             zMinorTicks += 1
             for coo in range(1, rz * zMinorTicks):
                 v = [0, 0, coo / rz / zMinorTicks]
                 mzds = shapes.Cylinder(
-                    v, r=zTickRadius / 1.5, height=zTickThickness, axis=(0, 0, 1), res=6
+                    v,
+                    r=zTickRadius / 1.5,
+                    height=zTickThickness,
+                    axis=(0, 0, 1),
+                    res=6,
                 )
-                minorticks.append(mzds.c(zTickColor).lighting(specular=0, ambient=1))
+                minorticks.append(
+                    mzds.c(zTickColor).lighting(specular=0, ambient=1)
+                )
 
         labels = []
         if xLabelSize:
@@ -617,14 +702,22 @@ class Grid(object):
                     v = (ic / rx, -xLabelOffset, 0)
                     val = v[0] * sizes[0] + min_bns[0]
                     if abs(val) > 1 and sizes[0] < 1:
-                        xLabelPrecision = int(xLabelPrecision - np.log10(sizes[0]))
+                        xLabelPrecision = int(
+                            xLabelPrecision - np.log10(sizes[0])
+                        )
                     tval = precision(val, xLabelPrecision, vrange=sizes[0])
                     xlab = shapes.Text3D(
-                        tval, pos=v, s=xLabelSize, justify="center-top", depth=0
+                        tval,
+                        pos=v,
+                        s=xLabelSize,
+                        justify="center-top",
+                        depth=0,
                     )
                     if xKeepAspectRatio:
                         xlab.SetScale(x_aspect_ratio_scale)
-                    labels.append(xlab.c(xTickColor).lighting(specular=0, ambient=1))
+                    labels.append(
+                        xlab.c(xTickColor).lighting(specular=0, ambient=1)
+                    )
         if yLabelSize:
             if ytitle:
                 if ry > 12:
@@ -633,7 +726,9 @@ class Grid(object):
                     v = (-yLabelOffset, ic / ry, 0)
                     val = v[1] * sizes[1] + min_bns[2]
                     if abs(val) > 1 and sizes[1] < 1:
-                        yLabelPrecision = int(yLabelPrecision - np.log10(sizes[1]))
+                        yLabelPrecision = int(
+                            yLabelPrecision - np.log10(sizes[1])
+                        )
                     tval = precision(val, yLabelPrecision, vrange=sizes[1])
                     ylab = shapes.Text3D(
                         tval,
@@ -646,7 +741,9 @@ class Grid(object):
                         ylab.SetScale(y_aspect_ratio_scale)
                     ylab.RotateZ(yTitleRotation)
                     ylab.pos(v)
-                    labels.append(ylab.c(yTickColor).lighting(specular=0, ambient=1))
+                    labels.append(
+                        ylab.c(yTickColor).lighting(specular=0, ambient=1)
+                    )
         if zLabelSize:
             if ztitle:
                 if rz > 12:
@@ -656,7 +753,9 @@ class Grid(object):
                     val = v[2] * sizes[2] + min_bns[4]
                     tval = precision(val, zLabelPrecision, vrange=sizes[2])
                     if abs(val) > 1 and sizes[2] < 1:
-                        zLabelPrecision = int(zLabelPrecision - np.log10(sizes[2]))
+                        zLabelPrecision = int(
+                            zLabelPrecision - np.log10(sizes[2])
+                        )
                     zlab = shapes.Text3D(
                         tval,
                         pos=(0, 0, 0),
@@ -669,7 +768,9 @@ class Grid(object):
                     zlab.RotateY(-90)
                     zlab.RotateX(zTitleRotation)
                     zlab.pos(v)
-                    labels.append(zlab.c(zTickColor).lighting(specular=0, ambient=1))
+                    labels.append(
+                        zlab.c(zTickColor).lighting(specular=0, ambient=1)
+                    )
 
         acts = grids + grids2 + lines + highlights + titles
         acts += minorticks + originmarks + ticks + cones + labels
@@ -703,7 +804,11 @@ class Grid(object):
             max_bns = vbb
             min_bns = vbb
         sizes = np.array(
-            [max_bns[1] - min_bns[0], max_bns[3] - min_bns[2], max_bns[5] - min_bns[4]]
+            [
+                max_bns[1] - min_bns[0],
+                max_bns[3] - min_bns[2],
+                max_bns[5] - min_bns[4],
+            ]
         )
         return vbb, sizes, min_bns, max_bns
 
@@ -899,7 +1004,10 @@ def Text_2D(
         ###############
 
     if len(pos) != 2:
-        print("Error in Text2D():" + "len(pos) must be 2 or integer value or string.")
+        print(
+            "Error in Text2D():"
+            + "len(pos) must be 2 or integer value or string."
+        )
         raise RuntimeError()
 
     else:

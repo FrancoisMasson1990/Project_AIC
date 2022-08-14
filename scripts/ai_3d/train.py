@@ -121,7 +121,9 @@ if __name__ == "__main__":
     )
 
     imgs_shape, label_shape = data.get_input_shape()
-    model = unet_model.create_model(imgs_shape=imgs_shape, msks_shape=label_shape)
+    model = unet_model.create_model(
+        imgs_shape=imgs_shape, msks_shape=label_shape
+    )
     model_filename, model_callbacks = unet_model.get_callbacks()
 
     """

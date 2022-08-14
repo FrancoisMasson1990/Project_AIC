@@ -122,13 +122,17 @@ class Unet(object):
     def combined_dice_coef_loss(self, target, prediction):
         """Combine Dice and Binary Cross Entropy Loss."""
         return mt.combined_dice_coef_loss(
-            weight_dice_loss=self.weight_dice_loss, target=target, prediction=prediction
+            weight_dice_loss=self.weight_dice_loss,
+            target=target,
+            prediction=prediction,
         )
 
     def tversky(self, target, prediction):
         """Get tversky loss."""
         return mt.tversky(
-            target=target, prediction=prediction, channels_first=self.channels_first
+            target=target,
+            prediction=prediction,
+            channels_first=self.channels_first,
         )
 
     def focal_tversky_loss(self, target, prediction):
@@ -174,46 +178,50 @@ class Unet(object):
         # Transposed convolution parameters
         params_trans = dict(kernel_size=(2, 2), strides=(2, 2), padding="same")
 
-        encodeA = K.layers.Conv2D(name="encodeAa", filters=self.fms, **params)(inputs)
-        encodeA = K.layers.Conv2D(name="encodeAb", filters=self.fms, **params)(encodeA)
+        encodeA = K.layers.Conv2D(name="encodeAa", filters=self.fms, **params)(
+            inputs
+        )
+        encodeA = K.layers.Conv2D(name="encodeAb", filters=self.fms, **params)(
+            encodeA
+        )
         poolA = K.layers.MaxPooling2D(name="poolA", pool_size=(2, 2))(encodeA)
 
-        encodeB = K.layers.Conv2D(name="encodeBa", filters=self.fms * 2, **params)(
-            poolA
-        )
-        encodeB = K.layers.Conv2D(name="encodeBb", filters=self.fms * 2, **params)(
-            encodeB
-        )
+        encodeB = K.layers.Conv2D(
+            name="encodeBa", filters=self.fms * 2, **params
+        )(poolA)
+        encodeB = K.layers.Conv2D(
+            name="encodeBb", filters=self.fms * 2, **params
+        )(encodeB)
         poolB = K.layers.MaxPooling2D(name="poolB", pool_size=(2, 2))(encodeB)
 
-        encodeC = K.layers.Conv2D(name="encodeCa", filters=self.fms * 4, **params)(
-            poolB
-        )
+        encodeC = K.layers.Conv2D(
+            name="encodeCa", filters=self.fms * 4, **params
+        )(poolB)
         if self.use_dropout:
             encodeC = K.layers.SpatialDropout2D(dropout)(encodeC)
-        encodeC = K.layers.Conv2D(name="encodeCb", filters=self.fms * 4, **params)(
-            encodeC
-        )
+        encodeC = K.layers.Conv2D(
+            name="encodeCb", filters=self.fms * 4, **params
+        )(encodeC)
 
         poolC = K.layers.MaxPooling2D(name="poolC", pool_size=(2, 2))(encodeC)
 
-        encodeD = K.layers.Conv2D(name="encodeDa", filters=self.fms * 8, **params)(
-            poolC
-        )
+        encodeD = K.layers.Conv2D(
+            name="encodeDa", filters=self.fms * 8, **params
+        )(poolC)
         if self.use_dropout:
             encodeD = K.layers.SpatialDropout2D(dropout)(encodeD)
-        encodeD = K.layers.Conv2D(name="encodeDb", filters=self.fms * 8, **params)(
-            encodeD
-        )
+        encodeD = K.layers.Conv2D(
+            name="encodeDb", filters=self.fms * 8, **params
+        )(encodeD)
 
         poolD = K.layers.MaxPooling2D(name="poolD", pool_size=(2, 2))(encodeD)
 
-        encodeE = K.layers.Conv2D(name="encodeEa", filters=self.fms * 16, **params)(
-            poolD
-        )
-        encodeE = K.layers.Conv2D(name="encodeEb", filters=self.fms * 16, **params)(
-            encodeE
-        )
+        encodeE = K.layers.Conv2D(
+            name="encodeEa", filters=self.fms * 16, **params
+        )(poolD)
+        encodeE = K.layers.Conv2D(
+            name="encodeEb", filters=self.fms * 16, **params
+        )(encodeE)
 
         if self.use_upsampling:
             up = K.layers.UpSampling2D(name="upE", size=(2, 2))(encodeE)
@@ -225,12 +233,12 @@ class Unet(object):
             [up, encodeD], axis=self.concat_axis, name="concatD"
         )
 
-        decodeC = K.layers.Conv2D(name="decodeCa", filters=self.fms * 8, **params)(
-            concatD
-        )
-        decodeC = K.layers.Conv2D(name="decodeCb", filters=self.fms * 8, **params)(
-            decodeC
-        )
+        decodeC = K.layers.Conv2D(
+            name="decodeCa", filters=self.fms * 8, **params
+        )(concatD)
+        decodeC = K.layers.Conv2D(
+            name="decodeCb", filters=self.fms * 8, **params
+        )(decodeC)
 
         if self.use_upsampling:
             up = K.layers.UpSampling2D(name="upC", size=(2, 2))(decodeC)
@@ -242,12 +250,12 @@ class Unet(object):
             [up, encodeC], axis=self.concat_axis, name="concatC"
         )
 
-        decodeB = K.layers.Conv2D(name="decodeBa", filters=self.fms * 4, **params)(
-            concatC
-        )
-        decodeB = K.layers.Conv2D(name="decodeBb", filters=self.fms * 4, **params)(
-            decodeB
-        )
+        decodeB = K.layers.Conv2D(
+            name="decodeBa", filters=self.fms * 4, **params
+        )(concatC)
+        decodeB = K.layers.Conv2D(
+            name="decodeBb", filters=self.fms * 4, **params
+        )(decodeB)
 
         if self.use_upsampling:
             up = K.layers.UpSampling2D(name="upB", size=(2, 2))(decodeB)
@@ -259,12 +267,12 @@ class Unet(object):
             [up, encodeB], axis=self.concat_axis, name="concatB"
         )
 
-        decodeA = K.layers.Conv2D(name="decodeAa", filters=self.fms * 2, **params)(
-            concatB
-        )
-        decodeA = K.layers.Conv2D(name="decodeAb", filters=self.fms * 2, **params)(
-            decodeA
-        )
+        decodeA = K.layers.Conv2D(
+            name="decodeAa", filters=self.fms * 2, **params
+        )(concatB)
+        decodeA = K.layers.Conv2D(
+            name="decodeAb", filters=self.fms * 2, **params
+        )(decodeA)
 
         if self.use_upsampling:
             up = K.layers.UpSampling2D(name="upA", size=(2, 2))(decodeA)
@@ -276,8 +284,12 @@ class Unet(object):
             [up, encodeA], axis=self.concat_axis, name="concatA"
         )
 
-        convOut = K.layers.Conv2D(name="convOuta", filters=self.fms, **params)(concatA)
-        convOut = K.layers.Conv2D(name="convOutb", filters=self.fms, **params)(convOut)
+        convOut = K.layers.Conv2D(name="convOuta", filters=self.fms, **params)(
+            concatA
+        )
+        convOut = K.layers.Conv2D(name="convOutb", filters=self.fms, **params)(
+            convOut
+        )
 
         prediction = K.layers.Conv2D(
             name="PredictionMask",
@@ -287,7 +299,9 @@ class Unet(object):
         )(convOut)
 
         model = K.models.Model(
-            inputs=[inputs], outputs=[prediction], name="2DUNet_Valve_Challenge"
+            inputs=[inputs],
+            outputs=[prediction],
+            name="2DUNet_Valve_Challenge",
         )
 
         optimizer = self.optimizer
@@ -295,7 +309,9 @@ class Unet(object):
         if final:
             model.trainable = False
         else:
-            model.compile(optimizer=optimizer, loss=self.loss, metrics=self.metrics)
+            model.compile(
+                optimizer=optimizer, loss=self.loss, metrics=self.metrics
+            )
 
             if self.print_model:
                 model.summary()
@@ -304,7 +320,9 @@ class Unet(object):
 
     def get_callbacks(self):
         """Define any callbacks for the training."""
-        model_filename = os.path.join(self.output_path, self.inference_filename)
+        model_filename = os.path.join(
+            self.output_path, self.inference_filename
+        )
 
         print("Writing model to '{}'".format(model_filename))
 
@@ -345,21 +363,31 @@ class Unet(object):
 
     def evaluate_model(self, model_filename, ds_test):
         """Evaluate the best model on the validation dataset."""
-        model = K.models.load_model(model_filename, custom_objects=self.custom_objects)
+        model = K.models.load_model(
+            model_filename, custom_objects=self.custom_objects
+        )
 
         print("Evaluating model on test dataset. Please wait...")
         metrics = model.evaluate(ds_test, verbose=1)
 
         for idx, metric in enumerate(metrics):
-            print("Test dataset {} = {:.4f}".format(model.metrics_names[idx], metric))
+            print(
+                "Test dataset {} = {:.4f}".format(
+                    model.metrics_names[idx], metric
+                )
+            )
 
     def create_model(self, imgs_shape, msks_shape, dropout=0.2, final=False):
         """Create model.
 
         If you have other models, you can try them here
         """
-        return self.unet_model(imgs_shape, msks_shape, dropout=dropout, final=final)
+        return self.unet_model(
+            imgs_shape, msks_shape, dropout=dropout, final=final
+        )
 
     def load_model(self, model_filename):
         """Load a model from Keras file."""
-        return K.models.load_model(model_filename, custom_objects=self.custom_objects)
+        return K.models.load_model(
+            model_filename, custom_objects=self.custom_objects
+        )

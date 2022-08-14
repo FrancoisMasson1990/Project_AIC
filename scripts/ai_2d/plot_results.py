@@ -101,7 +101,9 @@ if __name__ == "__main__":
     imgs = trainFiles
     labels = trainLabels
 
-    for index, (img, label) in tqdm(enumerate(zip(imgs, labels)), total=len(imgs)):
+    for index, (img, label) in tqdm(
+        enumerate(zip(imgs, labels)), total=len(imgs)
+    ):
         valve_name = str(Path(img).parent).split("/")[-1]
         plt.plot_results_2d(
             imgs=img,
