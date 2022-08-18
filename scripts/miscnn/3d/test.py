@@ -53,7 +53,7 @@ if __name__ == "__main__":
         config = yaml.load(f, Loader=yaml.FullLoader)
     blocktime, num_inter_threads, num_threads = req3d()
 
-    data_path = "/home/francoismasson/Project_AIC/scripts/data_kidney/"
+    data_path = "../data_kidney/"
 
     interface = NIFTI_interface(
         pattern="case_000[0-9]*", channels=1, classes=3
@@ -91,13 +91,16 @@ if __name__ == "__main__":
     pp = Preprocessor(
         data_io,
         data_aug=data_aug,
-        batch_size=4,
+        batch_size=1,
         subfunctions=subfunctions,
         prepare_subfunctions=True,
         analysis="patchwise-crop",
-        patch_shape=(32, 64, 64),
+        patch_shape=(64, 128, 128),
         use_multiprocessing=True,
     )
+
+    # Adjust the patch overlap for predictions
+    # pp.patchwise_overlap = (40, 80, 80)
 
     # Create a deep learning neural network model with
     # a standard U-Net architecture
@@ -127,5 +130,5 @@ if __name__ == "__main__":
         monitor="loss", min_delta=0, patience=150, verbose=1, mode="min"
     )
     sample_list = data_io.get_indiceslist()
-    model.train(sample_list, epochs=50, callbacks=[cb_ckpt, cb_lr, cb_es])
-    model.predict(sample_list)
+    model.train(sample_list[0], epochs=1, callbacks=[cb_ckpt, cb_lr, cb_es])
+    model.predict(sample_list[0])
