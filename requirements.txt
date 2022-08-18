@@ -5,6 +5,7 @@ pydicom
 scikit-image
 natsort
 tensorflow
+tensorflow_addons
 scikit-learn
 testresources
 open3d
