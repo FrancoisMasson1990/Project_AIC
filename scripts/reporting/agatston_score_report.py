@@ -1,0 +1,101 @@
+#!/usr/bin/env python3.9
+# *-* coding: utf-8*-*
+"""
+Copyright (C) 2022 Project AIC - All Rights Reserved.
+
+Unauthorized copy of this file, via any medium is strictly
+prohibited. Proprietary and confidential.
+
+Note
+----
+Generate automatically prediction and export to google sheet.
+"""
+
+import os
+import numpy as np
+import pandas as pd
+import aic.misc.files as fs
+from aic.misc.setting_tf import requirements_2d as req2d
+from aic.model.inference import get_inference
+import yaml
+import aic.misc.export as expt
+from glob import glob
+from natsort import natsorted
+from tqdm import tqdm
+
+if __name__ == "__main__":
+    req2d()
+
+    config = str(fs.get_configs_root() / "agatston_score_report.yml")
+    with open(config) as f:
+        # The FullLoader parameter handles the conversion from YAML
+        # scalar values to Python the dictionary format
+        config = yaml.load(f, Loader=yaml.FullLoader)
+
+    """
+    Step 0: Get list of valves.
+    """
+
+    data_path = config.get("data_path", str(fs.get_dataset_root()))
+    model_config = config.get("model_config", None)
+    if not model_config:
+        raise Exception(f"You should provide a model path.")
+    if not os.path.exists(model_config):
+        model_config = str(fs.get_configs_root() / model_config)
+    save_path = config.get("data_path", str(fs.get_prediction_root()))
+    sub_folders = os.listdir(data_path)
+    data = []
+    for sub_folder in sub_folders:
+        root = os.path.join(data_path, sub_folder)
+        sub_ = os.listdir(root)
+        for sub in sub_:
+            data.append(os.path.join(root, sub))
+
+    """
+    Step 1: Generate prediction from list of valves.
+    """
+
+    for d in tqdm(natsorted(data)):
+        print(d.split("/")[-2])
+        path = os.path.join(save_path, d.split("/")[-2], d.split("/")[-1])
+        get_inference(
+            data=d,
+            config=model_config,
+            online=False,
+            lite=False,
+            save_path=path,
+        )
+        breakpoint()
+
+    """
+    Step 2: Export prediction score to Google Sheet.
+    """
+
+    url = config.get("url", None)
+    sheet = expt.get_sheet(url)
+    df = pd.DataFrame({})
+    df = expt.get_sheet_cells(df, sheet)
+    df.score = "-"
+    folder_datasets = []
+    folder_dataset = fs.get_dataset_root()
+    for dir in natsorted(os.listdir(folder_dataset)):
+        patient = dir.split("/")[0]
+        patient = ("-").join(patient.split("-")[:2])
+        df.score = np.where(df.patient == patient, "Failed", df.score)
+
+    folder_prediction = fs.get_prediction_root()
+    for dir in natsorted(os.listdir(folder_prediction)):
+        for sub_dir in natsorted(
+            os.listdir(os.path.join(folder_prediction, dir))
+        ):
+            pkl_file = glob.glob(
+                os.path.join(folder_prediction, dir, sub_dir, "*.pkl")
+            )[0]
+            data = pd.read_pickle(pkl_file)
+            patient = data["data_path"].split("/")[0]
+            patient = ("-").join(patient.split("-")[:2])
+            df.score = np.where(
+                df.patient == patient, round(data["score"], 2), df.score
+            )
+
+    expt.update_sheet_cells(df, sheet)

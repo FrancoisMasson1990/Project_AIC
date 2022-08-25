@@ -130,5 +130,5 @@ if __name__ == "__main__":
         monitor="loss", min_delta=0, patience=150, verbose=1, mode="min"
     )
     sample_list = data_io.get_indiceslist()
-    model.train(sample_list[0], epochs=1, callbacks=[cb_ckpt, cb_lr, cb_es])
+    model.train(sample_list, epochs=250, callbacks=[cb_ckpt, cb_lr, cb_es])
     model.predict(sample_list[0])

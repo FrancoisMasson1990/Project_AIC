@@ -6,6 +6,7 @@ scikit-image
 natsort
 tensorflow
 tensorflow_addons
+tflite-runtime
 scikit-learn
 testresources
 open3d

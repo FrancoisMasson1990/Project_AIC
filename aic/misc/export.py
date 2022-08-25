@@ -63,38 +63,3 @@ def update_sheet_cells(df, sheet, col="G", header=4):
             index += 1
 
     sheet.update_cells(cell_list)
-
-
-if __name__ == "__main__":
-
-    url = (
-        "https://docs.google.com/spreadsheets/d/"
-        + "1quuMfuGeg3-DmWE3O8q4sseMFRvOzG0hmKziR4IEpVg/edit?usp=sharing"
-    )
-    sheet = get_sheet(url)
-    df = pd.DataFrame({})
-    df = get_sheet_cells(df, sheet)
-    df.score = "-"
-    folder_datasets = []
-    folder_dataset = fs.get_dataset_root()
-    for dir in natsorted(os.listdir(folder_dataset)):
-        patient = dir.split("/")[0]
-        patient = ("-").join(patient.split("-")[:2])
-        df.score = np.where(df.patient == patient, "Failed", df.score)
-
-    folder_prediction = fs.get_prediction_root()
-    for dir in natsorted(os.listdir(folder_prediction)):
-        for sub_dir in natsorted(
-            os.listdir(os.path.join(folder_prediction, dir))
-        ):
-            pkl_file = glob.glob(
-                os.path.join(folder_prediction, dir, sub_dir, "*.pkl")
-            )[0]
-            data = pd.read_pickle(pkl_file)
-            patient = data["data_path"].split("/")[0]
-            patient = ("-").join(patient.split("-")[:2])
-            df.score = np.where(
-                df.patient == patient, round(data["score"], 2), df.score
-            )
-
-    update_sheet_cells(df, sheet)

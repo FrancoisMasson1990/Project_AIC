@@ -11,6 +11,7 @@ Note
 Inference Web based for the model prediction
 """
 
+import shutil
 import sys
 import os
 import numpy as np
@@ -30,17 +31,27 @@ from tqdm import tqdm
 from copy import deepcopy
 
 
-def get_inference(data, file_types, config="./model_info.yml"):
+def get_inference(
+    data,
+    file_types=None,
+    config="./model_info.yml",
+    online=True,
+    lite=True,
+    save_path="./cache",
+):
     """Get inference results."""
     slices = []
-    for f, d in zip(file_types, data):
-        content_type, content_string = d.split(",")
-        if f.endswith(".txt"):
-            patient_info = content_string.encode("utf8")
-            patient_info = base64.decodebytes(patient_info).decode("UTF-8")
-        elif f.endswith(".dcm"):
-            decoded = base64.b64decode(content_string)
-            slices.append(io.BytesIO(decoded))
+    if file_types:
+        for f, d in zip(file_types, data):
+            content_type, content_string = d.split(",")
+            if f.endswith(".txt"):
+                patient_info = content_string.encode("utf8")
+                patient_info = base64.decodebytes(patient_info).decode("UTF-8")
+            elif f.endswith(".dcm"):
+                decoded = base64.b64decode(content_string)
+                slices.append(io.BytesIO(decoded))
+    else:
+        slices = [data]
 
     if slices:
         if os.path.exists(config):
@@ -53,13 +64,29 @@ def get_inference(data, file_types, config="./model_info.yml"):
             threshold = config.get("threshold", None)
             ratio_spacing = config.get("spacing", None)
         # Load model
-        model = ld.load_tflitemodel(model_name)
-        path = "./cache/tmp/"
+        if online:
+            model = ld.load_tflitemodel(model_name)
+        else:
+            model = ld.load_model(model_name)
         # Get Dicom files
-        data = deepcopy(slices)
-        data = ut.get_slices(data)
-        image = op.get_pixels_hu(data)
-        ut.save_dicom(slices, path=path)
+        path = "./cache/tmp/"
+        if not online:
+            list_data = os.listdir(data)
+            list_data = [
+                os.path.join(data, d) for d in list_data if d.endswith(".dcm")
+            ]
+        else:
+            list_data = deepcopy(slices)
+        dataset = ut.get_slices(list_data)
+        image = op.get_pixels_hu(dataset)
+        if not online:
+            if os.path.exists(path) and os.path.isdir(path):
+                shutil.rmtree(path)
+            os.makedirs(path, exist_ok=True)
+            for name in list_data:
+                shutil.copy(name, path)
+        else:
+            ut.save_dicom(slices, path=path)
         img = vedo_load(path)
         spacing = img.imagedata().GetSpacing()
         area = spacing[0] * spacing[1]
@@ -83,9 +110,10 @@ def get_inference(data, file_types, config="./model_info.yml"):
             ]
         )
         # Get predictions
-        std_err_backup = sys.stderr
-        file_prog = open("./cache/progress.txt", "w")
-        sys.stderr = file_prog
+        if online:
+            std_err_backup = sys.stderr
+            file_prog = open("./cache/progress.txt", "w")
+            sys.stderr = file_prog
         predictions, crop_values = get_predictions(
             model,
             model_version,
@@ -95,10 +123,11 @@ def get_inference(data, file_types, config="./model_info.yml"):
             z_slice_min=z_slice_min,
             spacing=spacing,
             dimensions=dimensions,
-            lite=True,
+            lite=lite,
         )
-        file_prog.close()
-        sys.stderr = std_err_backup
+        if online:
+            file_prog.close()
+            sys.stderr = std_err_backup
         vertices, _ = op.make_mesh(predictions, -1)
         # Clustering
         vertices_predictions = op.clustering(
@@ -143,15 +172,17 @@ def get_inference(data, file_types, config="./model_info.yml"):
         results = sc.save_prediction(
             image,
             mask_agatston,
-            path="./cache",
+            path=save_path,
             score=score,
             area=area,
             threshold_min=130,
             threshold_max=None,
             valve=valve,
             candidate=candidate,
-            online=True,
+            online=online,
         )
+        if not online:
+            shutil.rmtree(path)
         return results
 
 
@@ -200,7 +231,7 @@ def get_predictions(
     for i in tqdm(range(img.shape[0])):
         pred = np.expand_dims(img[i, :, :, :], 0)
         if not lite:
-            prediction = model.predict(pred)
+            prediction = model.predict(pred, verbose=0)
         else:
             prediction = tfl.get_interpreter(model, input=pred)
         if model_version == 0:

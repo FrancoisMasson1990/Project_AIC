@@ -194,7 +194,7 @@ def load_mask(path):
 
 
 def save_dicom(files_dcm, path="./cache/tmp"):
-    """Save to pydicom object to dcm format."""
+    """Save from pydicom object to dcm format."""
     if not isinstance(files_dcm, list):
         files_dcm = [files_dcm]
     slices = [pydicom.read_file(s) for s in files_dcm]
