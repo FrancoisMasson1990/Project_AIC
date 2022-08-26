@@ -12,13 +12,14 @@ Library using dataloader mindset to load
 big dataset.
 """
 
+import matplotlib.pyplot as plt
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.utils import Sequence
-import numpy as np
-import matplotlib.pyplot as plt
-from aic.processing import preprocess as dp
+
 import aic.misc.utils as ut
 import aic.processing.operations as op
+from aic.processing import preprocess as dp
 
 
 class DatasetGenerator2D(Sequence):
@@ -247,8 +248,6 @@ class DatasetGenerator2D(Sequence):
                 slice_idx = np.random.choice(range(num_slices), num_slices)
                 img = img[:, :, slice_idx]  # Randomize the slices
                 label = label[:, :, slice_idx]
-
-            name = self.filenames[idx]
 
             if (idy + self.batch_size) < num_slices:
                 # We have enough slices for batch

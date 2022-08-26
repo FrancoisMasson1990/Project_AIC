@@ -11,10 +11,11 @@ Note
 Library for scoring function
 """
 
-import numpy as np
 import bz2
-import pickle
 import os
+import pickle
+
+import numpy as np
 from scipy.ndimage import measurements, morphology
 
 

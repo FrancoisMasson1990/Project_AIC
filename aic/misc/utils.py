@@ -11,13 +11,14 @@ Note
 Various of functions simplifies execution.
 """
 
-import numpy as np
-import os
-import json
-from natsort import natsorted
 import glob
-import pydicom
+import json
+import os
 import shutil
+
+import numpy as np
+import pydicom
+from natsort import natsorted
 
 
 def get_file_list(data_path, json_filename, seed=816, split=0.7):
@@ -126,6 +127,7 @@ def json_export(json_filename):
         with open(json_filename, "r") as fp:
             experiment_data = json.load(fp)
     except IOError as e:
+        print(e)
         raise Exception(
             "File {} doesn't exist. It should be part of the "
             "Magna valve directory".format(json_filename)
@@ -176,6 +178,7 @@ def get_slices(file_dcm, path=None):
             - slices[1].ImagePositionPatient[2]
         )
     except Exception as e:
+        print(e)
         slice_thickness = np.abs(
             slices[0].SliceLocation - slices[1].SliceLocation
         )

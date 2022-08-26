@@ -26,8 +26,8 @@ from tensorflow import keras as K
 For Medical AIC (Task 1):
 
 LABEL_CHANNELS: "labels": {
-	 "0": "background",
-	 "1": "Magna_valve",
+    "0": "background",
+    "1": "Magna_valve",
 }
 
 """

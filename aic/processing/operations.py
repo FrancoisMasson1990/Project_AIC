@@ -12,21 +12,22 @@ Library for processing medical data inputs
 and data for training/infering.
 """
 
-import numpy as np
-from tqdm import tqdm
-from vtk.util.numpy_support import vtk_to_numpy
-from skimage import measure
-import scipy.ndimage
-from sklearn.cluster import DBSCAN
 from collections import Counter
+
+import numpy as np
 import open3d as o3d
-from scipy import optimize
+import scipy.ndimage
 import vtk
-from vedo import *
-from vedo import volume, mesh
-import aic.processing.fitting as ft
+from scipy import optimize
+from skimage import measure
+from sklearn.cluster import DBSCAN
+from tqdm import tqdm
+from vedo import mesh, volume
+from vtk.util.numpy_support import vtk_to_numpy
+
 import aic.misc.files as fs
 import aic.misc.sql as sql
+import aic.processing.fitting as ft
 
 
 def get_pixels_hu(scans):

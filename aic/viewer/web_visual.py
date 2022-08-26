@@ -11,19 +11,20 @@ Note
 Library for the UX Viewer
 """
 
+import base64
+import bz2
+import io
+import pickle
 import sys
-import aic.model.inference as infer
-import pickle
+
 import numpy as np
-import pickle
 import plotly.express as px
 import plotly.graph_objects as go
-import aic.processing.scoring as sc
-import aic.misc.files as fs
 from tqdm import tqdm
-import bz2
-import base64
-import io
+
+import aic.misc.files as fs
+import aic.model.inference as infer
+import aic.processing.scoring as sc
 
 
 def generate_imgs(data, index, fig):

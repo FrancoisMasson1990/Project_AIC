@@ -27,16 +27,16 @@ from a TensorFlow/Keras model.
 
 import datetime
 import warnings
+
 import yaml
+from tensorflow.keras.callbacks import (EarlyStopping, ModelCheckpoint,
+                                        ReduceLROnPlateau)
+
 import aic.misc.files as fs
 from aic.misc.setting_tf import requirements_3d as req3d
-from tensorflow.keras.callbacks import ReduceLROnPlateau
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.callbacks import ModelCheckpoint
 
 warnings.filterwarnings("ignore")
-from miscnn_dependency import *  # noqa: E402
-
+import dependency.miscnn_dependency as deps  # noqa: E402
 
 if __name__ == "__main__":
 
@@ -55,14 +55,14 @@ if __name__ == "__main__":
 
     data_path = "../data_kidney/"
 
-    interface = NIFTI_interface(
+    interface = deps.NIFTI_interface(
         pattern="case_000[0-9]*", channels=1, classes=3
     )
     # Initialize data path and create the Data I/O instance
-    data_io = Data_IO(interface, data_path)
+    data_io = deps.Data_IO(interface, data_path)
 
     # Create and configure the Data Augmentation class
-    data_aug = Data_Augmentation(
+    data_aug = deps.Data_Augmentation(
         cycles=2,
         scaling=True,
         rotations=True,
@@ -75,11 +75,11 @@ if __name__ == "__main__":
     )
 
     # Create a pixel value normalization Subfunction through Z-Score
-    sf_normalize = Normalization(mode="z-score")
+    sf_normalize = deps.Normalization(mode="z-score")
     # Create a clipping Subfunction
-    sf_clipping = Clipping(min=0, max=1000)
+    sf_clipping = deps.Clipping(min=0, max=1000)
     # Create a resampling Subfunction to voxel spacing 3.22 x 1.62 x 1.62
-    sf_resample = Resampling((3.22, 1.62, 1.62))
+    sf_resample = deps.Resampling((3.22, 1.62, 1.62))
 
     # Assemble Subfunction classes into a list
     # Be aware that the Subfunctions will be exectue
@@ -88,7 +88,7 @@ if __name__ == "__main__":
 
     # Create a Preprocessor instance to configure
     # how to preprocess the data into batches
-    pp = Preprocessor(
+    pp = deps.Preprocessor(
         data_io,
         data_aug=data_aug,
         batch_size=1,
@@ -104,11 +104,11 @@ if __name__ == "__main__":
 
     # Create a deep learning neural network model with
     # a standard U-Net architecture
-    unet_standard = Architecture()
-    model = Neural_Network(
+    unet_standard = deps.Architecture()
+    model = deps.Neural_Network(
         preprocessor=pp,
-        loss=tversky_loss,
-        metrics=[dice_soft, dice_crossentropy],
+        loss=deps.tversky_loss,
+        metrics=[deps.dice_soft, deps.dice_crossentropy],
         architecture=unet_standard,
         batch_queue_size=2,
         workers=8,

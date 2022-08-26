@@ -11,14 +11,17 @@ Note
 Library to show inference results.
 """
 
-import numpy as np
 import os
+from glob import glob
+
+import matplotlib.pyplot as plt
+import nibabel as nib
+import numpy as np
+
 import aic.misc.utils as ut
 from aic.processing import metrics as mt
-from aic.processing import preprocess as dp
 from aic.processing import operations as op
-import matplotlib.pyplot as plt
-from glob import glob
+from aic.processing import preprocess as dp
 
 
 def plot_results_2d(
@@ -222,8 +225,6 @@ def plot_results_3d(
 
 def plot_results_3d_miscnn(file_path, folder="./inference_examples"):
     """Plot the predicted masks for image."""
-    import nibabel as nib
-
     os.makedirs(folder, exist_ok=True)
     if file_path.endswith("/"):
         last = -2
@@ -244,6 +245,7 @@ def plot_results_3d_miscnn(file_path, folder="./inference_examples"):
 
     plot_pred = False
     prediction = glob(file_path + "predictions*")
+
     if prediction:
         plot_pred = True
         prediction = prediction[0]

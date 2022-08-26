@@ -3,5 +3,17 @@
 set -e
 
 Project_Dir=$HOME/Project_AIC/
-black "${Project_Dir}/aic" -l 79
-black "${Project_Dir}/scripts" -l 79
+
+flake8 \
+    "${Project_Dir}/aic" \
+    "${Project_Dir}/scripts" \
+    --extend-exclude "${Project_Dir}/scripts/sandbox/","${Project_Dir}/scripts/miscnn/3d/dependency/" \
+    --ignore E101,E203,E266,E501,W503,W605,E741,F541
+
+black "${Project_Dir}/aic" \
+      "${Project_Dir}/scripts" \
+      -l 79
+
+isort "${Project_Dir}/aic" \
+      "${Project_Dir}/scripts"
+

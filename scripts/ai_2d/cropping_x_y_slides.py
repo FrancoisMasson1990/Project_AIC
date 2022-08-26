@@ -27,14 +27,15 @@ best model.
 """
 
 
-import yaml
 import os
+
+import numpy as np
+import yaml
+from tqdm import tqdm
+
 import aic.misc.files as fs
 import aic.misc.utils as ut
-from tqdm import tqdm
-import numpy as np
 from aic.misc.setting_tf import requirements_2d as req2d
-
 
 if __name__ == "__main__":
 

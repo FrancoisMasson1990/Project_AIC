@@ -13,12 +13,12 @@ and make predictions.
 """
 
 import os
+
+import aic.misc.files as fs
+import aic.model.loaders as ld
 import aic.viewer.viewer_2D as v2d
 import aic.viewer.viewer_3D as v3d
-import aic.misc.files as fs
 from aic.misc.setting_tf import requirements_2d as req2d
-import aic.model.loaders as ld
-
 
 if __name__ == "__main__":
     # Set TensorFlow requirements

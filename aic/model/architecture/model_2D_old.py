@@ -24,19 +24,15 @@ You can try custom models by modifying the code here.
 """
 
 import os
-import time
 import shutil
+import time
+
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras as K
-
-from tensorflow.python.framework import graph_util
-from tensorflow.python.framework import graph_io
-
-import tensorflow_addons as tfa
 import segmentation_models as sm
-
+import tensorflow as tf
 import tensorflow.keras.backend as backend
+from tensorflow import keras as K
+from tensorflow.python.framework import graph_io, graph_util
 
 # LABEL_CHANNELS = {"labels":{
 # 	 			  "background":0,
@@ -432,7 +428,6 @@ class unet(object):
         BACKBONE = "efficientnetb3"
         classes = LABEL_CHANNELS["labels"].values()
 
-        preprocess_input = sm.get_preprocessing(BACKBONE)
         # define network parameters
         n_classes = len(classes)
         activation = "sigmoid" if n_classes == 1 else "softmax"
@@ -515,7 +510,8 @@ class unet(object):
             model = K.models.load_model(
                 model_filename, custom_objects=self.custom_objects
             )
-        except:
+        except Exception as e:
+            print(e)
             model = self.unet_model_multi_label(print_model=False)
             model.load_weights(model_filename)
 

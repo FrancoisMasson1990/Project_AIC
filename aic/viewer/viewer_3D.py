@@ -11,21 +11,22 @@ Note
 Library for the 3D interface
 """
 
-import vtk
-from vedo import *
-import numpy as np
-import os
-from vedo import settings
-from vtk.util.numpy_support import vtk_to_numpy
 import glob
-from aic.viewer.widget import *
+import os
+
+import numpy as np
+import vtk
+from scipy import ndimage as ndi
+from vedo import Cylinder, Volume, load, printc
+from vtk.util.numpy_support import vtk_to_numpy
+
 import aic.misc.utils as ut
 import aic.model.inference as infer
-import aic.processing.operations as op
-import aic.processing.fitting as ft
-from scipy import ndimage as ndi
-import aic.viewer.viewer_2D as v2d
 import aic.model.loaders as ld
+import aic.processing.fitting as ft
+import aic.processing.operations as op
+import aic.viewer.viewer_2D as v2d
+from aic.viewer.widget import Axes, Button, Cutter, Grid, Mover, Text_2D
 
 vtk.vtkObject.GlobalWarningDisplayOff()
 
@@ -1173,7 +1174,6 @@ class Viewer3D(object):
 
         picker = vtk.vtkPropPicker()
         picker.PickProp(x, y, renderer)
-        clickedActor = picker.GetActor()
 
         # check if any button objects are clicked
         clickedActor2D = picker.GetActor2D()

@@ -13,10 +13,10 @@ have consistency between folders for patient.
 """
 
 import os
-from tqdm import tqdm
 import shutil
-from natsort import natsorted
 
+from natsort import natsorted
+from tqdm import tqdm
 
 if __name__ == "__main__":
 

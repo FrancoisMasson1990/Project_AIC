@@ -12,8 +12,9 @@ Convert format files
 """
 
 import os
-import numpy as np
+
 import nibabel as nib
+import numpy as np
 
 
 def npy_to_nii(obj, name="imaging.nii.gz", directory=".", affine=np.eye(4)):

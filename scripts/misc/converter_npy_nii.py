@@ -11,13 +11,13 @@ Note
 Main script to convert npy file into a nibabel object.
 """
 
+import os
+
 import numpy as np
+
+import aic.misc.converter as co
 import aic.misc.files as fs
 import aic.misc.utils as ut
-import aic.misc.converter as co
-import os
-import nibabel as nib
-
 
 if __name__ == "__main__":
 

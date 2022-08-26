@@ -12,8 +12,9 @@ Library for processing medical data inputs
 and data for training/infering.
 """
 
-import psutil
 import os
+
+import psutil
 import tensorflow as tf
 
 

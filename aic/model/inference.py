@@ -11,24 +11,26 @@ Note
 Inference Web based for the model prediction
 """
 
-import shutil
-import sys
-import os
-import numpy as np
 import base64
 import io
-import aic.processing.preprocess as dp
-import aic.misc.utils as ut
-import aic.processing.operations as op
-import aic.processing.fitting as ft
-import aic.model.loaders as ld
-import aic.processing.scoring as sc
-import aic.model.from_tflite as tfl
+import os
+import shutil
+import sys
+from copy import deepcopy
+
+import numpy as np
+from tqdm import tqdm
 from vedo.io import load as vedo_load
 from vedo.volume import Volume
 from vtk.util.numpy_support import vtk_to_numpy
-from tqdm import tqdm
-from copy import deepcopy
+
+import aic.misc.utils as ut
+import aic.model.from_tflite as tfl
+import aic.model.loaders as ld
+import aic.processing.fitting as ft
+import aic.processing.operations as op
+import aic.processing.preprocess as dp
+import aic.processing.scoring as sc
 
 
 def get_inference(
@@ -62,7 +64,6 @@ def get_inference(
             z_slice_min = config.get("z_slice_min", None)
             z_slice_max = config.get("z_slice_max", None)
             threshold = config.get("threshold", None)
-            ratio_spacing = config.get("spacing", None)
         # Load model
         if online:
             model = ld.load_tflitemodel(model_name)

@@ -23,17 +23,17 @@ This module loads the data from data.py, creates a TensorFlow/Keras model
 from model.py, trains the model on the data, and then saves the
 best model.
 """
-from aic_models import model_2D
-import numpy as np
-from data import load_data
-import yaml
-from tensorflow import keras as K
-import multiprocessing
-import psutil
 import datetime
 import os
-import tensorflow as tf
 import sys
+
+import psutil
+import tensorflow as tf
+import yaml
+from aic_models import model_2D
+from tensorflow import keras as K
+
+from data import load_data
 
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 gpus = tf.config.experimental.list_physical_devices("GPU")

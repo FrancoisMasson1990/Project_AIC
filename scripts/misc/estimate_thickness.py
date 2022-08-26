@@ -13,10 +13,10 @@ Main script to estiamte valve thickness.
 
 import numpy as np
 import pandas as pd
-import aic.processing.operations as op
+
 import aic.misc.files as fs
 import aic.misc.sql as sql
-
+import aic.processing.operations as op
 
 if __name__ == "__main__":
     layers = [

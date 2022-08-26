@@ -11,14 +11,16 @@ Note
 Code for web deployment
 """
 
-import aic.viewer.web_visual as vs
-import aic.viewer.files as fs
 import bz2
 import pickle
 import warnings
+
 import dash
 import dash_bootstrap_components as dbc
-from dash import dcc, html, Dash
+from dash import Dash, dcc, html
+
+import aic.viewer.files as fs
+import aic.viewer.web_visual as vs
 
 warnings.filterwarnings("ignore")
 
@@ -354,6 +356,7 @@ def callback_progress(n_intervals):
         last_line = list(filter(None, str_raw.split("\n")))[-1]
         percent = float(last_line.split("%")[0])
     except Exception as e:
+        print(e)
         percent = 0
     finally:
         text = f"{percent:.0f}%"

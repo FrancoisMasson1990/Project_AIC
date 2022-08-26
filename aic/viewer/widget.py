@@ -11,12 +11,11 @@ Note
 Library for the Widget add-ons.
 """
 
-import vtk
-from vedo import *
-import numpy as np
-from vedo import settings
-import vedo.settings as settings
 import os
+
+import numpy as np
+import vtk
+from vedo import Assembly, getColor, precision, settings, shapes
 
 
 class Button(object):
@@ -216,10 +215,6 @@ class Grid(object):
         xTitleColor = self.axes.pop("xTitleColor", c)
         yTitleColor = self.axes.pop("yTitleColor", c)
         zTitleColor = self.axes.pop("zTitleColor", c)
-
-        xTitleBackfaceColor = self.axes.pop("xTitleBackfaceColor", None)
-        yTitleBackfaceColor = self.axes.pop("yTitleBackfaceColor", None)
-        zTitleBackfaceColor = self.axes.pop("zTitleBackfaceColor", None)
 
         xKeepAspectRatio = self.axes.pop("xKeepAspectRatio", True)
         yKeepAspectRatio = self.axes.pop("yKeepAspectRatio", True)

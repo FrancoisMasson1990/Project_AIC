@@ -12,14 +12,11 @@ Export prediction made by the algo to the
 google sheet file online.
 """
 
-import os
-import pandas as pd
-import numpy as np
-import glob
-from natsort import natsorted
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from tqdm import tqdm
+
 from aic.misc import files as fs
 
 

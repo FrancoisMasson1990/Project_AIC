@@ -28,24 +28,22 @@ So far not using .zip files but may be an option later
 For Medical AIC (Task 1):
 
 LABEL_CHANNELS: "labels": {
-	 "0": "background",
-	 "1": "Magna_valve",
+    "0": "background",
+    "1": "Magna_valve",
 }
 
 """
 
-import os
-import numpy as np
-from tqdm import tqdm  # pip install tqdm
-import h5py  # pip install h5py
-import json
-from os.path import expanduser
 import argparse
-import glob
-import pydicom
-import copy
+import json
+import os
+from os.path import expanduser
+
+import h5py  # pip install h5py
+import numpy as np
 import yaml
 from aic_models import data_preprocess as dp
+from tqdm import tqdm  # pip install tqdm
 
 LABEL_CHANNELS = {
     "labels": {
@@ -153,8 +151,8 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
     label_files = label_files.tolist()
 
     """
-	Print shapes of raw data
-	"""
+    Print shapes of raw data
+    """
     print("Data shapes")
     print("===========")
     print("n.b. All tensors converted to stacks of 2D slices.")
@@ -178,7 +176,8 @@ def convert_raw_data_to_hdf5(filename, dataDir, json_data, split):
                 msk_[0], msk_[1], msk_[2]
             )
         )
-    except:
+    except Exception as e:
+        print(e)
         pass
 
     # Save training set images
@@ -405,8 +404,8 @@ if __name__ == "__main__":
         os.remove(filename)
 
     """
-	All the useful infos are stored in a json file (dataset.json)
-	"""
+    All the useful infos are stored in a json file (dataset.json)
+    """
 
     json_filename = os.path.join(data_path, "dataset.json")
 
@@ -414,6 +413,7 @@ if __name__ == "__main__":
         with open(json_filename, "r") as fp:
             experiment_data = json.load(fp)
     except IOError as e:
+        print(e)
         print(
             "File {} doesn't exist. It should be part of the "
             "Dataset directory".format(json_filename)
@@ -432,8 +432,8 @@ if __name__ == "__main__":
     print("*" * 30)
 
     """
-	Grap folder of data and train/val/split
-	and randomize the file list.
-	"""
+    Grap folder of data and train/val/split
+    and randomize the file list.
+    """
 
     convert_raw_data_to_hdf5(filename, data_path, experiment_data, args.split)

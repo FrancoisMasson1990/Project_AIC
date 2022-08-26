@@ -25,16 +25,16 @@ Print out a visual representation of the inference from a 3D trained model.
 """
 
 import os
+from pathlib import Path
+
 import yaml
-import aic.misc.utils as ut
+from tqdm import tqdm
+
 import aic.misc.files as fs
 import aic.misc.plots as plt
-from aic.model.architecture import model_3D
-import yaml
-from pathlib import Path
-from tqdm import tqdm
+import aic.misc.utils as ut
 from aic.misc.setting_tf import requirements_3d as req3d
-
+from aic.model.architecture import model_3D
 
 if __name__ == "__main__":
 

@@ -26,11 +26,10 @@ Print out a visual representation of the inference from a 3D trained model.
 
 import aic.misc.plots as plt
 
-
 if __name__ == "__main__":
 
     """
     Load the filepath
     """
-    file_path = "../data_kidney/case_00000/"
+    file_path = "../data_kidney/case_00068/"
     plt.plot_results_3d_miscnn(file_path=file_path)

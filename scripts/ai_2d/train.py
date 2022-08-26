@@ -28,13 +28,15 @@ best model.
 
 
 import datetime
-import yaml
 import os
+
+import yaml
+
 import aic.misc.files as fs
 import aic.misc.utils as ut
+from aic.misc.setting_tf import requirements_2d as req2d
 from aic.model.architecture.model_2D import Unet
 from aic.processing.dataloader import DatasetGenerator2D
-from aic.misc.setting_tf import requirements_2d as req2d
 
 if __name__ == "__main__":
 

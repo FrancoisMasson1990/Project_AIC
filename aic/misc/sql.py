@@ -10,9 +10,10 @@ A library that eases the use of sqlite3 through Python
 """
 import os
 import sqlite3 as sql3
+from pathlib import Path
+
 import pandas as pd
 from tqdm import tqdm
-from pathlib import Path
 
 
 def get_tablenames(sql_path):

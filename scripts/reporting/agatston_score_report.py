@@ -12,16 +12,18 @@ Generate automatically prediction and export to google sheet.
 """
 
 import os
+from glob import glob
+
 import numpy as np
 import pandas as pd
+import yaml
+from natsort import natsorted
+from tqdm import tqdm
+
+import aic.misc.export as expt
 import aic.misc.files as fs
 from aic.misc.setting_tf import requirements_2d as req2d
 from aic.model.inference import get_inference
-import yaml
-import aic.misc.export as expt
-from glob import glob
-from natsort import natsorted
-from tqdm import tqdm
 
 if __name__ == "__main__":
     req2d()

@@ -25,3 +25,5 @@ nibabel
 batchgenerators
 SimpleITK
 black
+flake8
+isort
