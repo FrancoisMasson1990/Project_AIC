@@ -31,5 +31,5 @@ if __name__ == "__main__":
     """
     Load the filepath
     """
-    file_path = "../data_kidney/case_00068/"
+    file_path = "../data_kidney/case_00018/"
     plt.plot_results_3d_miscnn(file_path=file_path)

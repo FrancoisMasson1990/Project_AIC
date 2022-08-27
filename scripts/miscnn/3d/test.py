@@ -29,8 +29,9 @@ import datetime
 import warnings
 
 import yaml
-from tensorflow.keras.callbacks import (EarlyStopping, ModelCheckpoint,
-                                        ReduceLROnPlateau)
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ReduceLROnPlateau
 
 import aic.misc.files as fs
 from aic.misc.setting_tf import requirements_3d as req3d

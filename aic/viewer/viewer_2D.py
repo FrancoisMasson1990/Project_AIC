@@ -15,7 +15,8 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.widgets import Button, Slider
+from matplotlib.widgets import Button
+from matplotlib.widgets import Slider
 
 import aic.misc.utils as ut
 import aic.processing.operations as op

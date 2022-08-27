@@ -14,6 +14,7 @@ Main script to convert npy file into a nibabel object.
 import os
 
 import numpy as np
+from tqdm import tqdm
 
 import aic.misc.converter as co
 import aic.misc.files as fs
@@ -24,7 +25,7 @@ if __name__ == "__main__":
     path = str(fs.get_label_2d_root())
     save_path = str(fs.get_dataset_root())
     folders = os.listdir(path)
-    for folder in folders:
+    for folder in tqdm(folders):
         files_ = os.path.join(path, folder)
         file_ = os.listdir(files_)
         for f in file_:

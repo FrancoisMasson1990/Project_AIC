@@ -32,7 +32,8 @@ import segmentation_models as sm
 import tensorflow as tf
 import tensorflow.keras.backend as backend
 from tensorflow import keras as K
-from tensorflow.python.framework import graph_io, graph_util
+from tensorflow.python.framework import graph_io
+from tensorflow.python.framework import graph_util
 
 # LABEL_CHANNELS = {"labels":{
 # 	 			  "background":0,

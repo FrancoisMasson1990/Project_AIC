@@ -19,7 +19,7 @@ from tensorflow.keras.utils import Sequence
 
 import aic.misc.utils as ut
 import aic.processing.operations as op
-from aic.processing import preprocess as dp
+import aic.processing.preprocess as dp
 
 
 class DatasetGenerator2D(Sequence):

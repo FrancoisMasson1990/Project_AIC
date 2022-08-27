@@ -13,6 +13,8 @@ Main script to convert dcm file into a nibabel object.
 
 import os
 
+from tqdm import tqdm
+
 import aic.misc.converter as co
 import aic.misc.files as fs
 import aic.misc.utils as ut
@@ -22,7 +24,7 @@ if __name__ == "__main__":
 
     path = str(fs.get_dataset_root())
     folders = os.listdir(path)
-    for folder in folders:
+    for folder in tqdm(folders):
         files_ = os.path.join(path, folder)
         file_ = os.listdir(files_)
         for f in file_:

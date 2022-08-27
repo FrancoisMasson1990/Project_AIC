@@ -22,7 +22,8 @@ from scipy import optimize
 from skimage import measure
 from sklearn.cluster import DBSCAN
 from tqdm import tqdm
-from vedo import mesh, volume
+from vedo import mesh
+from vedo import volume
 from vtk.util.numpy_support import vtk_to_numpy
 
 import aic.misc.files as fs

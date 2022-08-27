@@ -29,7 +29,9 @@ import datetime
 import warnings
 
 import yaml
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ReduceLROnPlateau
 
 import aic.misc.files as fs
 from aic.misc.setting_tf import requirements_3d as req3d
@@ -54,8 +56,10 @@ if __name__ == "__main__":
 
     data_path = config.get("data_path", fs.get_dataset_root())
 
+    exclude_list = ["200", "201", "202", "203"]
+
     interface = deps.NIFTI_interface(
-        pattern="AIC-00[0-9]*", channels=1, classes=2
+        pattern="AIC-[0-9]*", channels=1, classes=3
     )
     # Initialize data path and create the Data I/O instance
     data_io = deps.Data_IO(interface, data_path)
@@ -76,9 +80,11 @@ if __name__ == "__main__":
     # Create a pixel value normalization Subfunction through Z-Score
     sf_normalize = deps.Normalization(mode="z-score")
     # Create a clipping Subfunction
-    sf_clipping = deps.Clipping(min=0, max=1000)
-    # Create a resampling Subfunction to voxel spacing 3.22 x 1.62 x 1.62
-    sf_resample = deps.Resampling((3.22, 1.62, 1.62))
+    sf_clipping = deps.Clipping(min=130, max=1000)
+    # Create a resampling Subfunction to voxel spacing.
+    # CT images can have different voxel spacings (slice thickness).
+    # Normalization of these voxel spacings to a common scale is required.
+    sf_resample = deps.Resampling((1.5, 0.5, 0.5))
 
     # Assemble Subfunction classes into a list
     # Be aware that the Subfunctions will be exectue
@@ -90,13 +96,16 @@ if __name__ == "__main__":
     pp = deps.Preprocessor(
         data_io,
         data_aug=data_aug,
-        batch_size=4,
+        batch_size=1,
         subfunctions=subfunctions,
         prepare_subfunctions=True,
         analysis="patchwise-crop",
-        patch_shape=(32, 64, 64),
+        patch_shape=(64, 128, 128),
         use_multiprocessing=True,
     )
+
+    # Adjust the patch overlap for predictions
+    # pp.patchwise_overlap = (40, 80, 80)
 
     # Create a deep learning neural network model with
     # a standard U-Net architecture
@@ -109,7 +118,9 @@ if __name__ == "__main__":
         batch_queue_size=2,
         workers=8,
     )
-
+    cb_ckpt = ModelCheckpoint(
+        filepath="./model", verbose=1, monitor="loss", save_best_only=True
+    )
     cb_lr = ReduceLROnPlateau(
         monitor="loss",
         factor=0.1,
@@ -124,5 +135,9 @@ if __name__ == "__main__":
         monitor="loss", min_delta=0, patience=150, verbose=1, mode="min"
     )
     sample_list = data_io.get_indiceslist()
-    model.train(sample_list, epochs=2)
-    model.dump("./model")
+    sample_list = [
+        s for s in sample_list if s.split("-")[-1] not in exclude_list
+    ]
+    breakpoint()
+    model.train(sample_list, epochs=25, callbacks=[cb_ckpt, cb_lr, cb_es])
+    model.predict(sample_list[0])

@@ -18,6 +18,6 @@ import numpy as np
 
 
 def npy_to_nii(obj, name="imaging.nii.gz", directory=".", affine=np.eye(4)):
-    ni_img = nib.Nifti1Image(obj, affine)
+    ni_img = nib.Nifti1Image(obj, affine, dtype=np.uint8)
     save = os.path.join(directory, name)
     nib.save(ni_img, save)

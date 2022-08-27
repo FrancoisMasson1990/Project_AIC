@@ -16,7 +16,8 @@ import os
 import pickle
 
 import numpy as np
-from scipy.ndimage import measurements, morphology
+from scipy.ndimage import measurements
+from scipy.ndimage import morphology
 
 
 def agatston_score_slice(

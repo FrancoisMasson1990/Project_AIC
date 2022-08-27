@@ -45,6 +45,7 @@ sandbox/
 inference_examples
 **/model/assets/**
 **/model/variables/
+**/batches
 
 # Not ignored
 !requirements-no-deps.txt

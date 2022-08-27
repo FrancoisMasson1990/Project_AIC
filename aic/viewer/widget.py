@@ -15,7 +15,11 @@ import os
 
 import numpy as np
 import vtk
-from vedo import Assembly, getColor, precision, settings, shapes
+from vedo import Assembly
+from vedo import getColor
+from vedo import precision
+from vedo import settings
+from vedo import shapes
 
 
 class Button(object):

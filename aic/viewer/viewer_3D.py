@@ -17,7 +17,10 @@ import os
 import numpy as np
 import vtk
 from scipy import ndimage as ndi
-from vedo import Cylinder, Volume, load, printc
+from vedo import Cylinder
+from vedo import Volume
+from vedo import load
+from vedo import printc
 from vtk.util.numpy_support import vtk_to_numpy
 
 import aic.misc.utils as ut
@@ -26,7 +29,12 @@ import aic.model.loaders as ld
 import aic.processing.fitting as ft
 import aic.processing.operations as op
 import aic.viewer.viewer_2D as v2d
-from aic.viewer.widget import Axes, Button, Cutter, Grid, Mover, Text_2D
+from aic.viewer.widget import Axes
+from aic.viewer.widget import Button
+from aic.viewer.widget import Cutter
+from aic.viewer.widget import Grid
+from aic.viewer.widget import Mover
+from aic.viewer.widget import Text_2D
 
 vtk.vtkObject.GlobalWarningDisplayOff()
 
@@ -41,7 +49,7 @@ class Viewer3D(object):
         label="/label_mask/",
         npy=None,
         frame=0,
-        **kwargs
+        **kwargs,
     ):
         """Init function."""
         self.frame = frame
