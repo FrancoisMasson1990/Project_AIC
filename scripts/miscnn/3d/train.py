@@ -138,6 +138,6 @@ if __name__ == "__main__":
     sample_list = [
         s for s in sample_list if s.split("-")[-1] not in exclude_list
     ]
-    breakpoint()
+
     model.train(sample_list, epochs=25, callbacks=[cb_ckpt, cb_lr, cb_es])
     model.predict(sample_list[0])
