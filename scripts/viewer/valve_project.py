@@ -40,7 +40,9 @@ if __name__ == "__main__":
         root = os.path.join(data_path, sub_folder)
         sub_ = os.listdir(root)
         for sub in sub_:
-            data.append(os.path.join(root, sub))
+            if os.path.isdir(os.path.join(root, sub)):
+                data.append(os.path.join(root, sub))
+
     if labels_2D:
         v2d.Viewer2D(data_path=data, folder_mask=surface_label_path)
     else:

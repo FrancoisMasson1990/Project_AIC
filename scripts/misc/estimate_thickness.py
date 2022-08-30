@@ -52,7 +52,7 @@ if __name__ == "__main__":
         for i, z in enumerate(np.unique(valve_p[:, 2])):
             valve_threshold_z = valve_threshold[valve_threshold[:, 2] == z]
             if valve_threshold_z.shape[0] > 2:
-                xc, yc, r, _ = op.leastsq_circle(
+                xc, yc, radius, _ = op.leastsq_circle(
                     valve_threshold_z[:, 0], valve_threshold_z[:, 1]
                 )
                 circle_center = np.array([xc, yc, z])
@@ -60,8 +60,8 @@ if __name__ == "__main__":
                 for point in valve_p[valve_p[:, 2] == z]:
                     dist = op.euclidean(point[:3], circle_center)
                     # Normalize thickness (d*spacing_native/spacing_patient)
-                    layer.append(dist * spacing)
-                df.append([z, r - min(np.asarray(layer))])
+                    layer.append(dist)
+                df.append([z, spacing * (radius - min(np.asarray(layer)))])
 
         df = np.array(df)
         df = pd.DataFrame(df, columns=["layer", "normalized_thickness"])

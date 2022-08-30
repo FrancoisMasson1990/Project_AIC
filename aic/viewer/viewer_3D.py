@@ -44,7 +44,7 @@ class Viewer3D(object):
 
     def __init__(
         self,
-        data_path: str,
+        data_path: list,
         mode=1,
         label="/label_mask/",
         npy=None,
@@ -870,7 +870,6 @@ class Viewer3D(object):
 
         self.mask = np.zeros(self.mask, dtype=int)
         self.spacing = self.img.imagedata().GetSpacing()
-        print(self.spacing)
         self.area = self.spacing[0] * self.spacing[1]
         self.dimensions = self.img.imagedata().GetDimensions()
 

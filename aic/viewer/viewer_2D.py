@@ -28,7 +28,7 @@ class Viewer2D(object):
 
     def __init__(
         self,
-        data_path: str,
+        data_path: list,
         folder_mask: str,
         frame=0,
         threshold_min=None,

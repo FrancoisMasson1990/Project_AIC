@@ -402,6 +402,19 @@ def icp(source, target, transformation=np.eye(4), verbose=False, show=False):
     )
 
 
+def affine_icp(points, matrix, normalize_val=10 * 4):
+    """Apply Affine transformation for ICP."""
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points[:, :3])
+    colors = np.zeros((points.shape[0], 3))
+    colors[:, 0] = points[:, -1] / normalize_val
+    pcd.colors = o3d.utility.Vector3dVector(colors)
+    pcd = pcd.transform(np.linalg.inv(matrix))
+    points[:, :3] = np.asarray(pcd.points)
+    points[:, -1] = np.asarray(pcd.colors)[:, 0] * normalize_val
+    return points
+
+
 def calc_R(x, y, xc, yc):
     """Get Radius.
 
@@ -496,14 +509,14 @@ def get_thickness_infos(
     size,
     layer,
     database=str(fs.get_native_root() / "Magna" / "thickness_info.db"),
-    columns=["thickness"],
+    columns=["normalized_thickness"],
 ):
     """Get thickness infos of native valve."""
     conditions = [f'size = "{size}"', f'layer = "{layer}"']
     args = {"conditions": conditions, "columns": columns}
     df = sql.load_sql(database, **args)
     if not df.empty:
-        return float(df.iloc[0]["thickness"])
+        return float(df.iloc[0][columns])
 
 
 def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
@@ -521,7 +534,13 @@ def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
     native_threshold = native[native[:, 3] > threshold]
     valve_threshold = valve[valve[:, 3] > threshold]
     # Perform ICP using mainly metalic part
-    _, matrix = icp(source=valve_threshold, target=native_threshold)
+    rot_z = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+    _, matrix = icp(
+        source=valve_threshold,
+        target=native_threshold,
+        transformation=rot_z,
+        show=False,
+    )
     # Apply given affine transformation
     pcd_ = o3d.geometry.PointCloud()
     pcd_.points = o3d.utility.Vector3dVector(valve[:, :3])
@@ -546,7 +565,7 @@ def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
         valve_z = valve_threshold[valve_threshold[:, 2] == z]
         if valve_z.shape[0] > 2:
             # Fit a circle using 2 points for each layer
-            xc, yc, r, _ = leastsq_circle(valve_z[:, 0], valve_z[:, 1])
+            xc, yc, radius, _ = leastsq_circle(valve_z[:, 0], valve_z[:, 1])
             circle_center = np.array([xc, yc, z])
             for point in valve_p[valve_p[:, 2] == z]:
                 # Measure the distance from the center of the circle
@@ -555,40 +574,31 @@ def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
                 thick = get_thickness_infos(size=size, layer=z)
                 # Keep only points where distance < radius - thickness
                 # Half pixel resolution
-                if (thick) and (dist < (r - (thick / spacing[0]))):
+                if (thick) and (dist < (radius - (thick / spacing[0]))):
                     p_fit.append(int(point[-1]))
+
+    find_candidates = False
     if p_fit:
         p_fit = np.array(p_fit)
         candidates[p_fit] = True
-        valve_candidates = valve[candidates][:, :4]
-        # Restore in ref before icp
-        valve_candidates = affine_projection(valve_candidates, matrix)
-        # Restore translation
-        valve_candidates += translation
-        # Restore starting ref
-        valve_candidates = affine_projection(valve_candidates, affine)
-        valve = valve[~candidates][:, :4]
-        # Restore in ref before icp
-        valve = affine_projection(valve, matrix)
-        # Restore translation
-        valve += translation
-        # Restore starting ref
-        valve = affine_projection(valve, affine)
+        find_candidates = True
+    valve_candidates = valve[candidates][:, :4]
+    # Restore in ref before icp
+    valve_candidates = affine_icp(valve_candidates, matrix)
+    # Restore translation
+    valve_candidates += translation
+    # Restore starting ref
+    valve_candidates = affine_projection(valve_candidates, affine)
+    valve = valve[~candidates][:, :4]
+    # Restore in ref before icp
+    valve = affine_icp(valve, matrix)
+    # Restore translation
+    valve += translation
+    # Restore starting ref
+    valve = affine_projection(valve, affine)
+    if find_candidates:
         mask_agatston = get_mask_2D(valve_candidates, dimensions, spacing)
     else:
-        valve_candidates = valve[candidates][:, :4]
-        # Restore in ref before icp
-        valve_candidates = affine_projection(valve_candidates, matrix)
-        # Restore translation
-        valve_candidates += translation
-        # Restore starting ref
-        valve_candidates = affine_projection(valve_candidates, affine)
-        # Restore in ref before icp
-        valve = affine_projection(valve, matrix)
-        # Restore translation
-        valve += translation
-        # Restore starting ref
-        valve = affine_projection(valve, affine)
         mask_agatston = np.zeros(
             [dimensions[2], dimensions[0], dimensions[1]], dtype=np.uint8
         )
