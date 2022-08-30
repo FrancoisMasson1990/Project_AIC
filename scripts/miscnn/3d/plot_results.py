@@ -24,6 +24,7 @@ Copyright (C) 2022 Project AIC - All Rights Reserved.
 Print out a visual representation of the inference from a 3D trained model.
 """
 
+import aic.misc.files as fs
 import aic.misc.plots as plt
 
 if __name__ == "__main__":
@@ -31,5 +32,6 @@ if __name__ == "__main__":
     """
     Load the filepath
     """
-    file_path = "../data_kidney/case_00018/"
+    # file_path = "../data_kidney/case_00018/"
+    file_path = str(fs.get_dataset_root() / "AIC-002")
     plt.plot_results_3d_miscnn(file_path=file_path)

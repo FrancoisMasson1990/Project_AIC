@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     data_path = config.get("data_path", fs.get_dataset_root())
 
-    exclude_list = ["200", "201", "202", "203"]
+    exclude_list = ["113", "200", "201", "202", "203"]
 
     interface = deps.NIFTI_interface(
         pattern="AIC-[0-9]*", channels=1, classes=3

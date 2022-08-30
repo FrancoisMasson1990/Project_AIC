@@ -20,22 +20,23 @@ import aic.processing.operations as op
 
 if __name__ == "__main__":
     layers = [
-        19,
-        21,
-        23,
-        25,
-        29,
+        (19, 0.43944),
+        (21, 0.46875),
+        (23, 0.46875),
+        (25, 0.35156),
+        (29, 0.47656),
     ]
     dfs = []
     threshold = 900
     for j in layers:
         # load projected native valve
         path = (
-            fs.get_native_root() / f"Magna/projected/Magna_{j}/projected.npy"
+            fs.get_native_root()
+            / f"Magna/projected/Magna_{j[0]}/projected.npy"
         )
         with open(str(path), "rb") as f:
             native = np.load(f)
-
+        spacing = j[1]
         valve = native.copy()
         # Project along z axis to help for circle-points fitting
         valve_p = valve.copy()
@@ -58,15 +59,16 @@ if __name__ == "__main__":
                 layer = []
                 for point in valve_p[valve_p[:, 2] == z]:
                     dist = op.euclidean(point[:3], circle_center)
-                    layer.append(dist)
+                    # Normalize thickness (d*spacing_native/spacing_patient)
+                    layer.append(dist * spacing)
                 df.append([z, r - min(np.asarray(layer))])
 
         df = np.array(df)
-        df = pd.DataFrame(df, columns=["layer", "thickness"])
-        df["size"] = j
+        df = pd.DataFrame(df, columns=["layer", "normalized_thickness"])
+        df["size"] = j[0]
         dfs.append(df)
     dfs = pd.concat(dfs)
-    dfs = dfs[["size", "layer", "thickness"]]
+    dfs = dfs[["size", "layer", "normalized_thickness"]]
     dfs.reset_index(drop=True, inplace=True)
     sql_path = str(fs.get_native_root() / "Magna" / "thickness_info.db")
     sql.to_sql(dfs, sql_path)

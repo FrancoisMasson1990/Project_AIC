@@ -226,10 +226,9 @@ def plot_results_3d(
 def plot_results_3d_miscnn(file_path, folder="./inference_examples"):
     """Plot the predicted masks for image."""
     os.makedirs(folder, exist_ok=True)
-    if file_path.endswith("/"):
-        last = -2
-    else:
-        last = -1
+    if not file_path.endswith("/"):
+        file_path += "/"
+    last = -2
     name = file_path.split("/")[last]
     imgs = glob(file_path + "imaging*")[0]
     imgs = nib.load(imgs)

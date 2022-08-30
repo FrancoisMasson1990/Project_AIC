@@ -870,6 +870,7 @@ class Viewer3D(object):
 
         self.mask = np.zeros(self.mask, dtype=int)
         self.spacing = self.img.imagedata().GetSpacing()
+        print(self.spacing)
         self.area = self.spacing[0] * self.spacing[1]
         self.dimensions = self.img.imagedata().GetDimensions()
 

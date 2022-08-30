@@ -1,5 +1,6 @@
 #data_path : "R:/Imagerie-Data_Labo/Gr_ClavelMA_img/AIC"
-data_path : "/home/francoismasson/Project_AIC/data/valve_patient_folder"
+#data_path : "/home/francoismasson/Project_AIC/data/valve_patient_folder"
+data_path : "/home/francoismasson/Project_AIC/data/natives/Magna"
 template : False
 labels_2D : False
 multi_label : True

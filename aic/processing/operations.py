@@ -521,11 +521,11 @@ def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
     native_threshold = native[native[:, 3] > threshold]
     valve_threshold = valve[valve[:, 3] > threshold]
     # Perform ICP using mainly metalic part
-    _, matrix = icp(source=native_threshold, target=valve_threshold)
+    _, matrix = icp(source=valve_threshold, target=native_threshold)
     # Apply given affine transformation
     pcd_ = o3d.geometry.PointCloud()
-    pcd_.points = o3d.utility.Vector3dVector(native[:, :3])
-    native[:, :3] = np.asarray(pcd_.transform(matrix).points)
+    pcd_.points = o3d.utility.Vector3dVector(valve[:, :3])
+    valve[:, :3] = np.asarray(pcd_.transform(matrix).points)
     # Perform Convex-Hull algo to extract outside part
     hull = ft.convex_hull(native[:, :3])
     mask_hull = isInHull(valve[:, :3], hull)
@@ -555,23 +555,39 @@ def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
                 thick = get_thickness_infos(size=size, layer=z)
                 # Keep only points where distance < radius - thickness
                 # Half pixel resolution
-                if (thick) and (dist < (r - thick - 1.1 * spacing[0])):
+                if (thick) and (dist < (r - (thick / spacing[0]))):
                     p_fit.append(int(point[-1]))
     if p_fit:
         p_fit = np.array(p_fit)
         candidates[p_fit] = True
         valve_candidates = valve[candidates][:, :4]
+        # Restore in ref before icp
+        valve_candidates = affine_projection(valve_candidates, matrix)
+        # Restore translation
         valve_candidates += translation
+        # Restore starting ref
         valve_candidates = affine_projection(valve_candidates, affine)
         valve = valve[~candidates][:, :4]
+        # Restore in ref before icp
+        valve = affine_projection(valve, matrix)
+        # Restore translation
         valve += translation
+        # Restore starting ref
         valve = affine_projection(valve, affine)
         mask_agatston = get_mask_2D(valve_candidates, dimensions, spacing)
     else:
         valve_candidates = valve[candidates][:, :4]
+        # Restore in ref before icp
+        valve_candidates = affine_projection(valve_candidates, matrix)
+        # Restore translation
         valve_candidates += translation
+        # Restore starting ref
         valve_candidates = affine_projection(valve_candidates, affine)
+        # Restore in ref before icp
+        valve = affine_projection(valve, matrix)
+        # Restore translation
         valve += translation
+        # Restore starting ref
         valve = affine_projection(valve, affine)
         mask_agatston = np.zeros(
             [dimensions[2], dimensions[0], dimensions[1]], dtype=np.uint8
