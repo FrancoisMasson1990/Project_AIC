@@ -11,7 +11,9 @@ Note
 Generate automatically prediction and export to google sheet.
 """
 
+import bz2
 import os
+import pickle
 from glob import glob
 
 import numpy as np
@@ -51,7 +53,8 @@ if __name__ == "__main__":
         root = os.path.join(data_path, sub_folder)
         sub_ = os.listdir(root)
         for sub in sub_:
-            data.append(os.path.join(root, sub))
+            if os.path.isdir(os.path.join(root, sub)):
+                data.append(os.path.join(root, sub))
 
     """
     Step 1: Generate prediction from list of valves.
@@ -67,7 +70,6 @@ if __name__ == "__main__":
             lite=False,
             save_path=path,
         )
-        breakpoint()
 
     """
     Step 2: Export prediction score to Google Sheet.
@@ -77,27 +79,28 @@ if __name__ == "__main__":
     sheet = expt.get_sheet(url)
     df = pd.DataFrame({})
     df = expt.get_sheet_cells(df, sheet)
-    df.score = "-"
+    df["score"] = "-"
     folder_datasets = []
     folder_dataset = fs.get_dataset_root()
     for dir in natsorted(os.listdir(folder_dataset)):
         patient = dir.split("/")[0]
         patient = ("-").join(patient.split("-")[:2])
-        df.score = np.where(df.patient == patient, "Failed", df.score)
+        df.score = np.where(df.patient == patient, "In Progress", df.score)
 
     folder_prediction = fs.get_prediction_root()
     for dir in natsorted(os.listdir(folder_prediction)):
         for sub_dir in natsorted(
             os.listdir(os.path.join(folder_prediction, dir))
         ):
-            pkl_file = glob.glob(
-                os.path.join(folder_prediction, dir, sub_dir, "*.pkl")
+            prediction = glob(
+                os.path.join(folder_prediction, dir, sub_dir, "*.pbz2")
             )[0]
-            data = pd.read_pickle(pkl_file)
+            with bz2.BZ2File(prediction, "rb") as f:
+                data = pickle.load(f)
             patient = data["data_path"].split("/")[0]
             patient = ("-").join(patient.split("-")[:2])
             df.score = np.where(
                 df.patient == patient, round(data["score"], 2), df.score
             )
-
+    df = df[df["patient"].str.contains("AIC")].reset_index()
     expt.update_sheet_cells(df, sheet)

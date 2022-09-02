@@ -12,7 +12,6 @@ Export prediction made by the algo to the
 google sheet file online.
 """
 
-
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from tqdm import tqdm
@@ -42,21 +41,17 @@ def get_sheet(url, index=0):
 def get_sheet_cells(df, sheet):
     """Get sheet cells infos."""
     df["patient"] = sheet.col_values(1)
-    df["score"] = sheet.col_values(7)
     return df
 
 
 def update_sheet_cells(df, sheet, col="G", header=4):
     """Update sheet cells infos."""
     start = col + str(header)
-    end = col + str(len(df))
+    stop = header + len(df) - 1
+    end = col + str(stop)
     cell_list = sheet.range(start + ":" + end)
-
     # Write the array to worksheet
     index = 0
     for index, row in tqdm(df.iterrows(), total=len(df)):
-        if index >= header - 1:
-            cell_list[index].value = row["score"]
-            index += 1
-
+        cell_list[index].value = row["score"]
     sheet.update_cells(cell_list)

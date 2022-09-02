@@ -75,4 +75,4 @@ def get_configs_root() -> Path:
 
 def get_valve_credentials() -> Path:
     """Get valve json."""
-    return get_credentials_root / "valve-project-332716.json"
+    return get_credentials_root() / "valve-project-332716.json"

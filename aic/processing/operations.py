@@ -350,6 +350,9 @@ def closest_element(value, upper=True):
     absolute_val_array = np.abs(array - value)
     smallest_difference_index = absolute_val_array.argmin()
     closest_element = array[smallest_difference_index]
+    # Path for 27 because missing size
+    if closest_element == 27:
+        return 25
     return closest_element
 
 
