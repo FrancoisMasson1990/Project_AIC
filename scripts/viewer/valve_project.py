@@ -14,6 +14,8 @@ and make predictions.
 
 import os
 
+from natsort import natsorted
+
 import aic.misc.files as fs
 import aic.model.loaders as ld
 import aic.viewer.viewer_2D as v2d
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     data_path = os.path.join(data_path, "datasets_dcm")
     sub_folders = os.listdir(data_path)
     data = []
-    for sub_folder in sub_folders:
+    for sub_folder in natsorted(sub_folders):
         root = os.path.join(data_path, sub_folder)
         sub_ = os.listdir(root)
         for sub in sub_:

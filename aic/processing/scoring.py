@@ -52,7 +52,12 @@ def area_measurements(slice_):
 
 
 def agatston_score(
-    image, mask_agatston, area, threshold_min=None, threshold_max=None
+    image,
+    mask_agatston,
+    area,
+    threshold_min=None,
+    threshold_max=None,
+    coef_factor=1.4,
 ):
     """Get Agatston score."""
     score = 0.0
@@ -78,7 +83,7 @@ def agatston_score(
         prediction[prediction >= 200] = 2
         prediction[prediction >= 130] = 1
         score += area * np.sum(prediction)
-    return score
+    return score / coef_factor
 
 
 def save_prediction(

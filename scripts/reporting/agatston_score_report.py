@@ -95,12 +95,13 @@ if __name__ == "__main__":
             prediction = glob(
                 os.path.join(folder_prediction, dir, sub_dir, "*.pbz2")
             )[0]
-            with bz2.BZ2File(prediction, "rb") as f:
-                data = pickle.load(f)
-            patient = data["data_path"].split("/")[0]
-            patient = ("-").join(patient.split("-")[:2])
-            df.score = np.where(
-                df.patient == patient, round(data["score"], 2), df.score
-            )
+            if prediction:
+                with bz2.BZ2File(prediction, "rb") as f:
+                    data = pickle.load(f)
+                patient = data["data_path"].split("/")[0]
+                patient = ("-").join(patient.split("-")[:2])
+                df.score = np.where(
+                    df.patient == patient, round(data["score"], 2), df.score
+                )
     df = df[df["patient"].str.contains("AIC")].reset_index()
     expt.update_sheet_cells(df, sheet)
