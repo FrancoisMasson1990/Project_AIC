@@ -46,10 +46,11 @@ if __name__ == "__main__":
         raise Exception(f"You should provide a model path.")
     if not os.path.exists(model_config):
         model_config = str(fs.get_configs_root() / model_config)
+
     save_path = config.get("data_path", str(fs.get_prediction_root()))
     sub_folders = os.listdir(data_path)
     data = []
-    for sub_folder in sub_folders:
+    for sub_folder in natsorted(sub_folders):
         root = os.path.join(data_path, sub_folder)
         sub_ = os.listdir(root)
         for sub in sub_:
@@ -60,8 +61,13 @@ if __name__ == "__main__":
     Step 1: Generate prediction from list of valves.
     """
 
-    for d in tqdm(natsorted(data)):
+    batch_start = 0
+    batch_stop = -1  # -1 for last element
+    except_list = ["AIC-013", "AIC-025", "AIC-104", "AIC-113"]
+    for d in tqdm(data[batch_start:batch_stop]):
         print(d.split("/")[-2])
+        if d.split("/")[-2] in except_list:
+            continue
         path = os.path.join(save_path, d.split("/")[-2], d.split("/")[-1])
         get_inference(
             data=d,

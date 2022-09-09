@@ -160,10 +160,10 @@ def clustering(
 
     print("number of cluster found: {}".format(len(set(model.labels_))))
     index = Counter(model.labels_).most_common()
-
     j = 0
-    while index[j][1] > threshold:  # Arbitrary values
-        j += 1
+    if len(index) > 1:
+        while index[j][1] > threshold:  # Arbitrary values
+            j += 1
     i = np.isin(model.labels_, np.array([index[j][0]]))
     return data[i, :]
 
