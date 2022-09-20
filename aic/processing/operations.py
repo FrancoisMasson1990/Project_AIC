@@ -356,7 +356,7 @@ def closest_element(value, upper=True):
     return closest_element
 
 
-def icp(source, target, transformation=np.eye(4), verbose=False, show=False):
+def icp(source, target, transformation=[np.eye(4)], verbose=False, show=False):
     """Apply ICP.
 
     Apply Iterative Closest Point to match point cloud valve with template
@@ -371,14 +371,22 @@ def icp(source, target, transformation=np.eye(4), verbose=False, show=False):
 
     threshold = 10.0
     print("Apply point-to-point ICP")
-    reg_p2p = o3d.pipelines.registration.registration_icp(
-        pcd_source,
-        pcd_target,
-        threshold,
-        transformation,
-        o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-        o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000),
-    )
+    inlier_rmse = np.inf
+    reg_p2p = None
+    for t in transformation:
+        reg_p2p_tmp = o3d.pipelines.registration.registration_icp(
+            pcd_source,
+            pcd_target,
+            threshold,
+            t,
+            o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+            o3d.pipelines.registration.ICPConvergenceCriteria(
+                max_iteration=2000
+            ),
+        )
+        if reg_p2p_tmp.inlier_rmse < inlier_rmse:
+            inlier_rmse = reg_p2p_tmp.inlier_rmse
+            reg_p2p = reg_p2p_tmp
 
     if verbose:
         print(reg_p2p)
@@ -537,11 +545,16 @@ def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
     native_threshold = native[native[:, 3] > threshold]
     valve_threshold = valve[valve[:, 3] > threshold]
     # Perform ICP using mainly metalic part
-    rot_z = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+    rot_z_1 = np.array(
+        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+    )
+    rot_z_2 = np.array(
+        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]
+    )
     _, matrix = icp(
         source=valve_threshold,
         target=native_threshold,
-        transformation=rot_z,
+        transformation=[rot_z_1, rot_z_2],
         show=False,
     )
     # Apply given affine transformation
