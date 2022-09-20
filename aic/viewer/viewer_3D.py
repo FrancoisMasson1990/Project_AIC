@@ -645,7 +645,7 @@ class Viewer3D(object):
                     self.center,
                     self.all_numpy_nodes,
                     ratio=0.4,
-                    threshold=4000,
+                    threshold=6000,
                     max_=self.max,
                     dimensions=self.dimensions,
                     spacings=self.spacing,
