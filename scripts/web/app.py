@@ -12,6 +12,7 @@ Code for web deployment
 """
 
 import bz2
+import os
 import pickle
 import warnings
 
@@ -352,17 +353,16 @@ def func(n_clicks):
 )
 def callback_progress(n_intervals):
     """Update progress bar."""
-    try:
-        with open("./cache/progress.txt", "r") as file:
+    progress_file = "./cache/progress.txt"
+    if os.path.exists(progress_file):
+        with open(progress_file, "r") as file:
             str_raw = file.read()
         last_line = list(filter(None, str_raw.split("\n")))[-1]
         percent = float(last_line.split("%")[0])
-    except Exception as e:
-        print(e)
+    else:
         percent = 0
-    finally:
-        text = f"{percent:.0f}%"
-        return percent, text
+    text = f"{percent:.0f}%"
+    return percent, text
 
 
 if __name__ == "__main__":
