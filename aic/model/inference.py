@@ -137,7 +137,7 @@ def get_inference(
             center,
             all_numpy_nodes,
             ratio=0.4,
-            threshold=4000,
+            threshold=6000,
             max_=None,
             dimensions=dimensions,
             spacings=spacing,

@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     batch_start = 0
     batch_stop = -1  # -1 for last element
-    except_list = ["AIC-013", "AIC-025", "AIC-104", "AIC-113"]
+    except_list = ["AIC-015"]
     for d in tqdm(data[batch_start:batch_stop]):
         print(d.split("/")[-2])
         if d.split("/")[-2] in except_list:
