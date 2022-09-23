@@ -780,19 +780,19 @@ class Viewer3D(object):
                 self.spacing,
                 self.dimensions,
             )
-            # # Show the score in 2D mode
-            # v2d.Viewer2D(
-            #     data_path=self.data_path,
-            #     folder_mask="",
-            #     frame=self.frame,
-            #     mask_agatston=mask_agatston,
-            #     agatston=True,
-            #     area=self.area,
-            #     threshold_min=130,
-            #     threshold_max=None,
-            #     valve=valve,
-            #     candidate=candidate,
-            # )
+            # Show the score in 2D mode
+            v2d.Viewer2D(
+                data_path=self.data_path,
+                folder_mask="",
+                frame=self.frame,
+                mask_agatston=mask_agatston,
+                agatston=True,
+                area=self.area,
+                threshold_min=130,
+                threshold_max=None,
+                valve=valve,
+                candidate=candidate,
+            )
         else:
             v2d.Viewer2D(
                 data_path=self.data_path,
