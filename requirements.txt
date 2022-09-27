@@ -24,6 +24,7 @@ PyYAML
 nibabel
 batchgenerators
 SimpleITK
+pyquaternion
 black
 flake8
 isort
