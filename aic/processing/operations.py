@@ -604,7 +604,7 @@ def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
                 thick = get_thickness_infos(size=size, layer=z)
                 # Keep only points where distance < radius - thickness
                 if (thick) and (
-                    dist < (radius - (thick / spacing[0]) - 1.1 * spacing[0])
+                    dist < (radius - (thick / spacing[0]) - 1.5 * spacing[0])
                 ):
                     p_fit.append(int(point[-1]))
     find_candidates = False
