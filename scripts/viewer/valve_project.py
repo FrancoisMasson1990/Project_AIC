@@ -45,6 +45,7 @@ if __name__ == "__main__":
             if os.path.isdir(os.path.join(root, sub)):
                 data.append(os.path.join(root, sub))
 
+    data = [data[1]] + data[41:]
     if labels_2D:
         v2d.Viewer2D(data_path=data, folder_mask=surface_label_path)
     else:

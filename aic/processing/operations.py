@@ -18,6 +18,7 @@ import numpy as np
 import open3d as o3d
 import scipy.ndimage
 import vtk
+from pyquaternion import Quaternion
 from scipy import optimize
 from skimage import measure
 from sklearn.cluster import DBSCAN
@@ -270,26 +271,20 @@ def z_projection(points, w_fit, save=False, name="projection_array.npy"):
     """
     matrix_array = matrix_transformation(w_fit)
     rot_x = np.array([[1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
-
     intensity = None
     if points.shape[1] == 4:
         intensity = points[:, 3]
-
     matrix = rot_x @ matrix_array
-    points = (matrix[:3, :3] @ (points[:, :3].T)).T
-
+    z_points = rotation_transformation(points, matrix)
     if intensity is not None:
-        xyz = points
-        points = np.zeros((xyz.shape[0], 4))
-        points[:, :3] = xyz
-        points[:, 3] = intensity
+        z_points = np.column_stack((z_points, intensity))
 
     if save:
         if not name.endswith(".npy"):
             name += ".npy"
         with open(name, "wb") as f:
-            np.save(f, points)
-    return points, matrix
+            np.save(f, z_points)
+    return z_points, matrix
 
 
 def matrix_transformation(w_fit):
@@ -314,12 +309,31 @@ def matrix_transformation(w_fit):
     return matrix_array
 
 
+def rotation_transformation(points, matrix):
+    """Apply rotation transformation."""
+    return (matrix[:3, :3] @ (points[:, :3].T)).T
+
+
 def affine_projection(points, affine):
     """Apply Affine transformation."""
     if points.shape[1] == 4:
         points = (np.linalg.inv(affine) @ (points.T)).T
     else:
         points = (np.linalg.inv(affine[:3, :3]) @ (points[:, :3].T)).T
+    return points
+
+
+def quaternion_projection(points, matrix):
+    """Apply quaternion inversed transformation."""
+    q8d = Quaternion(matrix=matrix)
+    q8d_inv = q8d.inverse
+    matrix_inv = q8d_inv.transformation_matrix
+    intensity = None
+    if points.shape[1] == 4:
+        intensity = points[:, 3]
+    points = rotation_transformation(points, matrix_inv)
+    if intensity is not None:
+        points = np.column_stack((points, intensity))
     return points
 
 
@@ -593,7 +607,6 @@ def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
                     dist < (radius - (thick / spacing[0]) - 1.1 * spacing[0])
                 ):
                     p_fit.append(int(point[-1]))
-
     find_candidates = False
     if p_fit:
         p_fit = np.array(p_fit)
@@ -605,14 +618,16 @@ def get_candidates(points, w_fit, r_fit, threshold, spacing, dimensions):
     # Restore translation
     valve_candidates += translation
     # Restore starting ref
-    valve_candidates = affine_projection(valve_candidates, affine)
+    valve_candidates = quaternion_projection(valve_candidates, affine)
+    valve_candidates = valve_candidates.astype(np.float32)
     valve = valve[~candidates][:, :4]
     # Restore in ref before icp
     valve = affine_icp(valve, matrix)
     # Restore translation
     valve += translation
     # Restore starting ref
-    valve = affine_projection(valve, affine)
+    valve = quaternion_projection(valve, affine)
+    valve = valve.astype(np.float32)
     if find_candidates:
         mask_agatston = get_mask_2D(valve_candidates, dimensions, spacing)
     else:
