@@ -49,7 +49,7 @@ LABEL_CHANNELS = {
 }
 
 
-class unet(object):
+class Unet(object):
     """
     2D U-Net model class
     """

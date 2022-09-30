@@ -15,7 +15,6 @@ import base64
 import io
 import os
 import shutil
-import sys
 from copy import deepcopy
 
 import numpy as np
@@ -37,6 +36,7 @@ def get_inference(
     data,
     file_types=None,
     config="./model_info.yml",
+    model=None,
     online=True,
     lite=True,
     save_path="./cache",
@@ -58,17 +58,11 @@ def get_inference(
     if slices:
         if os.path.exists(config):
             config = ld.load_config(config)
-            model_name = config.get("model_name", None)
             model_version = config.get("model_version", None)
             crop_dim = config.get("crop_dim", -1)
             z_slice_min = config.get("z_slice_min", None)
             z_slice_max = config.get("z_slice_max", None)
             threshold = config.get("threshold", None)
-        # Load model
-        if online:
-            model = ld.load_tflitemodel(model_name)
-        else:
-            model = ld.load_model(model_name)
         # Get Dicom files
         path = "./cache/tmp/"
         if not online:
@@ -111,10 +105,6 @@ def get_inference(
             ]
         )
         # Get predictions
-        if online:
-            std_err_backup = sys.stderr
-            file_prog = open("./cache/progress.txt", "w")
-            sys.stderr = file_prog
         predictions, crop_values = get_predictions(
             model,
             model_version,
@@ -126,9 +116,6 @@ def get_inference(
             dimensions=dimensions,
             lite=lite,
         )
-        if online:
-            file_prog.close()
-            sys.stderr = std_err_backup
         vertices, _ = op.make_mesh(predictions, -1)
         # Clustering
         vertices_predictions = op.clustering(

@@ -15,7 +15,6 @@ import base64
 import bz2
 import io
 import pickle
-import sys
 
 import numpy as np
 import plotly.express as px
@@ -103,13 +102,8 @@ def update_graph_2d(data):
         extra_index = 5
         index = np.arange(index[0] - extra_index, index[-1] + extra_index)
 
-        std_err_backup = sys.stderr
-        file_prog = open("./cache/progress.txt", "w")
-        sys.stderr = file_prog
         fig = generate_imgs(data, index, fig)
         fig = generate_mask(data, index, fig)
-        file_prog.close()
-        sys.stderr = std_err_backup
 
         # Visibility
         fig.data[0].visible = True
@@ -185,7 +179,7 @@ def update_graph_3d(data):
     return fig
 
 
-def parse_contents(contents, filenames, dates):
+def parse_contents(model, online, contents, filenames, dates):
     """Parse content."""
     response = None
     if not filenames:
@@ -202,7 +196,9 @@ def parse_contents(contents, filenames, dates):
             # Should send back dict with same element has the
             # predictions.pbz2
             config = fs.get_configs_root() / "web_config.yml"
-            response = infer.get_inference(data, files_types, str(config))
+            response = infer.get_inference(
+                data, files_types, str(config), model, online
+            )
     else:
         contents = contents[0]
         filenames = filenames[0]
