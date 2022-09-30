@@ -199,6 +199,8 @@ def parse_contents(model, online, contents, filenames, dates):
             response = infer.get_inference(
                 data, files_types, str(config), model, online
             )
+            if not response:
+                return None
     else:
         contents = contents[0]
         filenames = filenames[0]

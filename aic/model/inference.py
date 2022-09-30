@@ -42,6 +42,8 @@ def get_inference(
     save_path="./cache",
 ):
     """Get inference results."""
+    if not model:
+        return {}
     slices = []
     if file_types:
         for f, d in zip(file_types, data):

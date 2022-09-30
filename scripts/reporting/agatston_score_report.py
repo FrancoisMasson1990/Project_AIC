@@ -18,36 +18,44 @@ from glob import glob
 
 import numpy as np
 import pandas as pd
-import yaml
 from natsort import natsorted
 from tqdm import tqdm
 
 import aic.misc.export as expt
 import aic.misc.files as fs
+import aic.model.loaders as ld
 from aic.misc.setting_tf import requirements_2d as req2d
 from aic.model.inference import get_inference
 
 if __name__ == "__main__":
     req2d()
 
-    config = str(fs.get_configs_root() / "agatston_score_report.yml")
-    with open(config) as f:
-        # The FullLoader parameter handles the conversion from YAML
-        # scalar values to Python the dictionary format
-        config = yaml.load(f, Loader=yaml.FullLoader)
+    config_path = str(fs.get_configs_root() / "agatston_score_report.yml")
+    config = ld.load_config(config_path)
 
     """
     Step 0: Get list of valves.
     """
 
     data_path = config.get("data_path", str(fs.get_dataset_root()))
-    model_config = config.get("model_config", None)
-    if not model_config:
+    model_config_path = config.get("model_config", None)
+    if not model_config_path:
         raise Exception(f"You should provide a model path.")
-    if not os.path.exists(model_config):
-        model_config = str(fs.get_configs_root() / model_config)
+    if not os.path.exists(model_config_path):
+        model_config_path = str(fs.get_configs_root() / model_config_path)
 
-    save_path = config.get("data_path", str(fs.get_prediction_root()))
+    save_path = config.get("save_path", str(fs.get_prediction_root()))
+    model_config = ld.load_config(model_config_path)
+    model_name = model_config.get("model_name", None)
+    online = model_config.get("online", False)
+    if model_name:
+        if online:
+            model = ld.load_tflitemodel(model_name)
+        else:
+            model = ld.load_model(model_name)
+    else:
+        model = None
+
     sub_folders = os.listdir(data_path)
     data = []
     for sub_folder in natsorted(sub_folders):
@@ -71,7 +79,8 @@ if __name__ == "__main__":
         path = os.path.join(save_path, d.split("/")[-2], d.split("/")[-1])
         get_inference(
             data=d,
-            config=model_config,
+            config=model_config_path,
+            model=model,
             online=False,
             lite=False,
             save_path=path,
