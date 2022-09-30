@@ -67,6 +67,7 @@ def get_inference(
             threshold = config.get("threshold", None)
         # Get Dicom files
         path = "./cache/tmp/"
+        online = True
         if not online:
             list_data = os.listdir(data)
             list_data = [
@@ -110,7 +111,7 @@ def get_inference(
         predictions, crop_values = get_predictions(
             model,
             model_version,
-            data=data,
+            data=path,
             crop_dim=crop_dim,
             z_slice_max=z_slice_max,
             z_slice_min=z_slice_min,
