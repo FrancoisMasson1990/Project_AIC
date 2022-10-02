@@ -36,7 +36,7 @@ fs.rm_tmp_files()
 
 
 # Initialize the app
-def create_dash_app(
+def create_dash_inference(
     server: Flask,
     url_base_pathname: str = None,
     model=None,
