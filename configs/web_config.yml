@@ -6,3 +6,4 @@ model_name : "unet_model_for_aic_320_v2.tflite"
 model_version : 1
 threshold : 850
 spacing : 1 # Number of pixel ignore for the border detection
+online : True
