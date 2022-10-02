@@ -9,7 +9,11 @@ class AppContext(object):
     @classmethod
     def app(cls):
         if cls._app is None:
-            cls._app = Flask(__name__)
+            cls._app = Flask(
+                __name__,
+                template_folder="static/template",
+                static_folder="static/assets",
+            )
             import aic.misc.files as fs
             import aic.model.loaders as ld
 

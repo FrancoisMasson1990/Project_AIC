@@ -60,6 +60,7 @@ def create_dash_app(
                     html.Div(
                         className="four columns div-user-controls",
                         children=[
+                            html.Div(id="hidden_redirect_callback"),
                             # Patient Name
                             html.P(
                                 [
@@ -96,6 +97,12 @@ def create_dash_app(
                                     html.Button(
                                         "Clear results",
                                         id="clear_btn",
+                                        n_clicks=0,
+                                        style={"marginLeft": "10px"},
+                                    ),
+                                    html.Button(
+                                        "Home",
+                                        id="home_btn",
                                         n_clicks=0,
                                         style={"marginLeft": "10px"},
                                     ),
@@ -380,5 +387,13 @@ def create_dash_app(
             file_path = "./cache/prediction.pbz2"
             if os.path.exists(file_path):
                 return dcc.send_file("./cache/prediction.pbz2")
+
+    @dash_app.callback(
+        dash.Output("hidden_redirect_callback", "children"),
+        dash.Input("home_btn", "n_clicks"),
+    )
+    def redirect_home(n_clicks):
+        if n_clicks > 0:
+            return dcc.Location(pathname="/", id="redirect_home")
 
     return dash_app
