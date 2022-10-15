@@ -32,12 +32,21 @@ def generate_imgs(data, index, fig):
     # Update Image
     for i in tqdm(range(imgs.shape[0])):
         img = imgs[i]
-        fig.add_trace(px.imshow(img, color_continuous_scale="gray").data[0])
+        fig.add_trace(
+            go.Heatmap(
+                z=img,
+                hoverongaps=False,
+                hoverinfo="skip",
+                colorscale="gray",
+                showscale=False,
+                zauto=True,
+            )
+        )
         fig.data[i].visible = False
 
     fig.update_xaxes(showticklabels=False)
     fig.update_yaxes(showticklabels=False)
-    fig.update_layout(px.imshow(imgs[0], color_continuous_scale="gray").layout)
+    fig.update_layout(px.imshow(imgs[0]).layout)
     fig.update_traces(
         hovertemplate="x: %{x} <br> y: %{y} <br> Hounsfield unit: %{z}"
     )
@@ -75,17 +84,16 @@ def generate_mask(data, index, fig):
         fig.add_trace(
             go.Heatmap(
                 z=prediction,
+                coloraxis="coloraxis1",
                 hoverongaps=False,
-                colorscale="Reds",
                 hoverinfo="skip",
-                showscale=False,
             )
         )
         fig.data[i + masks.shape[0]].visible = False
     return fig
 
 
-def update_graph_2d(data):
+def update_graph_2d(data, zmin=130, zmax=600):
     """Draw prediction graphes."""
     fig = go.Figure()
     fig.update_layout(showlegend=False)
@@ -129,14 +137,53 @@ def update_graph_2d(data):
 
         fig.update_layout(
             sliders=sliders,
+            coloraxis1=dict(colorscale="Reds", showscale=False),
+            updatemenus=[
+                dict(
+                    buttons=list(
+                        [
+                            dict(
+                                args=[
+                                    {
+                                        "colorscale": "Greys",
+                                        "showscale": False,
+                                        "zauto": True,
+                                    }
+                                ],
+                                label="Original",
+                                method="restyle",
+                            ),
+                            dict(
+                                args=[
+                                    {
+                                        "colorscale": "Jet",
+                                        "showscale": True,
+                                        "zmax": zmax,
+                                        "zmin": zmin,
+                                    }
+                                ],
+                                label="Color Scale",
+                                method="restyle",
+                            ),
+                        ]
+                    ),
+                    type="buttons",
+                    direction="right",
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=0.1,
+                    xanchor="right",
+                    yanchor="top",
+                    font=dict(color="#000000"),
+                )
+            ],
         )
-
     fig.update_layout(template="plotly_dark")
     fig.update_layout(paper_bgcolor="#1e1e1e", plot_bgcolor="#1e1e1e")
     return fig
 
 
-def update_graph_3d(data):
+def update_graph_3d(data, cmin=130, cmax=600):
     """Draw prediction graphes."""
     fig = go.Figure()
     fig.update_layout(showlegend=False)
@@ -147,6 +194,7 @@ def update_graph_3d(data):
             x = data["valve"][:, 0]
             y = data["valve"][:, 1]
             z = data["valve"][:, 2]
+            c_valve = data["valve"][:, 3]
 
             fig.add_trace(
                 go.Scatter3d(
@@ -154,7 +202,7 @@ def update_graph_3d(data):
                     y=y,
                     z=z,
                     mode="markers",
-                    marker=dict(size=5, color="white", opacity=0.8),
+                    marker=dict(size=3, color="white", opacity=0.6),
                 )
             )
         if "candidate" in data.keys():
@@ -168,11 +216,65 @@ def update_graph_3d(data):
                     y=y,
                     z=z,
                     mode="markers",
-                    marker=dict(size=3, color="red", opacity=0.8),
+                    marker=dict(color="red", size=3, opacity=0.6),
                 )
             )
+
         fig.update_scenes(
-            xaxis_visible=False, yaxis_visible=False, zaxis_visible=False
+            xaxis_visible=False,
+            yaxis_visible=False,
+            zaxis_visible=False,
+        )
+        fig.update_layout(
+            updatemenus=[
+                dict(
+                    buttons=list(
+                        [
+                            dict(
+                                args=[
+                                    {
+                                        "marker": {
+                                            "color": "white",
+                                            "size": 3,
+                                            "opacity": 0.6,
+                                            "showscale": False,
+                                        },
+                                    },
+                                    [0],
+                                ],
+                                label="Original",
+                                method="restyle",
+                            ),
+                            dict(
+                                args=[
+                                    {
+                                        "marker": {
+                                            "color": c_valve,
+                                            "colorscale": "Jet",
+                                            "size": 3,
+                                            "opacity": 0.6,
+                                            "showscale": True,
+                                            "cmin": cmin,
+                                            "cmax": cmax,
+                                        },
+                                    },
+                                    [0],
+                                ],
+                                label="Color Scale",
+                                method="restyle",
+                            ),
+                        ]
+                    ),
+                    type="buttons",
+                    direction="right",
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=0.1,
+                    xanchor="right",
+                    yanchor="top",
+                    font=dict(color="#000000"),
+                )
+            ],
         )
     fig.update_layout(template="plotly_dark")
     fig.update_layout(paper_bgcolor="#1e1e1e", plot_bgcolor="#1e1e1e")
