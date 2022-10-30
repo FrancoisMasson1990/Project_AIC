@@ -38,12 +38,19 @@ if __name__ == "__main__":
     data_path = os.path.join(data_path, "datasets_dcm")
     sub_folders = os.listdir(data_path)
     data = []
+    include_list = []
     for sub_folder in natsorted(sub_folders):
-        root = os.path.join(data_path, sub_folder)
-        sub_ = os.listdir(root)
-        for sub in sub_:
-            if os.path.isdir(os.path.join(root, sub)):
-                data.append(os.path.join(root, sub))
+        sampled = False
+        if not include_list:
+            sampled = True
+        if sub_folder in include_list:
+            sampled = True
+        if sampled:
+            root = os.path.join(data_path, sub_folder)
+            sub_ = os.listdir(root)
+            for sub in sub_:
+                if os.path.isdir(os.path.join(root, sub)):
+                    data.append(os.path.join(root, sub))
 
     if labels_2D:
         v2d.Viewer2D(data_path=data, folder_mask=surface_label_path)

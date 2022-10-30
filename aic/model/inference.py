@@ -67,7 +67,6 @@ def get_inference(
             threshold = config.get("threshold", None)
         # Get Dicom files
         path = "./cache/tmp/"
-        online = True
         if not online:
             list_data = os.listdir(data)
             list_data = [
