@@ -17,7 +17,6 @@ import pickle
 from glob import glob
 
 import numpy as np
-import pandas as pd
 from natsort import natsorted
 from tqdm import tqdm
 
@@ -90,20 +89,15 @@ if __name__ == "__main__":
     Step 2: Export prediction score to Google Sheet.
     """
 
+    range_patient = ("A", 0)
+    range_score = ("G", 6)
     url = config.get("url", None)
     sheet = expt.get_sheet(url)
-    df = pd.DataFrame({})
-    df = expt.get_sheet_cells(df, sheet)
-    df["score"] = "-"
-    folder_datasets = []
-    folder_dataset = fs.get_dataset_root()
-    for dir in natsorted(os.listdir(folder_dataset)):
-        patient = dir.split("/")[0]
-        patient = ("-").join(patient.split("-")[:2])
-        df.score = np.where(df.patient == patient, "In Progress", df.score)
-
+    df = expt.get_sheet_cells(
+        sheet, range_cell=range_patient[0] + ":" + range_score[0]
+    )
     folder_prediction = fs.get_prediction_root()
-    for dir in natsorted(os.listdir(folder_prediction)):
+    for dir in tqdm(natsorted(os.listdir(folder_prediction))):
         for sub_dir in natsorted(
             os.listdir(os.path.join(folder_prediction, dir))
         ):
@@ -115,8 +109,9 @@ if __name__ == "__main__":
                     data = pickle.load(f)
                 patient = data["data_path"].split("/")[0]
                 patient = ("-").join(patient.split("-")[:2])
-                df.score = np.where(
-                    df.patient == patient, round(data["score"], 2), df.score
+                df[range_score[1]] = np.where(
+                    df[range_patient[1]] == patient,
+                    round(data["score"], 2),
+                    df[range_score[1]],
                 )
-    df = df[df["patient"].str.contains("AIC")].reset_index()
     expt.update_sheet_cells(df, sheet)

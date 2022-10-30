@@ -13,8 +13,8 @@ google sheet file online.
 """
 
 import gspread
+import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
-from tqdm import tqdm
 
 from aic.misc import files as fs
 
@@ -38,20 +38,11 @@ def get_sheet(url, index=0):
     return sheet_instance
 
 
-def get_sheet_cells(df, sheet):
+def get_sheet_cells(sheet, range_cell: str = ""):
     """Get sheet cells infos."""
-    df["patient"] = sheet.col_values(1)
-    return df
+    return pd.DataFrame(sheet.get(range_cell))
 
 
-def update_sheet_cells(df, sheet, col="G", header=4):
-    """Update sheet cells infos."""
-    start = col + str(header)
-    stop = header + len(df) - 1
-    end = col + str(stop)
-    cell_list = sheet.range(start + ":" + end)
-    # Write the array to worksheet
-    index = 0
-    for index, row in tqdm(df.iterrows(), total=len(df)):
-        cell_list[index].value = row["score"]
-    sheet.update_cells(cell_list)
+def update_sheet_cells(df, sheet):
+    """Update sheet cells infos from a dataframe."""
+    sheet.update(df.values.tolist())
