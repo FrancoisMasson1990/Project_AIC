@@ -160,8 +160,10 @@ def create_dash_label(
     )
     def update_output_2d(clear_clicks, contents, names, dates):
         """Update 2d graphes."""
-        output = []
-        fig_2d = vs.update_graph_2d(output)
+        fs.rm_tmp_folders()
+        fs.rm_tmp_files()
+        output = vs.parse_dcm(contents, names, dates)
+        fig_2d = vs.labeling_graph_2d(output)
         return fig_2d
 
     @dash_app.callback(

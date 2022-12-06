@@ -15,6 +15,7 @@ import base64
 import bz2
 import io
 import pickle
+from copy import deepcopy
 
 import numpy as np
 import plotly.express as px
@@ -22,7 +23,9 @@ import plotly.graph_objects as go
 from tqdm import tqdm
 
 import aic.misc.files as fs
+import aic.misc.utils as ut
 import aic.model.inference as infer
+import aic.processing.operations as op
 import aic.processing.scoring as sc
 
 
@@ -315,6 +318,29 @@ def parse_contents(model, online, contents, filenames, dates):
     return response
 
 
+def parse_dcm(contents, filenames, dates):
+    """Parse dcm files."""
+    response = {}
+    if not filenames:
+        return response
+
+    if len(filenames) > 1:
+        slices = []
+        for f, d in zip(filenames, contents):
+            content_type, content_string = d.split(",")
+            if f.endswith(".txt"):
+                patient_info = content_string.encode("utf8")
+                patient_info = base64.decodebytes(patient_info).decode("UTF-8")
+            elif f.endswith(".dcm"):
+                decoded = base64.b64decode(content_string)
+                slices.append(io.BytesIO(decoded))
+        if slices:
+            list_data = deepcopy(slices)
+            dataset = ut.get_slices(list_data)
+            response["image"] = op.get_pixels_hu(dataset)
+    return response
+
+
 def two_years_model(coefficient):
     """Get 2 years model."""
     out = 0
@@ -402,3 +428,80 @@ def operations(coeff_dict):
     else:
         message = "Missing informations for Clinical Outcomes"
         return message
+
+
+def labeling_graph_2d(data, zmin=130, zmax=600):
+    """Draw prediction graphes."""
+    fig = go.Figure()
+    fig.update_layout(showlegend=False)
+    fig.update_xaxes(visible=False)
+    fig.update_yaxes(visible=False)
+
+    if data:
+        index = np.arange(data["image"].shape[0])
+        fig = generate_imgs(data, index, fig)
+        # Visibility
+        fig.data[0].visible = True
+
+        steps = []
+        for i in range(len(fig.data)):
+            step = dict(
+                method="restyle",
+                args=[{"visible": [False] * len(fig.data)}],
+            )
+            # Toggle i'th trace to "visible"
+            step["args"][0]["visible"][i] = True
+            steps.append(step)
+
+        sliders = [
+            dict(
+                active=0, currentvalue={"prefix": "Dicom file: "}, steps=steps
+            )
+        ]
+
+        fig.update_layout(
+            sliders=sliders,
+            coloraxis1=dict(colorscale="Reds", showscale=False),
+            updatemenus=[
+                dict(
+                    buttons=list(
+                        [
+                            dict(
+                                args=[
+                                    {
+                                        "colorscale": "Greys",
+                                        "showscale": False,
+                                        "zauto": True,
+                                    }
+                                ],
+                                label="Original",
+                                method="restyle",
+                            ),
+                            dict(
+                                args=[
+                                    {
+                                        "colorscale": "Jet",
+                                        "showscale": True,
+                                        "zmax": zmax,
+                                        "zmin": zmin,
+                                    }
+                                ],
+                                label="Color Scale",
+                                method="restyle",
+                            ),
+                        ]
+                    ),
+                    type="buttons",
+                    direction="right",
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=0.1,
+                    xanchor="right",
+                    yanchor="top",
+                    font=dict(color="#000000"),
+                )
+            ],
+        )
+    fig.update_layout(template="plotly_dark")
+    fig.update_layout(paper_bgcolor="#1e1e1e", plot_bgcolor="#1e1e1e")
+    return fig
