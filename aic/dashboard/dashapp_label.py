@@ -20,6 +20,7 @@ from dash import dcc
 from dash import html
 from flask import Flask
 
+import aic.dashboard.template.annotated_card as a_card
 import aic.viewer.files as fs
 import aic.viewer.web_visual as vs
 
@@ -104,14 +105,7 @@ def create_dash_label(
                                     ),
                                 ]
                             ),
-                            html.Img(
-                                src="https://images.pexels.com/photos/544965/pexels-photo-544965.jpeg?cs=srgb&dl=pexels-burst-544965.jpg&fm=jpg",
-                                style={
-                                    "height": "50%",
-                                    "width": "50%",
-                                    "marginLeft": "10px",
-                                },
-                            ),
+                            a_card.annotated_data_card(),
                         ],
                     ),
                     html.Div(
