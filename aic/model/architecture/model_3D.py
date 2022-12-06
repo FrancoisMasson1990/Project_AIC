@@ -95,26 +95,29 @@ class Unet(object):
 
         self.use_upsampling = use_upsampling
         self.print_model = print_model
+        self.axis = (1, 2, 3)
 
-    def dice_coef(self, target, prediction, axis=(1, 2, 3)):
+    def dice_coef(self, target, prediction):
         """Get the Sorenson Dice."""
         return mt.dice_coefficient(
-            target=target, prediction=prediction, axis=axis
+            target=target, prediction=prediction, axis=self.axis
         )
 
-    def dice_loss(self, target, prediction, axis=(1, 2, 3)):
+    def dice_loss(self, target, prediction):
         """Get the Sorenson (Soft) Dice loss.
 
         Using -log(Dice) as the loss since it is better behaved.
         Also, the log allows avoidance of the division which
         can help prevent underflow when the numbers are very small.
         """
-        return mt.dice_loss(target=target, prediction=prediction, axis=axis)
+        return mt.dice_loss(
+            target=target, prediction=prediction, axis=self.axis
+        )
 
-    def focal_tversky_loss(self, target, prediction, axis=(1, 2, 3)):
+    def focal_tversky_loss(self, target, prediction):
         """Get focal tversky loss."""
         return mt.focal_tversky_loss(
-            target=target, prediction=prediction, axis=axis
+            target=target, prediction=prediction, axis=self.axis
         )
 
     def convolution_block(self, x, name, filters, params):

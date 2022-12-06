@@ -76,14 +76,14 @@ class Unet(object):
 
         self.output_path = output_path
         self.inference_filename = inference_filename
+        self.axis = (1, 2)
 
-        self.metrics = [self.dice_coef, self.soft_dice_coef]
+        self.metrics = [self.dice_coef]
         # self.loss = self.dice_coef_loss
-        self.loss = self.combined_dice_coef_loss
+        # self.loss = self.combined_dice_coef_loss
 
         # Tversky method
-        # self.metrics = [self.tversky]
-        # self.loss = self.focal_tversky_loss
+        self.loss = self.focal_tversky_loss
 
         self.optimizer = K.optimizers.Adam(learning_rate=self.learningrate)
 
@@ -91,9 +91,7 @@ class Unet(object):
             "combined_dice_ce_loss": self.combined_dice_coef_loss,
             "dice_coef_loss": self.dice_coef_loss,
             "dice_coef": self.dice_coef,
-            "soft_dice_coef": self.soft_dice_coef,
             "focal_tversky_loss": self.focal_tversky_loss,
-            "tversky": self.tversky,
         }
 
         self.blocktime = blocktime
@@ -106,11 +104,9 @@ class Unet(object):
 
     def dice_coef(self, target, prediction):
         """Get the Sorenson Dice."""
-        return mt.dice_coef(target=target, prediction=prediction)
-
-    def soft_dice_coef(self, target, prediction):
-        """Get the Sorenson (Soft) Dice."""
-        return mt.soft_dice_coef(target=target, prediction=prediction)
+        return mt.dice_coefficient(
+            target=target, prediction=prediction, axis=self.axis
+        )
 
     def dice_coef_loss(self, target, prediction):
         """Get the Sorenson (Soft) Dice loss.
@@ -119,27 +115,23 @@ class Unet(object):
         Also, the log allows avoidance of the division which
         can help prevent underflow when the numbers are very small.
         """
-        return mt.dice_coef_loss(target=target, prediction=prediction)
+        return mt.dice_loss(
+            target=target, prediction=prediction, axis=self.axis
+        )
 
     def combined_dice_coef_loss(self, target, prediction):
         """Combine Dice and Binary Cross Entropy Loss."""
-        return mt.combined_dice_coef_loss(
-            weight_dice_loss=self.weight_dice_loss,
+        return mt.combo_loss(
             target=target,
             prediction=prediction,
-        )
-
-    def tversky(self, target, prediction):
-        """Get tversky loss."""
-        return mt.tversky(
-            target=target,
-            prediction=prediction,
-            channels_first=self.channels_first,
+            axis=self.axis,
         )
 
     def focal_tversky_loss(self, target, prediction):
         """Get focal tversky loss."""
-        return mt.focal_tversky_loss(target=target, prediction=prediction)
+        return mt.focal_tversky_loss(
+            target=target, prediction=prediction, axis=self.axis
+        )
 
     def unet_model(self, imgs_shape, msks_shape, dropout=0.2, final=False):
         """Define the UNet model.

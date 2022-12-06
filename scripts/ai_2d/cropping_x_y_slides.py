@@ -65,7 +65,9 @@ if __name__ == "__main__":
     )
     print("-" * 30)
 
-    files = ut.get_file_list(data_path=data_path, json_filename=json_filename)
+    files = ut.get_file_list(
+        data_path=data_path, json_filename=json_filename, split=1.0
+    )
     imgs = files[0]
     labels = files[1]
 
