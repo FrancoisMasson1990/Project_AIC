@@ -22,6 +22,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from tqdm import tqdm
 
+import aic.dashboard.template.annotated_card as a_card
 import aic.misc.files as fs
 import aic.misc.utils as ut
 import aic.model.inference as infer
@@ -430,13 +431,21 @@ def operations(coeff_dict):
         return message
 
 
-def labeling_graph_2d(data, zmin=130, zmax=600):
+def init_graph_2d(fig):
     """Draw prediction graphes."""
     fig = go.Figure()
     fig.update_layout(showlegend=False)
     fig.update_xaxes(visible=False)
     fig.update_yaxes(visible=False)
+    fig.update_layout(template="plotly_dark")
+    fig.update_layout(paper_bgcolor="#1e1e1e", plot_bgcolor="#1e1e1e")
+    return fig
 
+
+def labeling_graph_2d(fig, data, zmin=130, zmax=600):
+    """Draw prediction graphes."""
+    if isinstance(fig, dict):
+        fig = go.Figure(fig)
     if data:
         index = np.arange(data["image"].shape[0])
         fig = generate_imgs(data, index, fig)
@@ -455,13 +464,14 @@ def labeling_graph_2d(data, zmin=130, zmax=600):
 
         sliders = [
             dict(
-                active=0, currentvalue={"prefix": "Dicom file: "}, steps=steps
+                active=0,
+                currentvalue={"prefix": "Dicom file: "},
+                steps=steps,
+                font={"color": "white"},
             )
         ]
-
         fig.update_layout(
             sliders=sliders,
-            coloraxis1=dict(colorscale="Reds", showscale=False),
             updatemenus=[
                 dict(
                     buttons=list(
@@ -491,17 +501,72 @@ def labeling_graph_2d(data, zmin=130, zmax=600):
                             ),
                         ]
                     ),
-                    type="buttons",
-                    direction="right",
+                    direction="down",
                     pad={"r": 10, "t": 10},
                     showactive=True,
                     x=0.1,
+                    y=1.0,
                     xanchor="right",
                     yanchor="top",
                     font=dict(color="#000000"),
-                )
+                ),
+                dict(
+                    buttons=list(
+                        [
+                            dict(
+                                args=[
+                                    {
+                                        "newshape.line.color": a_card.color_dict[
+                                            a_card.annotation_types[0]
+                                        ]
+                                    }
+                                ],
+                                label=a_card.annotation_types[0],
+                                method="relayout",
+                            ),
+                            dict(
+                                args=[
+                                    {
+                                        "newshape.line.color": a_card.color_dict[
+                                            a_card.annotation_types[1]
+                                        ]
+                                    }
+                                ],
+                                label=a_card.annotation_types[1],
+                                method="relayout",
+                            ),
+                            dict(
+                                args=[
+                                    {
+                                        "newshape.line.color": a_card.color_dict[
+                                            a_card.annotation_types[2]
+                                        ]
+                                    }
+                                ],
+                                label=a_card.annotation_types[2],
+                                method="relayout",
+                            ),
+                        ]
+                    ),
+                    direction="down",
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=0.1,
+                    y=0.92,
+                    xanchor="right",
+                    yanchor="top",
+                    font=dict(color="#000000"),
+                ),
             ],
         )
-    fig.update_layout(template="plotly_dark")
-    fig.update_layout(paper_bgcolor="#1e1e1e", plot_bgcolor="#1e1e1e")
     return fig
+
+
+def set_layout_mode(
+    fig,
+    dragmode="drawrect",
+    line_color=a_card.color_dict[a_card.annotation_types[0]],
+):
+    if isinstance(fig, dict):
+        fig = go.Figure(fig)
+    return fig.update_layout(dragmode=dragmode, newshape_line_color=line_color)

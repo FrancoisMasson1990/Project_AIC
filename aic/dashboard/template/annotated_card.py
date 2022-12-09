@@ -1,10 +1,10 @@
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
 import plotly.express as px
+from dash import dcc
 from dash import html
 
 annotation_colormap = px.colors.qualitative.Light24
-annotation_types = ["valve", "calcium", "artefact"]
+annotation_types = ["Valve", "Calcium", "Artefact"]
 DEFAULT_ATYPE = annotation_types[0]
 
 # prepare bijective type<->color mapping
@@ -31,7 +31,7 @@ def annotated_data_card():
                     dbc.Row(
                         dbc.Col(
                             [
-                                html.H4("Create new annotation for"),
+                                html.P("Create new annotation for"),
                                 dcc.Dropdown(
                                     id="annotation-type-dropdown",
                                     options=[
@@ -48,12 +48,4 @@ def annotated_data_card():
                 ]
             ),
         ],
-        color="#1E1E1E",
-        style={
-            "marginLeft": "10px",
-            "border-style": "dashed",
-            "border-color": "#F8F2F2",
-            "border-radius": "5px",
-            "border-width": "1px",
-        },
     )

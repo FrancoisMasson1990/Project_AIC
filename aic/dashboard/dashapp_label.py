@@ -20,9 +20,9 @@ from dash import dcc
 from dash import html
 from flask import Flask
 
-import aic.dashboard.template.annotated_card as a_card
 import aic.viewer.files as fs
 import aic.viewer.web_visual as vs
+from aic.dashboard.template.config_dragmode import config_mode_bar
 
 warnings.filterwarnings("ignore")
 
@@ -105,7 +105,6 @@ def create_dash_label(
                                     ),
                                 ]
                             ),
-                            a_card.annotated_data_card(),
                         ],
                     ),
                     html.Div(
@@ -125,6 +124,7 @@ def create_dash_label(
                                                         style={
                                                             "height": "100vh"
                                                         },
+                                                        config=config_mode_bar,
                                                     )
                                                 ],
                                             ),
@@ -145,20 +145,29 @@ def create_dash_label(
         dash.Output(
             component_id="agatston-graph-2d", component_property="figure"
         ),
-        dash.Input(component_id="clear_btn", component_property="n_clicks"),
+        dash.Input(
+            component_id="agatston-graph-2d", component_property="figure"
+        ),
         dash.Input(component_id="upload-data", component_property="contents"),
         dash.State(component_id="upload-data", component_property="filename"),
         dash.State(
             component_id="upload-data", component_property="last_modified"
         ),
     )
-    def update_output_2d(clear_clicks, contents, names, dates):
+    def update_output_2d(fig, contents, names, dates):
         """Update 2d graphes."""
         fs.rm_tmp_folders()
         fs.rm_tmp_files()
-        output = vs.parse_dcm(contents, names, dates)
-        fig_2d = vs.labeling_graph_2d(output)
-        return fig_2d
+        if not fig:
+            return vs.init_graph_2d(fig)
+        if "data" in fig.keys():
+            # Case of init graph
+            if not fig["data"]:
+                output = vs.parse_dcm(contents, names, dates)
+                fig = vs.labeling_graph_2d(fig, output)
+                fig = vs.set_layout_mode(fig, dragmode="drawopenpath")
+
+        return fig
 
     @dash_app.callback(
         dash.Output("hidden_redirect_callback", "children"),

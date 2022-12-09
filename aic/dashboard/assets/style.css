@@ -240,6 +240,15 @@ a:hover {
   font-family: "Open Sans Semi Bold"
 }
 
+/* Annotation Card */
+.card {
+  margin-left: 10px;
+  background-color: #1E1E1E;
+  border-style: dashed;
+  border-color: rgb(248, 242, 242);
+  border-radius: 5px;
+  border-width: 1px;
+}
 
 .button, button, input[type="submit"], input[type="reset"], input[type="button"] {
   display: inline-block;
