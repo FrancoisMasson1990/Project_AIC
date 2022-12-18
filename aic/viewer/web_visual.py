@@ -22,7 +22,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from tqdm import tqdm
 
-import aic.dashboard.template.annotated_card as a_card
+import aic.dashboard.template.annotation_mapping as a_card
 import aic.misc.files as fs
 import aic.misc.utils as ut
 import aic.model.inference as infer
