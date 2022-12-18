@@ -62,6 +62,7 @@ def create_dash_label(
                         className="four columns div-user-controls",
                         children=[
                             dcc.Store(id="annotation_data", data={}),
+                            dcc.Download(id="save_annotation"),
                             html.Div(id="hidden_redirect_callback"),
                             # Patient Name
                             html.P(
@@ -251,7 +252,7 @@ def create_dash_label(
             return dcc.Location(pathname="/", id="redirect_home")
 
     @dash_app.callback(
-        dash.Output("download_data", "children"),
+        dash.Output("save_annotation", "data"),
         dash.Input("annotation_data", component_property="data"),
         dash.Input(component_id="download_btn", component_property="n_clicks"),
         prevent_initial_call=True,
@@ -263,7 +264,6 @@ def create_dash_label(
         file_name = "./cache/annotation.pbz2"
         if triggered_id == "download_btn":
             if data:
-                breakpoint()
                 with bz2.BZ2File(file_name, "wb") as f:
                     pickle.dump(data, f)
                 return dcc.send_file(file_name)
