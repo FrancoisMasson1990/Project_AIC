@@ -446,8 +446,10 @@ def labeling_graph_2d(fig, data, zmin=130, zmax=600):
     """Draw prediction graphes."""
     if isinstance(fig, dict):
         fig = go.Figure(fig)
+    img_shape = None
     if data:
         index = np.arange(data["image"].shape[0])
+        img_shape = (data["image"].shape[1], data["image"].shape[2])
         fig = generate_imgs(data, index, fig)
         # Visibility
         fig.data[0].visible = True
@@ -535,17 +537,6 @@ def labeling_graph_2d(fig, data, zmin=130, zmax=600):
                                 label=a_card.annotation_types[1],
                                 method="relayout",
                             ),
-                            dict(
-                                args=[
-                                    {
-                                        "newshape.line.color": a_card.color_dict[
-                                            a_card.annotation_types[2]
-                                        ]
-                                    }
-                                ],
-                                label=a_card.annotation_types[2],
-                                method="relayout",
-                            ),
                         ]
                     ),
                     direction="down",
@@ -559,7 +550,7 @@ def labeling_graph_2d(fig, data, zmin=130, zmax=600):
                 ),
             ],
         )
-    return fig
+    return fig, img_shape
 
 
 def set_layout_mode(

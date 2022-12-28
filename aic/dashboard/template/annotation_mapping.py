@@ -4,7 +4,7 @@ from dash import dcc
 from dash import html
 
 annotation_colormap = px.colors.qualitative.Light24
-annotation_types = ["Valve", "Calcium", "Artefact"]
+annotation_types = ["Calcium", "Artefact"]
 DEFAULT_ATYPE = annotation_types[0]
 
 # prepare bijective type<->color mapping
@@ -16,9 +16,15 @@ typ_col_pairs = [
 color_dict = {}
 # colors to types
 type_dict = {}
+# colors to labels
+label_dict = {}
+
+index = 1
 for typ, col in typ_col_pairs:
     color_dict[typ] = col
     type_dict[col] = typ
+    label_dict[col] = index
+    index += 1
 
 options = list(color_dict.keys())
 

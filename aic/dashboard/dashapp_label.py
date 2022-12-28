@@ -17,6 +17,7 @@ import warnings
 
 import dash
 import dash_bootstrap_components as dbc
+import numpy as np
 from dash import Dash
 from dash import ctx
 from dash import dcc
@@ -24,6 +25,8 @@ from dash import html
 from dash import no_update
 from flask import Flask
 
+import aic.dashboard.template.annotation_mapping as a_card
+import aic.processing.annotation as annot
 import aic.viewer.files as fs
 import aic.viewer.web_visual as vs
 from aic.dashboard.template.config_dragmode import config_mode_bar
@@ -50,7 +53,7 @@ def create_dash_label(
         url_base_pathname=url_base_pathname,
         external_stylesheets=[dbc.themes.BOOTSTRAP],
     )
-    dash_app.title = "Agatston Score Dashboard"
+    dash_app.title = "Agatston Annotation Dashboard"
     dash_app._favicon = "heart.ico"
     dash_app.config.suppress_callback_exceptions = True
     dash_app.layout = html.Div(
@@ -62,6 +65,7 @@ def create_dash_label(
                         className="four columns div-user-controls",
                         children=[
                             dcc.Store(id="annotation_data", data={}),
+                            dcc.Store(id="img_shape", data={}),
                             dcc.Download(id="save_annotation"),
                             html.Div(id="hidden_redirect_callback"),
                             # Patient Name
@@ -126,7 +130,7 @@ def create_dash_label(
                                                             id="download_data"
                                                         ),
                                                         dbc.Tooltip(
-                                                            "Download all the annonations present in the images.",
+                                                            "Download all the annotations present in the images.",
                                                             target="download_btn",
                                                         ),
                                                         html.P(
@@ -212,28 +216,31 @@ def create_dash_label(
         dash.Output(
             component_id="agatston-graph-2d", component_property="figure"
         ),
+        dash.Output("img_shape", component_property="data"),
         dash.Input(
             component_id="agatston-graph-2d", component_property="figure"
         ),
         dash.Input(component_id="upload-data", component_property="contents"),
+        dash.Input("img_shape", component_property="data"),
+        dash.Input(component_id="clear_btn", component_property="n_clicks"),
         dash.State(component_id="upload-data", component_property="filename"),
         dash.State(
             component_id="upload-data", component_property="last_modified"
         ),
-        dash.Input(component_id="clear_btn", component_property="n_clicks"),
     )
-    def update_output_2d(fig, contents, names, dates, n_click):
+    def update_output_2d(fig, contents, img_shape, clear_clicks, names, dates):
         """Update 2d graphes."""
         fs.rm_tmp_folders()
         fs.rm_tmp_files()
         triggered_id = ctx.triggered_id
         if not fig:
-            return vs.init_graph_2d(fig)
+            return vs.init_graph_2d(fig), no_update
         if "data" in fig.keys():
             # Case of init graph
             if not fig["data"]:
                 output = vs.parse_dcm(contents, names, dates)
-                fig = vs.labeling_graph_2d(fig, output)
+                fig, shape = vs.labeling_graph_2d(fig, output)
+                img_shape["img_shape"] = shape
                 fig = vs.set_layout_mode(fig, dragmode="drawopenpath")
         if triggered_id == "clear_btn":
             # Case of clear all annotations
@@ -241,7 +248,7 @@ def create_dash_label(
                 layout = fig["layout"]
                 if "shapes" in layout.keys():
                     fig["layout"]["shapes"] = []
-        return fig
+        return fig, img_shape
 
     @dash_app.callback(
         dash.Output("hidden_redirect_callback", "children"),
@@ -255,17 +262,29 @@ def create_dash_label(
         dash.Output("save_annotation", "data"),
         dash.Input("annotation_data", component_property="data"),
         dash.Input(component_id="download_btn", component_property="n_clicks"),
+        dash.Input("img_shape", component_property="data"),
         prevent_initial_call=True,
     )
-    def download_annotation(data, n_clicks):
+    def download_annotation(annotation, n_clicks, img_shape):
         fs.rm_tmp_folders()
         fs.rm_tmp_files()
         triggered_id = ctx.triggered_id
         file_name = "./cache/annotation.pbz2"
+        masks = {}
         if triggered_id == "download_btn":
-            if data:
+            if annotation:
+                for key, value in annotation.items():
+                    mask = np.zeros(
+                        tuple(img_shape["img_shape"]), dtype=np.int
+                    )
+                    for shape in value["shapes"]:
+                        label = a_card.label_dict[shape["line"]["color"]]
+                        mask += label * annot.path_to_mask(
+                            shape["path"], tuple(img_shape["img_shape"])
+                        )
+                    masks[key] = mask
                 with bz2.BZ2File(file_name, "wb") as f:
-                    pickle.dump(data, f)
+                    pickle.dump(masks, f)
                 return dcc.send_file(file_name)
         return no_update
 
@@ -281,16 +300,17 @@ def create_dash_label(
         ),
         prevent_initial_call=True,
     )
-    def save_annotation(data, relayoutData, n_clicks, fig):
+    def save_annotation(annotation, relayoutData, n_clicks, fig):
         triggered_id = ctx.triggered_id
         if triggered_id == "frame_btn":
-            # Case of clear all annotations
+            # Case of csave current annotations
             if isinstance(fig, dict) and "layout" in fig.keys():
-                if "sliders" in fig["layout"].keys():
+                layout = fig["layout"]
+                if "sliders" in layout.keys():
                     slide = fig["layout"]["sliders"][0]["active"]
-                    # Need to extract point inside
-                    data[slide] = relayoutData
-                    return data
+                    if "shapes" in relayoutData.keys():
+                        annotation[slide] = relayoutData
+                        return annotation
         return no_update
 
     return dash_app
