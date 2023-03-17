@@ -1,17 +1,41 @@
-# syntax=docker/dockerfile:1
+FROM quay.io/opendatahub-contrib/workbench-images:base-c9s-py39_2023b_latest
 
-FROM python:3.9
+USER 0
 
-RUN apt-get update && apt-get -y install sudo
-RUN apt-get install ffmpeg libsm6 libxext6  -y
+RUN yum install -y yum-utils && \
+    yum-config-manager --enable crb && \
+    dnf install -y https://download.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
+    dnf install -y https://download1.rpmfusion.org/free/el/rpmfusion-free-release-9.noarch.rpm && \
+    INSTALL_PKGS="ffmpeg libXext libSM python3-tkinter" && \
+    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    yum -y clean all --enablerepo='*'
 
-COPY aic /Project_AIC/aic
-COPY scripts /Project_AIC/scripts
+# Copying AIC and packages files
+COPY --chown=1001:0 aic /opt/app-root/src/Project_AIC/aic
+COPY --chown=1001:0 configs /opt/app-root/src/Project_AIC/configs
+COPY --chown=1001:0 scripts /opt/app-root/src/Project_AIC/scripts
+COPY --chown=1001:0 setup.py README.md Pipfile.lock /opt/app-root/src/Project_AIC/
 
-COPY setup.py requirements-docker.txt README.md /Project_AIC/
-WORKDIR /Project_AIC
-RUN python3.9 -m pip install --upgrade pip
-RUN python3.9 -m pip install -r requirements-docker.txt
-RUN python3.9 -m pip install -e . --user
+USER 1001
 
-WORKDIR /Project_AIC/scripts/web
+#WORKDIR /opt/app-root/bin/
+WORKDIR /opt/app-root/src/Project_AIC
+
+# Install packages and cleanup
+# (all commands are chained to minimize layer size)
+RUN echo "Installing softwares and packages" && \
+    # Install Python packages \
+    micropipenv install && \
+    rm -f ./Pipfile.lock && \
+    pip install miscnn==1.4.0 --no-deps && \
+    pip install -e . && \
+    chmod -R g+w /opt/app-root/lib/python3.9/site-packages && \
+    fix-permissions /opt/app-root -P
+
+EXPOSE 8080
+
+ENV DISPLAY=:0
+
+WORKDIR /opt/app-root/src/Project_AIC/scripts/web
+
+CMD ["python", "app.py"]
